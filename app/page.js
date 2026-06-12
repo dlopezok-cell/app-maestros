@@ -29,6 +29,27 @@ export default function Home() {
     const [selIdx, setSelIdx] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
+    const [usuario, setUsuario] = useState(null);
+    const [authTab, setAuthTab] = useState('ingresar');
+    const [email, setEmail] = useState('');
+    const [pass, setPass] = useState('');
+    const [authMsg, setAuthMsg] = useState(null);
+
+    function entrar() {
+          setAuthMsg('Procesando...');
+          const fn = authTab === 'ingresar'
+            ? supabase.auth.signInWithPassword({ email: email, password: pass })
+                  : supabase.auth.signUp({ email: email, password: pass });
+          fn.then(function (r) {
+                  if (r.error) { setAuthMsg(r.error.message); return; }
+                  setUsuario(r.data.user);
+                  setAuthMsg(null);
+                  setVista('gain');
+          });
+    }
+    function conGoogle() {
+          supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    }
 
   function cargar(lat, lng) {
         supabase.rpc('maestros_cercanos', { lat: lat, lng: lng, oficio_buscado: null })
@@ -208,7 +229,31 @@ export default function Home() {
     </main>
   );
 
-  return (
+    if (!usuario) return (
+          <main>
+            <div className="darkhead">
+              <div className="dh1">Modo maestro</div>
+              <h2>Bienvenido de vuelta</h2>
+              <div className="dh2">Ingresa para ver tus trabajos y ganancias</div>
+      </div>
+            <div className="body" style={{ paddingTop: 18 }}>
+        <div style={{ display: 'flex', background: '#fff', borderRadius: 14, padding: 4, marginBottom: 16, border: '1.5px solid #eee' }}>
+          <button onClick={function () { setAuthTab('ingresar'); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#ff5a3c' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
+                <button onClick={function () { setAuthTab('crear'); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#ff5a3c' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
+      </div>
+              <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="tucorreo@ejemplo.cl" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
+              <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contrasena" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
+{authMsg && <p className="error">{authMsg}</p>}
+          <button className="gbtn full" onClick={entrar}>{authTab === 'ingresar' ? 'Ingresar' : 'Crear cuenta'}</button>
+          <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '6px 0' }}>o</div>
+          <button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #ddd', boxShadow: 'none' }} onClick={conGoogle}>{'\u{1F310} Continuar con Google'}</button>
+          <p style={{ fontSize: 11, color: '#9aa1b5', textAlign: 'center', marginTop: 8 }}>Al continuar aceptas los Terminos y la Politica de Privacidad</p>
+          <button onClick={function () { setVista('home'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 8 }}>Volver al inicio</button>
+  </div>
+  </main>
+    );
+
+return (
         <main>
           <div className="darkhead">
             <div className="dh1">{'\u{1F514} Vista del maestro · nuevo trabajo'}</div>
