@@ -113,6 +113,7 @@ export default function Home() {
         <div className="seehead"><h3>{'⚡ Disponibles ahora'}</h3></div>
 {cargando && <p>Buscando maestros cerca de ti...</p>}
 {error && <p className="error">{error}</p>}
+         <div className="cardscroll">
  {lista.map(function (m, i) {
              return (
                            <div key={m.id} className="mcard" onClick={function () { abrir(m, i); }}>
@@ -128,6 +129,41 @@ export default function Home() {
   </div>
           );
 })}
+  </div>
+        <div className="seehead"><h3>{'\u{1F3C6} Los mejor puntuados'}</h3></div>
+          <div className="cardscroll">
+{lista.slice().sort(function (a, b) { return b.rating - a.rating; }).map(function (m, i) {
+            return (
+                          <div key={'r' + m.id} className="mcard" onClick={function () { abrir(m, i); }}>
+                <div className="photo" style={{ background: GRADS[(i + 2) % 6] }}>
+                <img src={'https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'women/' : 'men/') + ((i * 13 + 40) % 90) + '.jpg'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <span className="ratepill">{'★ ' + m.rating}</span>
+  </div>
+              <div className="minfo">
+                  <div className="nm">{m.nombre}</div>
+                <div className="mt">{m.oficio + ' · ' + m.trabajos + ' trabajos'}</div>
+  </div>
+  </div>
+          );
+})}
+</div>
+        <div className="seehead"><h3>{'\u{1F4B0} Precios convenientes'}</h3></div>
+          <div className="cardscroll">
+{lista.slice().sort(function (a, b) { return a.precio_videollamada - b.precio_videollamada; }).map(function (m, i) {
+            return (
+                          <div key={'p' + m.id} className="mcard" onClick={function () { abrir(m, i); }}>
+                <div className="photo" style={{ background: GRADS[(i + 4) % 6] }}>
+                <img src={'https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 11 + 60) % 90) + '.jpg'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <span className="ratepill">{'Desde ' + plata(m.precio_videollamada)}</span>
+  </div>
+              <div className="minfo">
+                  <div className="nm">{m.nombre}</div>
+                <div className="mt">{'Diagnostico ' + plata(m.precio_videollamada)}</div>
+  </div>
+  </div>
+          );
+})}
+</div>
 {!cargando && lista.length === 0 && <p>No hay maestros de este oficio todavia.</p>}
   </div>
        <div className="tabbar">
