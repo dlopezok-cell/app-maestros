@@ -79,3 +79,49 @@ body { background: #fafafa; color: #1c1f2b; max-width: 480px; margin: 0 auto; pa
 .prow .m { color: #d04b2e; font-weight: 700; }
 .swipe { margin: 14px 20px; background: linear-gradient(135deg, #16c468, #0d9456); border-radius: 16px; padding: 16px; color: #fff; text-align: center; font-weight: 800; font-size: 14px; cursor: pointer; }
 .error { color: #c2452d; font-size: 13px; margin: 8px 0; }
+
+/* ============================================================
+   VERSION ESCRITORIO (responsive) - se activa en pantallas anchas.
+   El celular conserva todo el diseno original de arriba.
+   ============================================================ */
+@media (min-width: 768px) {
+  body { max-width: 1120px; padding: 0 28px 40px; }
+
+  .hero { border-radius: 26px; margin-top: 24px; padding: 46px 48px 70px; }
+  .hero h1 { font-size: 34px; max-width: 640px; }
+  .searchfloat { left: 48px; right: auto; width: 420px; font-size: 15px; padding: 16px 20px; }
+
+  .body { padding: 48px 8px 0; }
+
+  .catscroll { flex-wrap: wrap; justify-content: flex-start; gap: 18px; overflow: visible; }
+  .catv2 { width: 84px; }
+
+  .promo { padding: 22px 26px; margin: 10px 0 26px; }
+  .promo .pt { font-size: 16px; }
+  .promo .pd { font-size: 13px; }
+
+  .seehead h3 { font-size: 20px; }
+
+  .cardscroll { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; overflow: visible; padding: 4px 0 20px; }
+  .mcard { width: auto; }
+  .photo { height: 150px; }
+
+  .tabbar { width: auto; max-width: none; border: 1px solid #ececf0; border-top: 1px solid #ececf0; border-radius: 22px; bottom: 24px; padding: 10px 26px; gap: 18px; box-shadow: 0 12px 34px rgba(20,20,40,.16); }
+  .tab { width: 70px; font-size: 11px; }
+  .tabc { width: 54px; height: 54px; margin-top: 0; }
+
+  .dhero { max-width: 760px; margin: 24px auto 0; border-radius: 26px; height: 240px; }
+  .dsheet { max-width: 760px; margin: -26px auto 0; border-radius: 28px; padding: 30px 36px 60px; }
+  .darkhead { max-width: 760px; margin: 24px auto 0; border-radius: 26px; padding: 32px 36px; }
+  .darkhead h2 { font-size: 24px; }
+  .gaincard { max-width: 620px; margin: -12px auto 0; padding: 26px 28px; }
+  .swipe { max-width: 620px; margin: 16px auto; }
+  .stickycta { max-width: 620px; border: 1px solid #ececf0; border-radius: 22px; bottom: 24px; padding: 16px 24px; box-shadow: 0 12px 34px rgba(20,20,40,.16); }
+
+  .vopt { display: inline-flex; width: calc(50% - 6px); vertical-align: top; }
+}
+
+@media (min-width: 1024px) {
+  .hero h1 { font-size: 38px; }
+  .photo { height: 170px; }
+}
