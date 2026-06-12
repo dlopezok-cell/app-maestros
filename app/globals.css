@@ -1,0 +1,15 @@
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; }
+body { background: #fafafa; color: #1c1f2b; max-width: 480px; margin: 0 auto; }
+.hero { background: linear-gradient(150deg, #ff5a3c, #ff8a3c); color: #fff; padding: 28px 20px 40px; border-radius: 0 0 28px 28px; }
+.hero h1 { font-size: 24px; }
+.hero p { opacity: .85; font-size: 14px; margin-top: 4px; }
+.body { padding: 20px; }
+.cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+.cat { background: #fff; border-radius: 16px; padding: 14px 6px; text-align: center; cursor: pointer; border: 1.5px solid #eee; font-size: 13px; font-weight: 600; }
+.cat span { font-size: 26px; display: block; margin-bottom: 4px; }
+.card { background: #fff; border-radius: 16px; padding: 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; border: 1.5px solid #eee; }
+.card .av { width: 50px; height: 50px; border-radius: 50%; background: #ffe9d6; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.card b { font-size: 15px; }
+.card .meta { font-size: 12.5px; color: #7c8499; margin-top: 2px; }
+.stars { color: #f6a609; font-weight: 700; font-size: 13px; }
+.error { color: #c2452d; font-size: 13px; margin: 8px 0; }
