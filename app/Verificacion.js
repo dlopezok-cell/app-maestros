@@ -41,35 +41,45 @@ export default function Verificacion({ usuario }) {
     if (!numSerie || numSerie.length < 9) { setMsg('Ingresa el numero de documento del carnet (al frente, ej: 123456789)'); return; }
     if (!carnet || !selfie) { setMsg('Falta la foto del carnet o la selfie'); return; }
     setSubiendo(true);
-    setMsg('Subiendo fotos...');
-    const ruta = function (n) { return usuario.id + '/' + n; };
-    supabase.storage.from('verificaciones').upload(ruta('carnet.jpg'), carnet, { upsert: true })
-      .then(function (r1) {
-        if (r1.error) throw r1.error;
-        return supabase.storage.from('verificaciones').upload(ruta('selfie.jpg'), selfie, { upsert: true });
-      })
-      .then(function (r2) {
-        if (r2.error) throw r2.error;
-        return supabase.from('verificaciones').upsert({
-          user_id: usuario.id,
-          email: usuario.email,
-          rut: rut.trim().toUpperCase(),
-          num_serie: numSerie.trim(),
-          carnet_path: ruta('carnet.jpg'),
-          selfie_path: ruta('selfie.jpg'),
-          estado: 'pendiente',
-          notas: null,
-          revisado_at: null,
-        }, { onConflict: 'user_id' }).select().single();
-      })
-      .then(function (r3) {
-        if (r3.error) throw r3.error;
-        setRegistro(r3.data);
-        setAbierto(false);
-        setMsg(null);
+    setMsg('Verificando sesión...');
+    supabase.auth.getSession().then(function (s) {
+      const sesion = s.data ? s.data.session : null;
+      if (!sesion) {
+        setMsg('Tu sesión no está activa. Si acabas de crear la cuenta, abre el correo de confirmación que te enviamos y vuelve a ingresar.');
         setSubiendo(false);
-      })
-      .catch(function (e) { setMsg('Error: ' + e.message); setSubiendo(false); });
+        return;
+      }
+      const uid = sesion.user.id;
+      const ruta = function (n) { return uid + '/' + n; };
+      setMsg('Subiendo fotos...');
+      supabase.storage.from('verificaciones').upload(ruta('carnet.jpg'), carnet, { upsert: true })
+        .then(function (r1) {
+          if (r1.error) throw new Error('al subir el carnet: ' + r1.error.message);
+          return supabase.storage.from('verificaciones').upload(ruta('selfie.jpg'), selfie, { upsert: true });
+        })
+        .then(function (r2) {
+          if (r2.error) throw new Error('al subir la selfie: ' + r2.error.message);
+          return supabase.from('verificaciones').upsert({
+            user_id: uid,
+            email: sesion.user.email,
+            rut: rut.trim().toUpperCase(),
+            num_serie: numSerie.trim(),
+            carnet_path: ruta('carnet.jpg'),
+            selfie_path: ruta('selfie.jpg'),
+            estado: 'pendiente',
+            notas: null,
+            revisado_at: null,
+          }, { onConflict: 'user_id' }).select().single();
+        })
+        .then(function (r3) {
+          if (r3.error) throw new Error('al guardar el registro: ' + r3.error.message);
+          setRegistro(r3.data);
+          setAbierto(false);
+          setMsg(null);
+          setSubiendo(false);
+        })
+        .catch(function (e) { setMsg('Error ' + e.message); setSubiendo(false); });
+    });
   }
 
   if (!usuario || !cargado) return null;
