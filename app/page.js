@@ -117,7 +117,7 @@ export default function Home() {
              return (
                            <div key={m.id} className="mcard" onClick={function () { abrir(m, i); }}>
                  <div className="photo" style={{ background: GRADS[i % 6] }}>
- {CARAS[i % 6]}
+           <img src={'https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 17 + 23) % 90) + '.jpg'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                  <span className="ratepill">{'★ ' + m.rating + ' · ' + m.trabajos}</span>
   </div>
               <div className="minfo">
