@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import Verificacion from './Verificacion';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -296,6 +297,7 @@ return (
         <h2>Cambio de sifon lavaplatos</h2>
         <div className="dh2">Providencia · manana 10:00 · cotizado por video {'✓'}</div>
     </div>
+      <Verificacion usuario={usuario} />
       <div className="gaincard">
             <div className="biggain">
               <div className="bg1">RECIBES LIQUIDO</div>
