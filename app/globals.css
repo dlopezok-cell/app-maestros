@@ -17,7 +17,8 @@ body { background: #fafafa; color: #1c1f2b; max-width: 480px; margin: 0 auto; pa
 .cta { background: #ff5a3c; border: none; color: #fff; border-radius: 12px; padding: 10px 14px; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 .seehead { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 0 10px; }
 .seehead h3 { font-size: 16px; font-weight: 800; }
-.mcard { background: #fff; border-radius: 20px; overflow: hidden; margin-bottom: 14px; box-shadow: 0 6px 18px rgba(20,20,40,.08); cursor: pointer; }
+.mcard { display: inline-block; width: 47.5%; margin-right: 2%; vertical-align: top; background: #fff; border-radius: 20px; overflow: hidden; margin-bottom: 14px; box-shadow: 0 6px 18px rgba(20,20,40,.08); cursor: pointer; }
+.mcard:nth-of-type(even) { margin-right: 0; }
 .photo { height: 110px; display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
 .ratepill { position: absolute; bottom: 10px; left: 12px; background: rgba(28,31,43,.85); color: #fff; font-size: 11.5px; font-weight: 700; border-radius: 12px; padding: 4px 9px; }
 .minfo { padding: 12px 14px 14px; }
