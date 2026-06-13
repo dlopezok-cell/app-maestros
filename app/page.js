@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import Verificacion from './Verificacion';
+import PerfilCliente from './PerfilCliente';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -36,6 +37,14 @@ export default function Home() {
     const [pass, setPass] = useState('');
     const [authMsg, setAuthMsg] = useState(null);
     const [pagando, setPagando] = useState(false);
+    const [volverA, setVolverA] = useState('cliente');
+
+    function pedirLogin(volver) {
+          setVolverA(volver);
+          setAuthMsg(null);
+          setVista('auth');
+          window.scrollTo(0, 0);
+    }
 
     function entrar() {
           setAuthMsg('Procesando...');
@@ -46,14 +55,18 @@ export default function Home() {
                   if (r.error) { setAuthMsg(r.error.message); return; }
                   setUsuario(r.data.user);
                   setAuthMsg(null);
-                  setVista('gain');
+                  setVista(volverA || 'cliente');
           });
     }
     function conGoogle() {
           supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
     }
+    function salir() {
+          supabase.auth.signOut().then(function () { setUsuario(null); setVista('home'); });
+    }
 
     function pagar(tipo, monto, descripcion, maestroId) {
+          if (!usuario) { pedirLogin(vista); return; }
           setPagando(true);
           fetch('/api/pagar', {
                   method: 'POST',
@@ -78,6 +91,7 @@ export default function Home() {
   }
 
   useEffect(function () {
+        supabase.auth.getUser().then(function (r) { if (r.data && r.data.user) setUsuario(r.data.user); });
         cargar(-33.43, -70.61);
         if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -93,6 +107,10 @@ export default function Home() {
     function abrir(m, i) {
           setSel(m); setSelIdx(i); setVista('detalle'); window.scrollTo(0, 0);
     }
+    function agendar() {
+          if (!usuario) { pedirLogin('video'); return; }
+          setVista('video');
+    }
     function plata(n) {
           return '$' + (n || 0).toLocaleString('es-CL');
     }
@@ -100,6 +118,19 @@ export default function Home() {
   const lista = maestros.filter(function (m) { return !oficio || m.oficio === oficio; });
     const desg = { bruto: 28000, comision: Math.round(28000 * .10 * 1.19), pasarela: Math.round(28000 * .0235 * 1.19), retencion: Math.round(28000 * .1525) };
     desg.liquido = desg.bruto - desg.comision - desg.pasarela - desg.retencion;
+
+    function Tabs(props) {
+          const act = props.act;
+          return (
+                <div className="tabbar">
+                  <div className={'tab' + (act === 'home' ? ' on' : '')} onClick={function () { setVista('home'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
+                  <div className={'tab' + (act === 'explorar' ? ' on' : '')} onClick={function () { setOficio(null); setVista('home'); }}><span className="ti">{'\u{1F9ED}'}</span>Explorar</div>
+                  <div className="tabc" onClick={function () { video('banner'); }}>{'\u{1F4F9}'}</div>
+                  <div className={'tab' + (act === 'cliente' ? ' on' : '')} onClick={function () { if (usuario) setVista('cliente'); else pedirLogin('cliente'); }}><span className="ti">{'\u{1F464}'}</span>Mi perfil</div>
+                  <div className={'tab' + (act === 'gain' ? ' on' : '')} onClick={function () { if (usuario) setVista('gain'); else pedirLogin('gain'); }}><span className="ti">{'\u{1F4B0}'}</span>Maestro</div>
+                </div>
+          );
+    }
 
   if (vista === 'home') return (
         <main>
@@ -183,13 +214,7 @@ export default function Home() {
 </div>
 {!cargando && lista.length === 0 && <p>No hay maestros de este oficio todavia.</p>}
   </div>
-       <div className="tabbar">
-          <div className="tab on"><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-          <div className="tab" onClick={function () { setOficio(null); }}><span className="ti">{'\u{1F9ED}'}</span>Explorar</div>
-          <div className="tabc" onClick={function () { video('banner'); }}>{'\u{1F4F9}'}</div>
-         <div className="tab" onClick={function () { setVista('track'); }}><span className="ti">{'\u{1F527}'}</span>Pedidos</div>
-          <div className="tab" onClick={function () { setVista('gain'); }}><span className="ti">{'\u{1F4B0}'}</span>Maestro</div>
-  </div>
+       <Tabs act="home" />
   </main>
    );
 
@@ -230,7 +255,7 @@ export default function Home() {
           <div className="p1">{plata(sel.precio_videollamada)} <span style={{ fontWeight: 400, fontSize: 12, color: '#7c8499' }}>videollamada</span></div>
                       <div className="p2">primera vez GRATIS</div>
             </div>
-        <button className="gbtn" onClick={function () { setVista('video'); }}>{'Agendar \u{1F4F9}'}</button>
+        <button className="gbtn" onClick={agendar}>{'Agendar \u{1F4F9}'}</button>
             </div>
             </main>
   );
@@ -291,12 +316,12 @@ export default function Home() {
     </main>
   );
 
-    if (!usuario) return (
+    if (vista === 'auth') return (
           <main>
             <div className="darkhead">
-              <div className="dh1">Modo maestro</div>
-              <h2>Bienvenido de vuelta</h2>
-              <div className="dh2">Ingresa para ver tus trabajos y ganancias</div>
+              <div className="dh1">Tu cuenta</div>
+              <h2>{authTab === 'ingresar' ? 'Bienvenido de vuelta' : 'Crea tu cuenta'}</h2>
+              <div className="dh2">Ingresa para agendar, pagar y ver tus pedidos</div>
       </div>
             <div className="body" style={{ paddingTop: 18 }}>
         <div style={{ display: 'flex', background: '#fff', borderRadius: 14, padding: 4, marginBottom: 16, border: '1.5px solid #eee' }}>
@@ -313,6 +338,21 @@ export default function Home() {
           <button onClick={function () { setVista('home'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 8 }}>Volver al inicio</button>
   </div>
   </main>
+    );
+
+    if (vista === 'cliente') return (
+          <main>
+            <div className="darkhead">
+              <div className="dh1">{'\u{1F464} Mi cuenta'}</div>
+              <h2>{'Hola ' + (usuario ? (usuario.email || '').split('@')[0] : '')}</h2>
+              <div className="dh2">Tus datos y tus pedidos</div>
+      </div>
+      <PerfilCliente usuario={usuario} />
+      <div style={{ textAlign: 'center', paddingBottom: 20 }}>
+        <button onClick={salir} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cerrar sesión</button>
+      </div>
+      <Tabs act="cliente" />
+          </main>
     );
 
 return (
@@ -335,7 +375,7 @@ return (
         <div className="prow"><span>Boleta de honorarios</span><b style={{ color: '#0d9456' }}>{'se emite sola ✓'}</b></div>
     </div>
       <div className="swipe" onClick={function () { alert('Trabajo aceptado! Agendado para manana 10:00'); setVista('home'); }}>{'Aceptar trabajo · ' + plata(desg.liquido)}</div>
-      <div style={{ textAlign: 'center' }}><button onClick={function () { setVista('home'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Volver al inicio</button></div>
+      <Tabs act="gain" />
     </main>
   );
 }
