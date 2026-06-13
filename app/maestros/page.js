@@ -5,6 +5,7 @@ import Verificacion from '../Verificacion';
 import FotoPerfilMaestro from '../FotoPerfilMaestro';
 import PresupuestosMaestro from '../PresupuestosMaestro';
 import RegistroMaestro from '../RegistroMaestro';
+import GaleriaMaestro from '../GaleriaMaestro';
 import Bienvenida from '../Bienvenida';
 
 const OWNER = 'dlopezok@gmail.com';
@@ -25,10 +26,6 @@ export default function Maestros() {
     supabase.auth.signOut().then(function () { setUsuario(null); });
   }
 
-  function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
-  var desg = { bruto: 28000, comision: Math.round(28000 * .10 * 1.19), pasarela: Math.round(28000 * .0235 * 1.19), retencion: Math.round(28000 * .1525) };
-  desg.liquido = desg.bruto - desg.comision - desg.pasarela - desg.retencion;
-
   if (!cargado) return <main><div className="body" style={{ paddingTop: 30 }}><p>Cargando...</p></div></main>;
 
   if (!usuario || (usuario.email || '').toLowerCase() !== OWNER) return <Bienvenida />;
@@ -43,19 +40,8 @@ export default function Maestros() {
 
       <RegistroMaestro usuario={usuario} />
       <FotoPerfilMaestro usuario={usuario} />
+      <GaleriaMaestro usuario={usuario} />
       <Verificacion usuario={usuario} />
-
-      <div className="gaincard">
-        <div className="biggain">
-          <div className="bg1">EJEMPLO · RECIBES LIQUIDO</div>
-          <div className="bg2">{plata(desg.liquido)}</div>
-        </div>
-        <div className="prow"><span>Precio cotizado al cliente</span><b>{plata(desg.bruto)}</b></div>
-        <div className="prow"><span>Comision app (10% + IVA)</span><span className="m">{'-' + plata(desg.comision)}</span></div>
-        <div className="prow"><span>Pasarela de pago (2,35% + IVA)</span><span className="m">{'-' + plata(desg.pasarela)}</span></div>
-        <div className="prow"><span>Retencion SII honorarios (15,25%)</span><span className="m">{'-' + plata(desg.retencion)}</span></div>
-        <div className="prow"><span>Boleta de honorarios</span><b style={{ color: '#0d9456' }}>{'se emite sola ✓'}</b></div>
-      </div>
 
       <PresupuestosMaestro usuario={usuario} />
 
