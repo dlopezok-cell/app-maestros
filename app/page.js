@@ -198,7 +198,7 @@ export default function Home() {
   </div>
               <div className="minfo">
                   <div className="nm">{m.nombre}</div>
-                <div className="mt"><span className="live"></span>{'Disponible · a ' + m.distancia_km + ' km · ' + m.oficio}</div>
+                <div className="mt"><span className="live"></span>{'Disponible · ' + (m.distancia_km != null ? 'a ' + m.distancia_km + ' km · ' : '') + m.oficio}</div>
                   <div className="mt">{'Diagnostico ' + plata(m.precio_videollamada) + ' · primera vez GRATIS'}</div>
   </div>
   </div>
@@ -256,7 +256,7 @@ export default function Home() {
         <div className="dmeta">{sel.oficio + ' · certificado · verificado'}</div>
         <div className="dbadges">
                     <span className="dbadge g">{'● Disponible ahora'}</span>
-          <span className="dbadge">{'\u{1F4CD} a ' + sel.distancia_km + ' km'}</span>
+          {sel.distancia_km != null && <span className="dbadge">{'\u{1F4CD} a ' + sel.distancia_km + ' km'}</span>}
           <span className="dbadge">{'\u{1F6E1} Identidad verificada'}</span>
           </div>
         <div className="statgrid">
