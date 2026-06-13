@@ -109,6 +109,15 @@ export default function Home() {
     }
     function agendar() {
           if (!usuario) { pedirLogin('video'); return; }
+          if (sel) {
+                supabase.from('reservas').insert({
+                          cliente_id: usuario.id,
+                          maestro_id: sel.id,
+                          tipo: 'diagnostico',
+                          descripcion_problema: 'Diagnóstico de ' + (sel.oficio || 'servicio'),
+                          estado: 'agendada',
+                }).then(function () {});
+          }
           setVista('video');
     }
     function plata(n) {
