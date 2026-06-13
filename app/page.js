@@ -1,12 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import Verificacion from './Verificacion';
 import PerfilCliente from './PerfilCliente';
 import PresupuestoCliente from './PresupuestoCliente';
-import PresupuestosMaestro from './PresupuestosMaestro';
 import MisPedidos from './MisPedidos';
-import FotoPerfilMaestro from './FotoPerfilMaestro';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -107,7 +104,7 @@ export default function Home() {
         supabase.auth.getUser().then(function (r) { if (r.data && r.data.user) setUsuario(r.data.user); });
         if (typeof window !== 'undefined') {
                 var p = new URLSearchParams(window.location.search).get('p');
-                if (p && ['home', 'presupuesto', 'cuenta', 'cliente', 'pedidos', 'gain', 'auth', 'track'].indexOf(p) >= 0) setVista(p);
+                if (p && ['home', 'presupuesto', 'cuenta', 'cliente', 'pedidos', 'auth', 'track'].indexOf(p) >= 0) setVista(p);
         }
         cargar(-33.43, -70.61);
         if (navigator.geolocation) {
@@ -388,30 +385,30 @@ export default function Home() {
               <div className="dh2">Tu cuenta y tu actividad</div>
       </div>
       <div className="body" style={{ paddingTop: 18 }}>
-        <div onClick={function () { setVista('gain'); }} style={{ border: '2px solid #ff5a3c', background: '#fff5f2', borderRadius: 16, padding: 14, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 18 }}>
-          <span style={{ fontSize: 26 }}>{'\u{1F6E0}'}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: '#993c1d' }}>Cambiar a modo maestro</div>
-            <div style={{ fontSize: 12, color: '#b56a4f' }}>Recibe trabajos y genera ingresos</div>
-          </div>
-          <span style={{ color: '#993c1d', fontWeight: 800, fontSize: 18 }}>{'›'}</span>
-        </div>
-
         <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 2px 6px' }}>Mi actividad</div>
         <div style={{ background: '#fff', border: '1.5px solid #eee', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
           <div onClick={function () { setVista('cliente'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F464}'}</span>
-            <span style={{ flex: 1, fontSize: 14 }}>Mi perfil y dirección</span>
+            <span style={{ fontSize: 22 }}>{'\u{1F464}'}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Mi perfil y dirección</div>
+              <div style={{ fontSize: 12, color: '#9aa1b5' }}>Tus datos y a dónde llega el maestro</div>
+            </div>
             <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
           </div>
           <div onClick={function () { setVista('pedidos'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F4E6}'}</span>
-            <span style={{ flex: 1, fontSize: 14 }}>Mis pedidos</span>
+            <span style={{ fontSize: 22 }}>{'\u{1F4E6}'}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Mis pedidos</div>
+              <div style={{ fontSize: 12, color: '#9aa1b5' }}>Servicios que agendaste y su estado</div>
+            </div>
             <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
           </div>
           <div onClick={function () { setVista('presupuesto'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F3A5}'}</span>
-            <span style={{ flex: 1, fontSize: 14 }}>Mis presupuestos</span>
+            <span style={{ fontSize: 22 }}>{'\u{1F9FE}'}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Mis cotizaciones</div>
+              <div style={{ fontSize: 12, color: '#9aa1b5' }}>Presupuestos por video que pediste</div>
+            </div>
             <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
           </div>
         </div>
@@ -423,6 +420,7 @@ export default function Home() {
             <span style={{ flex: 1, fontSize: 14, color: '#b3261e' }}>Cerrar sesión</span>
           </div>
         </div>
+        <a href="/maestros" style={{ display: 'block', textAlign: 'center', color: '#9aa1b5', fontWeight: 700, fontSize: 13, marginTop: 4, textDecoration: 'none' }}>{'\u{1F6E0} ¿Eres maestro? Entra a la app de maestros →'}</a>
       </div>
       <Tabs act="cuenta" />
           </main>
@@ -454,30 +452,5 @@ export default function Home() {
           </main>
     );
 
-return (
-        <main>
-          <div className="darkhead">
-            <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Volver a mi cuenta'}</button>
-            <div className="dh1">{'\u{1F514} Modo maestro · nuevo trabajo'}</div>
-        <h2>Cambio de sifon lavaplatos</h2>
-        <div className="dh2">Providencia · manana 10:00 · cotizado por video {'✓'}</div>
-    </div>
-      <FotoPerfilMaestro usuario={usuario} />
-      <Verificacion usuario={usuario} />
-      <div className="gaincard">
-            <div className="biggain">
-              <div className="bg1">RECIBES LIQUIDO</div>
-          <div className="bg2">{plata(desg.liquido)}</div>
-    </div>
-        <div className="prow"><span>Precio cotizado al cliente</span><b>{plata(desg.bruto)}</b></div>
-        <div className="prow"><span>Comision app (10% + IVA)</span><span className="m">{'-' + plata(desg.comision)}</span></div>
-        <div className="prow"><span>Pasarela de pago (2,35% + IVA)</span><span className="m">{'-' + plata(desg.pasarela)}</span></div>
-        <div className="prow"><span>Retencion SII honorarios (15,25%)</span><span className="m">{'-' + plata(desg.retencion)}</span></div>
-        <div className="prow"><span>Boleta de honorarios</span><b style={{ color: '#0d9456' }}>{'se emite sola ✓'}</b></div>
-    </div>
-      <div className="swipe" onClick={function () { alert('Trabajo aceptado! Agendado para manana 10:00'); setVista('home'); }}>{'Aceptar trabajo · ' + plata(desg.liquido)}</div>
-      <PresupuestosMaestro usuario={usuario} />
-      <Tabs act="cuenta" />
-    </main>
-  );
+  return null;
 }
