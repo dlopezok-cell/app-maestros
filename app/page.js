@@ -6,6 +6,7 @@ import PerfilCliente from './PerfilCliente';
 import PresupuestoCliente from './PresupuestoCliente';
 import PresupuestosMaestro from './PresupuestosMaestro';
 import MisPedidos from './MisPedidos';
+import FotoPerfilMaestro from './FotoPerfilMaestro';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -193,7 +194,7 @@ export default function Home() {
              return (
                            <div key={m.id} className="mcard" onClick={function () { abrir(m, i); }}>
                  <div className="photo" style={{ background: GRADS[i % 6] }}>
-           <img src={'https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 17 + 23) % 90) + '.jpg'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+           <img src={m.foto || ('https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 17 + 23) % 90) + '.jpg')} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                  <span className="ratepill">{'★ ' + m.rating + ' · ' + m.trabajos}</span>
   </div>
               <div className="minfo">
@@ -211,7 +212,7 @@ export default function Home() {
             return (
                           <div key={'r' + m.id} className="mcard" onClick={function () { abrir(m, i); }}>
                 <div className="photo" style={{ background: GRADS[(i + 2) % 6] }}>
-                <img src={'https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'women/' : 'men/') + ((i * 13 + 40) % 90) + '.jpg'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={m.foto || ('https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'women/' : 'men/') + ((i * 13 + 40) % 90) + '.jpg')} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <span className="ratepill">{'★ ' + m.rating}</span>
   </div>
               <div className="minfo">
@@ -228,7 +229,7 @@ export default function Home() {
             return (
                           <div key={'p' + m.id} className="mcard" onClick={function () { abrir(m, i); }}>
                 <div className="photo" style={{ background: GRADS[(i + 4) % 6] }}>
-                <img src={'https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 11 + 60) % 90) + '.jpg'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={m.foto || ('https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 11 + 60) % 90) + '.jpg')} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <span className="ratepill">{'Desde ' + plata(m.precio_videollamada)}</span>
   </div>
               <div className="minfo">
@@ -248,7 +249,7 @@ export default function Home() {
   if (vista === 'detalle' && sel) return (
         <main>
           <div className="dhero" style={{ background: GRADS[selIdx % 6] }}>
-{CARAS[selIdx % 6]}
+{sel.foto ? <img src={sel.foto} alt="" style={{ width: 104, height: 104, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,.65)' }} /> : CARAS[selIdx % 6]}
         <button className="dback" onClick={function () { setVista('home'); }}>{'←'}</button>
           </div>
       <div className="dsheet">
@@ -461,6 +462,7 @@ return (
         <h2>Cambio de sifon lavaplatos</h2>
         <div className="dh2">Providencia · manana 10:00 · cotizado por video {'✓'}</div>
     </div>
+      <FotoPerfilMaestro usuario={usuario} />
       <Verificacion usuario={usuario} />
       <div className="gaincard">
             <div className="biggain">
