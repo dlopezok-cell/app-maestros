@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import Verificacion from './Verificacion';
 import PerfilCliente from './PerfilCliente';
+import PresupuestoCliente from './PresupuestoCliente';
+import PresupuestosMaestro from './PresupuestosMaestro';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -109,15 +111,6 @@ export default function Home() {
     }
     function agendar() {
           if (!usuario) { pedirLogin('video'); return; }
-          if (sel) {
-                supabase.from('reservas').insert({
-                          cliente_id: usuario.id,
-                          maestro_id: sel.id,
-                          tipo: 'diagnostico',
-                          descripcion_problema: 'Diagnóstico de ' + (sel.oficio || 'servicio'),
-                          estado: 'agendada',
-                }).then(function () {});
-          }
           setVista('video');
     }
     function plata(n) {
@@ -133,7 +126,7 @@ export default function Home() {
           return (
                 <div className="tabbar">
                   <div className={'tab' + (act === 'home' ? ' on' : '')} onClick={function () { setVista('home'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-                  <div className={'tab' + (act === 'explorar' ? ' on' : '')} onClick={function () { setOficio(null); setVista('home'); }}><span className="ti">{'\u{1F9ED}'}</span>Explorar</div>
+                  <div className={'tab' + (act === 'presupuesto' ? ' on' : '')} onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}><span className="ti">{'\u{1F3A5}'}</span>Presupuesto</div>
                   <div className="tabc" onClick={function () { video('banner'); }}>{'\u{1F4F9}'}</div>
                   <div className={'tab' + (act === 'cliente' ? ' on' : '')} onClick={function () { if (usuario) setVista('cliente'); else pedirLogin('cliente'); }}><span className="ti">{'\u{1F464}'}</span>Mi perfil</div>
                   <div className={'tab' + (act === 'gain' ? ' on' : '')} onClick={function () { if (usuario) setVista('gain'); else pedirLogin('gain'); }}><span className="ti">{'\u{1F4B0}'}</span>Maestro</div>
@@ -349,6 +342,18 @@ export default function Home() {
   </main>
     );
 
+    if (vista === 'presupuesto') return (
+          <main>
+            <div className="darkhead">
+              <div className="dh1">{'\u{1F3A5} Presupuesto por video'}</div>
+              <h2>Muestra el problema, recibe soluciones</h2>
+              <div className="dh2">Graba un video y un maestro te responde con precio · sin coordinar videollamada</div>
+      </div>
+      <PresupuestoCliente usuario={usuario} maestros={maestros} />
+      <Tabs act="presupuesto" />
+          </main>
+    );
+
     if (vista === 'cliente') return (
           <main>
             <div className="darkhead">
@@ -384,6 +389,7 @@ return (
         <div className="prow"><span>Boleta de honorarios</span><b style={{ color: '#0d9456' }}>{'se emite sola ✓'}</b></div>
     </div>
       <div className="swipe" onClick={function () { alert('Trabajo aceptado! Agendado para manana 10:00'); setVista('home'); }}>{'Aceptar trabajo · ' + plata(desg.liquido)}</div>
+      <PresupuestosMaestro usuario={usuario} />
       <Tabs act="gain" />
     </main>
   );
