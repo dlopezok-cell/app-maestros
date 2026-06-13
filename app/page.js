@@ -126,10 +126,8 @@ export default function Home() {
           return (
                 <div className="tabbar">
                   <div className={'tab' + (act === 'home' ? ' on' : '')} onClick={function () { setVista('home'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-                  <div className={'tab' + (act === 'presupuesto' ? ' on' : '')} onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}><span className="ti">{'\u{1F3A5}'}</span>Presupuesto</div>
-                  <div className="tabc" onClick={function () { video('banner'); }}>{'\u{1F4F9}'}</div>
-                  <div className={'tab' + (act === 'cliente' ? ' on' : '')} onClick={function () { if (usuario) setVista('cliente'); else pedirLogin('cliente'); }}><span className="ti">{'\u{1F464}'}</span>Mi perfil</div>
-                  <div className={'tab' + (act === 'gain' ? ' on' : '')} onClick={function () { if (usuario) setVista('gain'); else pedirLogin('gain'); }}><span className="ti">{'\u{1F4B0}'}</span>Maestro</div>
+                  <div className={'tab' + (act === 'cotizar' ? ' on' : '')} onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}><span className="ti">{'\u{1F3A5}'}</span>Cotizar</div>
+                  <div className={'tab' + (act === 'cuenta' ? ' on' : '')} onClick={function () { if (usuario) setVista('cuenta'); else pedirLogin('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
                 </div>
           );
     }
@@ -345,34 +343,81 @@ export default function Home() {
     if (vista === 'presupuesto') return (
           <main>
             <div className="darkhead">
-              <div className="dh1">{'\u{1F3A5} Presupuesto por video'}</div>
+              <div className="dh1">{'\u{1F3A5} Cotizar por video'}</div>
               <h2>Muestra el problema, recibe soluciones</h2>
               <div className="dh2">Graba un video y un maestro te responde con precio · sin coordinar videollamada</div>
       </div>
       <PresupuestoCliente usuario={usuario} maestros={maestros} />
-      <Tabs act="presupuesto" />
+      <Tabs act="cotizar" />
+          </main>
+    );
+
+    if (vista === 'cuenta') return (
+          <main>
+            <div className="darkhead">
+              <div className="dh1">{'\u{1F464} Mi cuenta'}</div>
+              <h2>{'Hola ' + (usuario ? (usuario.email || '').split('@')[0] : '')}</h2>
+              <div className="dh2">Tu cuenta y tu actividad</div>
+      </div>
+      <div className="body" style={{ paddingTop: 18 }}>
+        <div onClick={function () { setVista('gain'); }} style={{ border: '2px solid #ff5a3c', background: '#fff5f2', borderRadius: 16, padding: 14, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 18 }}>
+          <span style={{ fontSize: 26 }}>{'\u{1F6E0}'}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#993c1d' }}>Cambiar a modo maestro</div>
+            <div style={{ fontSize: 12, color: '#b56a4f' }}>Recibe trabajos y genera ingresos</div>
+          </div>
+          <span style={{ color: '#993c1d', fontWeight: 800, fontSize: 18 }}>{'›'}</span>
+        </div>
+
+        <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 2px 6px' }}>Mi actividad</div>
+        <div style={{ background: '#fff', border: '1.5px solid #eee', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
+          <div onClick={function () { setVista('cliente'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
+            <span style={{ fontSize: 20 }}>{'\u{1F464}'}</span>
+            <span style={{ flex: 1, fontSize: 14 }}>Mi perfil y dirección</span>
+            <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
+          </div>
+          <div onClick={function () { setVista('cliente'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
+            <span style={{ fontSize: 20 }}>{'\u{1F4E6}'}</span>
+            <span style={{ flex: 1, fontSize: 14 }}>Mis pedidos</span>
+            <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
+          </div>
+          <div onClick={function () { setVista('presupuesto'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }}>
+            <span style={{ fontSize: 20 }}>{'\u{1F3A5}'}</span>
+            <span style={{ flex: 1, fontSize: 14 }}>Mis presupuestos</span>
+            <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 2px 6px' }}>Cuenta y soporte</div>
+        <div style={{ background: '#fff', border: '1.5px solid #eee', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
+          <div onClick={salir} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }}>
+            <span style={{ fontSize: 20 }}>{'\u{1F6AA}'}</span>
+            <span style={{ flex: 1, fontSize: 14, color: '#b3261e' }}>Cerrar sesión</span>
+          </div>
+        </div>
+      </div>
+      <Tabs act="cuenta" />
           </main>
     );
 
     if (vista === 'cliente') return (
           <main>
             <div className="darkhead">
-              <div className="dh1">{'\u{1F464} Mi cuenta'}</div>
+              <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Cuenta'}</button>
+              <div className="dh1">{'\u{1F464} Mi perfil'}</div>
               <h2>{'Hola ' + (usuario ? (usuario.email || '').split('@')[0] : '')}</h2>
-              <div className="dh2">Tus datos y tus pedidos</div>
+              <div className="dh2">Tus datos, dirección y pedidos</div>
       </div>
       <PerfilCliente usuario={usuario} />
-      <div style={{ textAlign: 'center', paddingBottom: 20 }}>
-        <button onClick={salir} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cerrar sesión</button>
-      </div>
-      <Tabs act="cliente" />
+      <Tabs act="cuenta" />
           </main>
     );
 
 return (
         <main>
           <div className="darkhead">
-            <div className="dh1">{'\u{1F514} Vista del maestro · nuevo trabajo'}</div>
+            <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Volver a mi cuenta'}</button>
+            <div className="dh1">{'\u{1F514} Modo maestro · nuevo trabajo'}</div>
         <h2>Cambio de sifon lavaplatos</h2>
         <div className="dh2">Providencia · manana 10:00 · cotizado por video {'✓'}</div>
     </div>
@@ -390,7 +435,7 @@ return (
     </div>
       <div className="swipe" onClick={function () { alert('Trabajo aceptado! Agendado para manana 10:00'); setVista('home'); }}>{'Aceptar trabajo · ' + plata(desg.liquido)}</div>
       <PresupuestosMaestro usuario={usuario} />
-      <Tabs act="gain" />
+      <Tabs act="cuenta" />
     </main>
   );
 }
