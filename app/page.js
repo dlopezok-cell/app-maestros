@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import PerfilCliente from './PerfilCliente';
 import PresupuestoCliente from './PresupuestoCliente';
 import MisPedidos from './MisPedidos';
+import Bienvenida from './Bienvenida';
+
+const OWNER = 'dlopezok@gmail.com';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -41,6 +44,7 @@ export default function Home() {
     const [volverA, setVolverA] = useState('cliente');
     const [q, setQ] = useState('');
     const [locTexto, setLocTexto] = useState('\u{1F4CD} Cerca de ti');
+    const [authReady, setAuthReady] = useState(false);
 
     function pedirLogin(volver) {
           setVolverA(volver);
@@ -101,7 +105,7 @@ export default function Home() {
   }
 
   useEffect(function () {
-        supabase.auth.getUser().then(function (r) { if (r.data && r.data.user) setUsuario(r.data.user); });
+        supabase.auth.getUser().then(function (r) { if (r.data && r.data.user) setUsuario(r.data.user); setAuthReady(true); });
         if (typeof window !== 'undefined') {
                 var p = new URLSearchParams(window.location.search).get('p');
                 if (p && ['home', 'presupuesto', 'cuenta', 'cliente', 'pedidos', 'auth', 'track'].indexOf(p) >= 0) setVista(p);
@@ -139,7 +143,7 @@ export default function Home() {
 
   const ql = (q || '').trim().toLowerCase();
   const lista = maestros.filter(function (m) {
-        if (oficio && m.oficio !== oficio) return false;
+        if (oficio && (m.oficios && m.oficios.length ? m.oficios.indexOf(oficio) < 0 : m.oficio !== oficio)) return false;
         if (ql && (m.nombre || '').toLowerCase().indexOf(ql) < 0 && (m.oficio || '').toLowerCase().indexOf(ql) < 0) return false;
         return true;
   });
@@ -156,6 +160,9 @@ export default function Home() {
                 </div>
           );
     }
+
+  if (!authReady) return null;
+  if (!usuario || (usuario.email || '').toLowerCase() !== OWNER) return <Bienvenida />;
 
   if (vista === 'home') return (
         <main>
@@ -251,7 +258,7 @@ export default function Home() {
           </div>
       <div className="dsheet">
                   <h2>{sel.nombre}</h2>
-        <div className="dmeta">{sel.oficio + ' · certificado · verificado'}</div>
+        <div className="dmeta">{(sel.oficios && sel.oficios.length ? sel.oficios.join(' · ') : sel.oficio) + ' · certificado · verificado'}</div>
         <div className="dbadges">
                     <span className="dbadge g">{'● Disponible ahora'}</span>
           {sel.distancia_km != null && <span className="dbadge">{'\u{1F4CD} a ' + sel.distancia_km + ' km'}</span>}
