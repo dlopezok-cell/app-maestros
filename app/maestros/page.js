@@ -45,17 +45,6 @@ export default function Maestros() {
       <FotoPerfilMaestro usuario={usuario} />
       <Verificacion usuario={usuario} />
 
-      <div style={{ background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 26 }}>{'\u{1F9D1}\u{200D}\u{1F4BB}'}</span>
-          <div style={{ flex: 1 }}>
-            <b style={{ fontSize: 14 }}>Verificación biométrica (reconocimiento facial)</b>
-            <div style={{ fontSize: 12, color: '#7c8499', marginTop: 2 }}>Validación automática de tu rostro contra tu carnet, en segundos. Te da una insignia de mayor confianza.</div>
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#a9710a', background: '#fff3dc', borderRadius: 8, padding: '4px 9px', whiteSpace: 'nowrap' }}>PRONTO</span>
-        </div>
-      </div>
-
       <div className="gaincard">
         <div className="biggain">
           <div className="bg1">EJEMPLO · RECIBES LIQUIDO</div>
