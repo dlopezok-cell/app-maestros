@@ -5,6 +5,7 @@ import Verificacion from './Verificacion';
 import PerfilCliente from './PerfilCliente';
 import PresupuestoCliente from './PresupuestoCliente';
 import PresupuestosMaestro from './PresupuestosMaestro';
+import MisPedidos from './MisPedidos';
 
 const OFICIOS = [
   { id: null, emoji: '✨', nombre: 'Todos' },
@@ -40,6 +41,8 @@ export default function Home() {
     const [authMsg, setAuthMsg] = useState(null);
     const [pagando, setPagando] = useState(false);
     const [volverA, setVolverA] = useState('cliente');
+    const [q, setQ] = useState('');
+    const [locTexto, setLocTexto] = useState('\u{1F4CD} Cerca de ti');
 
     function pedirLogin(volver) {
           setVolverA(volver);
@@ -87,13 +90,24 @@ export default function Home() {
         supabase.rpc('maestros_cercanos', { lat: lat, lng: lng, oficio_buscado: null })
           .then(function (r) {
                     if (r.error) setError(r.error.message);
-                    else setMaestros(r.data || []);
+                    else {
+                      var data = r.data || [];
+                      setMaestros(data);
+                      if (typeof window !== 'undefined' && data.length) {
+                        var pm = new URLSearchParams(window.location.search).get('p');
+                        if (pm && (pm === 'detalle' || pm === 'video')) { setSel(data[0]); setSelIdx(0); setVista(pm); }
+                      }
+                    }
                     setCargando(false);
           });
   }
 
   useEffect(function () {
         supabase.auth.getUser().then(function (r) { if (r.data && r.data.user) setUsuario(r.data.user); });
+        if (typeof window !== 'undefined') {
+                var p = new URLSearchParams(window.location.search).get('p');
+                if (p && ['home', 'presupuesto', 'cuenta', 'cliente', 'pedidos', 'gain', 'auth', 'track'].indexOf(p) >= 0) setVista(p);
+        }
         cargar(-33.43, -70.61);
         if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -106,6 +120,14 @@ export default function Home() {
   function video(id) {
         window.open('https://meet.jit.si/maestros-demo-' + id, '_blank');
   }
+  function ubicarme() {
+        if (!navigator.geolocation) { setLocTexto('\u{1F4CD} Cerca de ti'); return; }
+        setLocTexto('\u{1F4CD} Buscando tu ubicación...');
+        navigator.geolocation.getCurrentPosition(
+          function (pos) { setLocTexto('\u{1F4CD} Cerca de ti ✓'); cargar(pos.coords.latitude, pos.coords.longitude); },
+          function () { setLocTexto('\u{1F4CD} Activa la ubicación en tu navegador'); }
+        );
+  }
     function abrir(m, i) {
           setSel(m); setSelIdx(i); setVista('detalle'); window.scrollTo(0, 0);
     }
@@ -117,7 +139,12 @@ export default function Home() {
           return '$' + (n || 0).toLocaleString('es-CL');
     }
 
-  const lista = maestros.filter(function (m) { return !oficio || m.oficio === oficio; });
+  const ql = (q || '').trim().toLowerCase();
+  const lista = maestros.filter(function (m) {
+        if (oficio && m.oficio !== oficio) return false;
+        if (ql && (m.nombre || '').toLowerCase().indexOf(ql) < 0 && (m.oficio || '').toLowerCase().indexOf(ql) < 0) return false;
+        return true;
+  });
     const desg = { bruto: 28000, comision: Math.round(28000 * .10 * 1.19), pasarela: Math.round(28000 * .0235 * 1.19), retencion: Math.round(28000 * .1525) };
     desg.liquido = desg.bruto - desg.comision - desg.pasarela - desg.retencion;
 
@@ -126,7 +153,7 @@ export default function Home() {
           return (
                 <div className="tabbar">
                   <div className={'tab' + (act === 'home' ? ' on' : '')} onClick={function () { setVista('home'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-                  <div className={'tab' + (act === 'cotizar' ? ' on' : '')} onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}><span className="ti">{'\u{1F3A5}'}</span>Cotizar</div>
+                  <div className={'tab' + (act === 'cotizar' ? ' on' : '')} onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}><span className="ti">{'\u{1F9F0}'}</span>Cotizar</div>
                   <div className={'tab' + (act === 'cuenta' ? ' on' : '')} onClick={function () { if (usuario) setVista('cuenta'); else pedirLogin('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
                 </div>
           );
@@ -135,9 +162,9 @@ export default function Home() {
   if (vista === 'home') return (
         <main>
           <div className="hero">
-            <span className="locpill">{'\u{1F4CD} Cerca de ti'}</span>
+            <span className="locpill" style={{ cursor: 'pointer' }} onClick={ubicarme}>{locTexto}</span>
           <h1>{'Hola \u{1F44B} Que arreglamos hoy?'}</h1>
-          <div className="searchfloat">{'\u{1F50D} Prueba "fuga de agua"'}</div>
+          <input className="searchfloat" value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={'\u{1F50D} Busca un servicio o maestro'} style={{ border: 'none', outline: 'none', width: '100%', fontSize: 15, color: '#1c1f2b' }} />
     </div>
         <div className="body">
             <div className="catscroll">
@@ -151,12 +178,12 @@ export default function Home() {
 })}
 </div>
         <div className="promo">
-            <span style={{ fontSize: 28 }}>{'\u{1F4F9}'}</span>
+            <span style={{ fontSize: 28 }}>{'\u{1F3A5}'}</span>
           <div style={{ flex: 1 }}>
-            <div className="pt">Tu primer diagnostico es GRATIS</div>
-            <div className="pd">Videollamada con un experto, hoy mismo</div>
+            <div className="pt">Pide tu presupuesto por video</div>
+            <div className="pd">Manda un video y recibe precios, sin compromiso</div>
   </div>
-          <button className="cta" onClick={function () { video('banner'); }}>Probar ahora</button>
+          <button className="cta" onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}>Cotizar</button>
   </div>
         <div className="seehead"><h3>{'⚡ Disponibles ahora'}</h3></div>
 {cargando && <p>Buscando maestros cerca de ti...</p>}
@@ -376,7 +403,7 @@ export default function Home() {
             <span style={{ flex: 1, fontSize: 14 }}>Mi perfil y dirección</span>
             <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
           </div>
-          <div onClick={function () { setVista('cliente'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
+          <div onClick={function () { setVista('pedidos'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
             <span style={{ fontSize: 20 }}>{'\u{1F4E6}'}</span>
             <span style={{ flex: 1, fontSize: 14 }}>Mis pedidos</span>
             <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
@@ -400,13 +427,26 @@ export default function Home() {
           </main>
     );
 
+    if (vista === 'pedidos') return (
+          <main>
+            <div className="darkhead">
+              <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Cuenta'}</button>
+              <div className="dh1">{'\u{1F4E6} Mis pedidos'}</div>
+              <h2>Tus solicitudes y trabajos</h2>
+              <div className="dh2">Aquí ves el estado de cada pedido</div>
+      </div>
+      <MisPedidos usuario={usuario} />
+      <Tabs act="cuenta" />
+          </main>
+    );
+
     if (vista === 'cliente') return (
           <main>
             <div className="darkhead">
               <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Cuenta'}</button>
               <div className="dh1">{'\u{1F464} Mi perfil'}</div>
               <h2>{'Hola ' + (usuario ? (usuario.email || '').split('@')[0] : '')}</h2>
-              <div className="dh2">Tus datos, dirección y pedidos</div>
+              <div className="dh2">Tus datos y dirección</div>
       </div>
       <PerfilCliente usuario={usuario} />
       <Tabs act="cuenta" />
