@@ -97,7 +97,7 @@ export default function PerfilCliente({ usuario }) {
         setLat(la); setLng(lo);
         setMsg('Ubicación capturada ✓');
         // Rellenar la direccion con geocodificacion inversa (opcional)
-        fetch('https://photon.komoot.io/reverse?lat=' + la + '&lon=' + lo + '&lang=es')
+        fetch('https://photon.komoot.io/reverse?lat=' + la + '&lon=' + lo)
           .then(function (r) { return r.json(); })
           .then(function (j) {
             var f = j && j.features && j.features[0];
@@ -120,7 +120,7 @@ export default function PerfilCliente({ usuario }) {
     if (!v || v.trim().length < 4) { setSugs([]); return; }
     debRef.current = setTimeout(function () {
       setBuscando(true);
-      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(v) + '&lang=es&limit=6&lat=-33.45&lon=-70.66')
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(v) + '&limit=8&lat=-33.45&lon=-70.66')
         .then(function (r) { return r.json(); })
         .then(function (j) {
           var feats = (j.features || []).filter(function (f) {
