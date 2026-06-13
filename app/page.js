@@ -35,6 +35,7 @@ export default function Home() {
     const [email, setEmail] = useState('');
     const [pass, setPass] = useState('');
     const [authMsg, setAuthMsg] = useState(null);
+    const [pagando, setPagando] = useState(false);
 
     function entrar() {
           setAuthMsg('Procesando...');
@@ -50,6 +51,21 @@ export default function Home() {
     }
     function conGoogle() {
           supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    }
+
+    function pagar(tipo, monto, descripcion, maestroId) {
+          setPagando(true);
+          fetch('/api/pagar', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tipo: tipo, monto: monto, descripcion: descripcion, maestroId: maestroId || null, email: usuario ? usuario.email : null }),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                    if (d.init_point) { window.location.href = d.init_point; }
+                    else { alert(d.error || 'No se pudo iniciar el pago'); setPagando(false); }
+            })
+            .catch(function () { alert('Error de conexión con el pago'); setPagando(false); });
     }
 
   function cargar(lat, lng) {
@@ -238,6 +254,7 @@ export default function Home() {
           <div><div className="vt">Video en la app<span className="pillo">PRONTO</span></div><div className="vd">Con cotizacion en pantalla y grabacion integrada</div></div>
           </div>
         <button className="gbtn full" onClick={function () { video(sel.id); }}>Iniciar videollamada ahora</button>
+        <button className="gbtn full" style={{ background: '#009ee3', boxShadow: 'none', opacity: pagando ? .6 : 1 }} disabled={pagando} onClick={function () { pagar('diagnostico', sel.precio_videollamada, 'Diagnóstico con ' + sel.nombre, sel.id); }}>{'\u{1F4B3} Pagar diagnóstico ' + plata(sel.precio_videollamada) + ' con Mercado Pago'}</button>
         <button className="gbtn full" style={{ background: '#fff', color: '#ff5a3c', border: '2px solid #ffd6cb', boxShadow: 'none' }} onClick={function () { setVista('track'); }}>Ver seguimiento del trabajo (demo)</button>
           </div>
           </main>
@@ -261,7 +278,15 @@ export default function Home() {
             <div className="mt">{'Pago protegido ✓ · se libera cuando confirmes'}</div>
     </div>
     </div>
-        <button className="gbtn full" onClick={function () { setVista('home'); }}>Volver al inicio</button>
+        <div style={{ background: '#fff', borderRadius: 18, padding: 16, margin: '16px 0', boxShadow: '0 6px 18px rgba(20,20,40,.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div><div style={{ fontSize: 12, color: '#7c8499' }}>Total del trabajo cotizado</div><div style={{ fontSize: 24, fontWeight: 800 }}>{plata(desg.bruto)}</div></div>
+            <span className="dbadge g">{'\u{1F512} Pago protegido'}</span>
+          </div>
+          <button className="gbtn full" style={{ background: '#009ee3', boxShadow: 'none', opacity: pagando ? .6 : 1 }} disabled={pagando} onClick={function () { pagar('trabajo', desg.bruto, 'Trabajo: ' + (sel ? sel.nombre : 'maestro'), sel ? sel.id : null); }}>{'\u{1F4B3} Pagar ' + plata(desg.bruto) + ' con Mercado Pago'}</button>
+          <div style={{ fontSize: 11, color: '#9aa1b5', textAlign: 'center', marginTop: 6 }}>El dinero se libera al maestro cuando confirmes que el trabajo quedó listo.</div>
+        </div>
+        <button className="gbtn full" style={{ background: '#fff', color: '#ff5a3c', border: '2px solid #ffd6cb', boxShadow: 'none' }} onClick={function () { setVista('home'); }}>Volver al inicio</button>
     </div>
     </main>
   );
