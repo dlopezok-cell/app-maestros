@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Formulario de registro/edicion del maestro: oficio, experiencia, precios y ubicacion.
+// Formulario de registro/edicion del maestro: oficios (varios), experiencia, precios y ubicacion.
 // Guarda via RPC registrar_maestro (marca el perfil como maestro y hace upsert en maestros).
 const OFICIOS = [
   { id: 'gasfiteria', nombre: 'Gasfitería' },
@@ -15,7 +15,7 @@ const OFICIOS = [
 
 export default function RegistroMaestro({ usuario }) {
   const [nombre, setNombre] = useState('');
-  const [oficio, setOficio] = useState('');
+  const [oficios, setOficios] = useState([]);
   const [descripcion, setDescripcion] = useState('');
   const [anos, setAnos] = useState('');
   const [precioVideo, setPrecioVideo] = useState('');
@@ -39,7 +39,7 @@ export default function RegistroMaestro({ usuario }) {
       if (p) { setNombre(p.nombre || ''); if (p.lat != null) setLat(p.lat); if (p.lng != null) setLng(p.lng); }
       if (m) {
         setYaRegistrado(true);
-        setOficio(m.oficio || '');
+        setOficios(m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []));
         setDescripcion(m.descripcion || '');
         setAnos(m.anos_experiencia != null ? String(m.anos_experiencia) : '');
         setPrecioVideo(m.precio_videollamada != null ? String(m.precio_videollamada) : '');
@@ -48,6 +48,12 @@ export default function RegistroMaestro({ usuario }) {
       setCargado(true);
     });
   }, [usuario]);
+
+  function toggleOficio(id) {
+    setOficios(function (prev) {
+      return prev.indexOf(id) >= 0 ? prev.filter(function (x) { return x !== id; }) : prev.concat([id]);
+    });
+  }
 
   function ubicar() {
     if (!navigator.geolocation) { setUbicMsg('Tu navegador no soporta ubicación'); return; }
@@ -60,13 +66,13 @@ export default function RegistroMaestro({ usuario }) {
 
   function guardar() {
     if (!nombre.trim()) { setMsg('Escribe tu nombre'); return; }
-    if (!oficio) { setMsg('Elige tu oficio'); return; }
+    if (!oficios.length) { setMsg('Elige al menos una especialidad'); return; }
     if (!descripcion.trim() || descripcion.trim().length < 20) { setMsg('Cuéntanos un poco más de tu experiencia (mín. 20 caracteres)'); return; }
     setGuardando(true);
     setMsg('Guardando...');
     supabase.rpc('registrar_maestro', {
       p_nombre: nombre.trim(),
-      p_oficio: oficio,
+      p_oficios: oficios,
       p_descripcion: descripcion.trim(),
       p_anos: anos ? parseInt(anos, 10) : 0,
       p_precio_video: precioVideo ? parseInt(precioVideo, 10) : 0,
@@ -93,10 +99,20 @@ export default function RegistroMaestro({ usuario }) {
 
       <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre y apellido" style={inp} />
 
-      <select value={oficio} onChange={function (e) { setOficio(e.target.value); }} style={inp}>
-        <option value="">Elige tu oficio</option>
-        {OFICIOS.map(function (o) { return <option key={o.id} value={o.id}>{o.nombre}</option>; })}
-      </select>
+      <div style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 8px' }}>Tus especialidades (elige una o varias)</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        {OFICIOS.map(function (o) {
+          var on = oficios.indexOf(o.id) >= 0;
+          return (
+            <button key={o.id} type="button" onClick={function () { toggleOficio(o.id); }}
+              style={{ padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                border: on ? '1.5px solid #ff5a3c' : '1.5px solid #ddd',
+                background: on ? '#fff5f2' : '#fff', color: on ? '#ff5a3c' : '#5b6275' }}>
+              {(on ? '✓ ' : '') + o.nombre}
+            </button>
+          );
+        })}
+      </div>
 
       <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }}
         placeholder="Describe tu experiencia: qué trabajos haces, tu especialidad, certificaciones, etc."
