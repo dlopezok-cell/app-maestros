@@ -270,6 +270,16 @@ export default function Home() {
           <div className="sg"><div className="v">98%</div><div className="k">a tiempo</div></div>
           <div className="sg"><div className="v">{'<1 h'}</div><div className="k">respuesta</div></div>
           </div>
+        {sel.galeria && sel.galeria.length > 0 && (
+          <div>
+            <div className="seehead"><h3>{'\u{1F4F8} Trabajos realizados'}</h3></div>
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 0 10px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
+              {sel.galeria.map(function (u, i) {
+                return <img key={i} src={u} alt="" style={{ height: 160, minWidth: 160, width: 160, objectFit: 'cover', borderRadius: 14, scrollSnapAlign: 'start', flexShrink: 0, border: '1px solid #eee' }} />;
+              })}
+            </div>
+          </div>
+        )}
         <div className="seehead"><h3>Opiniones verificadas</h3></div>
                   <div className="rev2">
                     <b>{'Maria Jose P. ★★★★★'}</b>
