@@ -8,6 +8,7 @@ const SECCIONES = [
   { id: 'verificaciones', icono: '\u{1F6E1}', nombre: 'Verificaciones' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
   { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios' },
+  { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
@@ -23,6 +24,9 @@ export default function Admin() {
   const [reservas, setReservas] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [resenas, setResenas] = useState([]);
+  const [mensajes, setMensajes] = useState([]);
+  const [presupuestos, setPresupuestos] = useState([]);
+  const [hilo, setHilo] = useState(null); // clave 'presupuestoId|maestroId' del chat abierto
   const [urls, setUrls] = useState({});
   const [busca, setBusca] = useState('');
   const [msg, setMsg] = useState(null);
@@ -43,6 +47,8 @@ export default function Admin() {
       supabase.from('reservas').select('*').order('creado_en', { ascending: false }).limit(25),
       supabase.from('pagos').select('*').order('creado_en', { ascending: false }).limit(25),
       supabase.from('resenas').select('*').order('creado_en', { ascending: false }).limit(25),
+      supabase.from('mensajes').select('*').order('creado_en', { ascending: true }).limit(1000),
+      supabase.from('presupuestos').select('id, cliente_id, oficio, descripcion, comuna, creado_en'),
     ]).then(function (rs) {
       setVerifs(rs[0].data || []);
       setMaestros(rs[1].data || []);
@@ -50,6 +56,8 @@ export default function Admin() {
       setReservas(rs[3].data || []);
       setPagos(rs[4].data || []);
       setResenas(rs[5].data || []);
+      setMensajes(rs[6].data || []);
+      setPresupuestos(rs[7].data || []);
       setCargando(false);
       (rs[0].data || []).forEach(function (v) {
         if (!v.carnet_path || v.estado !== 'pendiente') return;
@@ -125,6 +133,20 @@ export default function Admin() {
     if (!busca) return true;
     const n = (nombreDe(m.id) + ' ' + m.oficio).toLowerCase();
     return n.indexOf(busca.toLowerCase()) >= 0;
+  });
+
+  // Agrupar mensajes en hilos (presupuesto + maestro) para Conversaciones
+  const presById = {};
+  presupuestos.forEach(function (p) { presById[p.id] = p; });
+  const hilosMap = {};
+  mensajes.forEach(function (m) {
+    const k = m.presupuesto_id + '|' + m.maestro_id;
+    if (!hilosMap[k]) hilosMap[k] = { key: k, presupuesto_id: m.presupuesto_id, maestro_id: m.maestro_id, msgs: [] };
+    hilosMap[k].msgs.push(m);
+  });
+  const hilos = Object.keys(hilosMap).map(function (k) { return hilosMap[k]; }).sort(function (a, b) {
+    const la = a.msgs[a.msgs.length - 1].creado_en, lb = b.msgs[b.msgs.length - 1].creado_en;
+    return la < lb ? 1 : -1;
   });
 
   return (
@@ -259,6 +281,51 @@ export default function Admin() {
             </tbody>
           </table>
           <p style={{ fontSize: 11, color: '#9aa1b5', marginTop: 10 }}>El correo y bloqueo de cuentas se gestionan en Supabase Auth (requiere clave de servidor; se integrará con API routes).</p>
+        </div>
+      )}
+
+      {seccion === 'conversaciones' && (
+        <div>
+          {hilos.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin conversaciones todavía</b><div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 4 }}>Aquí verás los chats entre clientes y maestros para supervisar dudas, calidad o disputas.</div></div>}
+          {hilos.map(function (h) {
+            const p = presById[h.presupuesto_id] || {};
+            const ultimo = h.msgs[h.msgs.length - 1];
+            const abierto = hilo === h.key;
+            return (
+              <div key={h.key} style={card}>
+                <div onClick={function () { setHilo(abierto ? null : h.key); }} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <b style={{ fontSize: 14 }}>{nombreDe(p.cliente_id) + ' ↔ ' + nombreDe(h.maestro_id)}</b>
+                    <div style={{ fontSize: 12, color: '#7c8499' }}>{((p.oficio || 'servicio') + (p.comuna ? ' · ' + p.comuna : '')).trim()}</div>
+                    <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 2, maxWidth: 460, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(ultimo.autor_rol === 'cliente' ? 'Cliente: ' : 'Maestro: ') + (ultimo.texto || (ultimo.foto_url ? '\u{1F4F7} foto' : ''))}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span style={{ background: '#eef0f5', color: '#5b6275', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>{h.msgs.length}</span>
+                    <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 4 }}>{fecha(ultimo.creado_en)}</div>
+                    <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 2 }}>{abierto ? 'Cerrar' : 'Ver chat'}</div>
+                  </div>
+                </div>
+                {abierto && (
+                  <div style={{ marginTop: 12, borderTop: '1px solid #f1f1f1', paddingTop: 12, maxHeight: 380, overflowY: 'auto' }}>
+                    {p.descripcion && <div style={{ fontSize: 12, color: '#7c8499', background: '#fafafc', borderRadius: 8, padding: 8, marginBottom: 10 }}>{'Solicitud: ' + p.descripcion}</div>}
+                    {h.msgs.map(function (m) {
+                      const cli = m.autor_rol === 'cliente';
+                      return (
+                        <div key={m.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 8 }}>
+                          <div style={{ maxWidth: '75%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 14, padding: '8px 11px' }}>
+                            <div style={{ fontSize: 10, opacity: 0.75, fontWeight: 800, marginBottom: 2 }}>{cli ? nombreDe(p.cliente_id) : nombreDe(h.maestro_id)}</div>
+                            {m.foto_url && <img src={m.foto_url} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: m.texto ? 6 : 0, display: 'block' }} />}
+                            {m.texto && <div style={{ fontSize: 13.5, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>}
+                            <div style={{ fontSize: 9.5, opacity: 0.7, marginTop: 3, textAlign: 'right' }}>{fecha(m.creado_en)}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
