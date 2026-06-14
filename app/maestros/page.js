@@ -10,8 +10,8 @@ import AgendaMaestro from '../AgendaMaestro';
 import GananciasMaestro from '../GananciasMaestro';
 import AccesoMaestro from '../AccesoMaestro';
 
-// App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
-// cuenta y arme su ficha. Navega por pestañas: Perfil · Cotizaciones · Agenda · Ganancias.
+// App de MAESTROS (ruta /maestros). Independiente: no enlaza a la app de clientes.
+// Navega por pestañas: Perfil · Cotizaciones · Agenda · Ganancias.
 export default function Maestros() {
   const [usuario, setUsuario] = useState(null);
   const [cargado, setCargado] = useState(false);
@@ -48,11 +48,10 @@ export default function Maestros() {
         <div>
           <CabeceraMaestro usuario={usuario} />
           <Verificacion usuario={usuario} />
-          <RegistroMaestro usuario={usuario} />
           <GaleriaMaestro usuario={usuario} />
+          <RegistroMaestro usuario={usuario} />
           <div className="body" style={{ paddingTop: 4, paddingBottom: 90 }}>
             <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
-            <a href="/" style={{ display: 'block', textAlign: 'center', color: '#9aa1b5', fontWeight: 700, fontSize: 13, marginTop: 14, textDecoration: 'none' }}>Ir a la app de clientes →</a>
           </div>
         </div>
       )}
