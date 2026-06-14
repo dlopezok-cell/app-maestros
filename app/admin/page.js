@@ -202,6 +202,11 @@ export default function Admin() {
     supabase.from('comunicados').delete().eq('id', c.id)
       .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
   }
+  function borrarLead(e) {
+    if (!window.confirm('¿Borrar este lead (' + e.email + ')? Esta acción no se puede deshacer.')) return;
+    supabase.from('lista_espera').delete().eq('id', e.id)
+      .then(function (r) { if (r.error) setMsg('No se pudo borrar: ' + r.error.message); else cargarTodo(); });
+  }
 
   const wrap = { maxWidth: 920, margin: '0 auto', padding: 16 };
   const card = { background: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
@@ -560,7 +565,7 @@ export default function Admin() {
           {listaEspera.length > 0 && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
-                <thead><tr><th style={th}>Correo</th><th style={th}>Origen</th><th style={th}>Fecha</th></tr></thead>
+                <thead><tr><th style={th}>Correo</th><th style={th}>Origen</th><th style={th}>Fecha</th><th style={th}>Acción</th></tr></thead>
                 <tbody>
                   {listaEspera.map(function (e) {
                     return (
@@ -568,6 +573,7 @@ export default function Admin() {
                         <td style={td}>{e.email}</td>
                         <td style={td}>{tag('LISTA DE ESPERA', 'pend')}</td>
                         <td style={{ ...td, color: '#9aa1b5' }}>{fecha(e.creado_en)}</td>
+                        <td style={td}><button style={{ ...btnS, color: '#fff', background: '#b3261e', border: 'none' }} onClick={function () { borrarLead(e); }}>Borrar</button></td>
                       </tr>
                     );
                   })}
