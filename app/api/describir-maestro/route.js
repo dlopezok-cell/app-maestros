@@ -9,6 +9,8 @@ export async function POST(request) {
     const oficios = body.oficios || [];
     const anos = body.anos || '';
     const tipos = body.tipos || [];
+    const zona = body.zona || '';
+    const sello = body.sello || '';
     const fds = body.fds, urgencias = body.urgencias, garantia = body.garantia, boleta = body.boleta;
 
     const key = process.env.ANTHROPIC_API_KEY;
@@ -21,6 +23,8 @@ export async function POST(request) {
       oficios.length ? 'Oficios/especialidades: ' + oficios.join(', ') : '',
       anos ? 'Años de experiencia: ' + anos : '',
       tipos.length ? 'Tipos de trabajo: ' + tipos.join(', ') : '',
+      zona ? 'Zonas/comunas donde trabaja: ' + zona : '',
+      sello ? 'Lo que lo diferencia (su sello): ' + sello : '',
       fds ? 'Trabaja fines de semana' : '',
       urgencias ? 'Atiende urgencias' : '',
       garantia ? 'Ofrece garantía en sus trabajos' : '',
@@ -29,7 +33,7 @@ export async function POST(request) {
 
     const prompt =
       'Eres un redactor que escribe descripciones de perfil para maestros (técnicos de oficios como gasfitería, electricidad, etc.) en una app chilena llamada MaestrosEnLínea. ' +
-      'Con los datos entregados, escribe UNA descripción profesional, cálida y confiable, en PRIMERA PERSONA, en español de Chile, de 2 a 4 oraciones (máximo ~60 palabras). ' +
+      'Con los datos entregados, escribe UNA descripción profesional, cálida y confiable, en PRIMERA PERSONA, en español de Chile, de 2 a 4 oraciones (máximo ~65 palabras). ' +
       'No inventes datos que no aparezcan. No uses emojis. No exageres ni prometas cosas imposibles. Suena cercano, serio y que genere confianza. ' +
       'Devuelve SOLO la descripción, sin títulos ni comillas.\n\nDatos del maestro:\n' + datos + '\n\nDescripción:';
 
