@@ -8,6 +8,7 @@ const SECCIONES = [
   { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
+  { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
   { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
@@ -463,7 +464,6 @@ export default function Admin() {
           return ((p.nombre || '') + ' ' + (p.telefono || '')).toLowerCase().indexOf(busca.toLowerCase()) >= 0;
         });
         return (
-          <>
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <b style={{ fontSize: 14 }}>{clientes.length + ' clientes'}</b>
@@ -490,34 +490,37 @@ export default function Admin() {
               </table>
             </div>
           </div>
-          <div style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <b style={{ fontSize: 14 }}>{'\u{1F4CB} Lista de espera (' + listaEspera.length + ')'}</b>
-              <span style={{ fontSize: 11, color: '#9aa1b5' }}>Correos del formulario "Avísenme"</span>
-            </div>
-            {listaEspera.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Nadie en la lista de espera todavía.</div>}
-            {listaEspera.length > 0 && (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
-                  <thead><tr><th style={th}>Correo</th><th style={th}>Etiqueta</th><th style={th}>Fecha</th></tr></thead>
-                  <tbody>
-                    {listaEspera.map(function (e) {
-                      return (
-                        <tr key={e.id}>
-                          <td style={td}>{e.email}</td>
-                          <td style={td}>{tag('LISTA DE ESPERA', 'pend')}</td>
-                          <td style={{ ...td, color: '#9aa1b5' }}>{fecha(e.creado_en)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          </>
         );
       })()}
+
+      {/* ---------------- LEADS (lista de espera) ---------------- */}
+      {seccion === 'leads' && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <b style={{ fontSize: 14 }}>{'\u{1F9F2} ' + listaEspera.length + ' leads'}</b>
+            <span style={{ fontSize: 11, color: '#9aa1b5' }}>Correos del formulario "Avísenme" del home</span>
+          </div>
+          {listaEspera.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Nadie se ha inscrito todavía.</div>}
+          {listaEspera.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
+                <thead><tr><th style={th}>Correo</th><th style={th}>Origen</th><th style={th}>Fecha</th></tr></thead>
+                <tbody>
+                  {listaEspera.map(function (e) {
+                    return (
+                      <tr key={e.id}>
+                        <td style={td}>{e.email}</td>
+                        <td style={td}>{tag('LISTA DE ESPERA', 'pend')}</td>
+                        <td style={{ ...td, color: '#9aa1b5' }}>{fecha(e.creado_en)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ---------------- PEDIDOS (timeline) ---------------- */}
       {seccion === 'pedidos' && (
