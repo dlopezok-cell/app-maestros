@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import CropFoto from './CropFoto';
 
 // Registro del maestro en 3 pasos (obligatorios en orden):
 //   1) Identidad  -> foto de perfil (con reencuadre), nombre, teléfono (+56 9 fijo),
@@ -90,9 +89,6 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   const [err, setErr] = useState(null);
   const [msg, setMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  // recorte de foto (gestos, componente CropFoto)
-  const [cropSrc, setCropSrc] = useState(null);
-  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const dirRef = useRef(null);
 
   useEffect(function () {
@@ -165,25 +161,6 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   function toggle(arr, set, v) { set(arr.indexOf(v) >= 0 ? arr.filter(function (x) { return x !== v; }) : arr.concat([v])); }
   function espNombre(slug) { var e = cat.especialidad.filter(function (x) { return x.slug === slug; })[0]; return e ? e.valor : slug; }
   var oficiosTxt = oficios.map(espNombre).join(' · ');
-
-  // ---------- foto de perfil (recorte por gestos en CropFoto) ----------
-  function elegirFoto(file) { if (!file) return; setCropSrc(URL.createObjectURL(file)); }
-  function onRecorte(blob) {
-    setSubiendoFoto(true);
-    subirAvatar(new File([blob], 'perfil.jpg', { type: 'image/jpeg' }), function () { setSubiendoFoto(false); setCropSrc(null); });
-  }
-  function subirAvatar(file, done) {
-    if (!file) { if (done) done(); return; }
-    var ruta = usuario.id + '/perfil_' + Date.now() + '.jpg';
-    supabase.storage.from('avatares').upload(ruta, file, { upsert: true }).then(function (r) {
-      if (r.error) throw new Error(r.error.message);
-      var pub = supabase.storage.from('avatares').getPublicUrl(ruta);
-      return supabase.from('perfiles').upsert({ id: usuario.id, avatar_url: pub.data.publicUrl, rol: 'maestro' }, { onConflict: 'id' }).then(function (r2) {
-        if (r2.error) throw new Error(r2.error.message);
-        setAvatarUrl(pub.data.publicUrl); setMsg(null); if (done) done();
-      });
-    }).catch(function (e) { setMsg('Error: ' + e.message); if (done) done(); });
-  }
 
   function pedirIA() {
     if (!oficios.length) return;
@@ -393,7 +370,6 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   return (
     <div style={card}>
       {verPerfil && <Preview />}
-      {cropSrc && <CropFoto src={cropSrc} subiendo={subiendoFoto} onCancel={function () { setCropSrc(null); }} onUse={onRecorte} />}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
         {pasoMeta.map(function (s, i) {
@@ -413,13 +389,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 18 }}>{'\u{1F6E1}'}</span><span style={{ fontSize: 15, fontWeight: 800 }}>Verifica tu identidad</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '8px 0 14px' }}>
-            <label style={{ width: 86, height: 86, borderRadius: '50%', overflow: 'hidden', background: avatarUrl ? '#eee' : '#fafafc', border: '2px dashed #d6d3ee', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 26, color: '#7F77DD' }}>{'\u{1F4F7}'}</span>}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={function (e) { elegirFoto(e.target.files[0]); e.target.value = ''; }} />
-            </label>
-            <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>{avatarUrl ? 'Cambiar / reencuadrar foto' : 'Agregar foto de perfil'}</span>
-          </div>
+          <div style={{ fontSize: 11, color: '#9aa1b5', background: '#fafafc', border: '1px solid #eef0f5', borderRadius: 10, padding: '8px 11px', margin: '4px 0 12px', textAlign: 'center' }}>{'\u{1F4F7} Tu foto de perfil se edita arriba, en la cabecera.'}</div>
 
           <label style={lbl}>Nombre y apellido</label>
           <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre y apellido" style={inp} />

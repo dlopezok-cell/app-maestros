@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
 
-// Vista del maestro: solicitudes de presupuesto (videos) abiertas de su oficio
-// y las que le fueron dirigidas. Responde con monto + mensaje y puede chatear.
-// Ubicación por etapas: aquí solo ve la COMUNA; la dirección exacta aparece en
-// la Agenda cuando el cliente agenda.
+// Vista del maestro: solicitudes de presupuesto (videos) abiertas de su(s)
+// especialidad(es) y las dirigidas a él. Responde con monto + mensaje y chatea.
+// Solo se muestran pedidos ABIERTOS: los que un cliente ya agendó con un maestro
+// (estado = 'agendado') desaparecen para los demás.
+// Ubicación por etapas: aquí solo ve la COMUNA; la dirección exacta aparece en la
+// Agenda cuando el cliente agenda.
 export default function PresupuestosMaestro({ usuario }) {
-  const [miOficio, setMiOficio] = useState(null);
+  const [misOficios, setMisOficios] = useState([]);
   const [esMaestro, setEsMaestro] = useState(false);
   const [items, setItems] = useState([]);
   const [cargado, setCargado] = useState(false);
@@ -20,14 +22,16 @@ export default function PresupuestosMaestro({ usuario }) {
   const [chatId, setChatId] = useState(null);
   const [noLeidos, setNoLeidos] = useState({});
 
-  function cargar(oficio) {
+  function cargar(oficios) {
     supabase.from('presupuestos').select('*, cotizaciones(*)')
       .or('maestro_id.eq.' + usuario.id + ',maestro_id.is.null')
       .order('creado_en', { ascending: false })
       .then(function (r) {
         var data = r.data || [];
         var filt = data.filter(function (p) {
-          return p.maestro_id === usuario.id || (p.maestro_id == null && p.oficio === oficio);
+          if (p.estado === 'agendado') return false; // ya tomado por otro
+          if (p.maestro_id === usuario.id) return true; // dirigido a mí
+          return p.maestro_id == null && oficios.indexOf(p.oficio) >= 0; // abierto de mi especialidad
         });
         setItems(filt);
         setCargado(true);
@@ -45,10 +49,12 @@ export default function PresupuestosMaestro({ usuario }) {
 
   useEffect(function () {
     if (!usuario) return;
-    supabase.from('maestros').select('oficio').eq('id', usuario.id).maybeSingle()
+    supabase.from('maestros').select('oficios, oficio').eq('id', usuario.id).maybeSingle()
       .then(function (r) {
-        if (r.data) { setEsMaestro(true); setMiOficio(r.data.oficio); cargar(r.data.oficio); }
-        else { setEsMaestro(false); setCargado(true); }
+        if (r.data) {
+          var ofs = r.data.oficios && r.data.oficios.length ? r.data.oficios : (r.data.oficio ? [r.data.oficio] : []);
+          setEsMaestro(true); setMisOficios(ofs); cargar(ofs);
+        } else { setEsMaestro(false); setCargado(true); }
       });
   }, [usuario]);
 
@@ -64,12 +70,11 @@ export default function PresupuestosMaestro({ usuario }) {
       mensaje: mensaje.trim() || null,
     }).then(function (r) {
       if (r.error) { setMsg('Error: ' + r.error.message); setEnviando(false); return; }
-      // avisar por correo al cliente (sin frenar la UI)
       try {
         fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'cotizacion', presupuestoId: p.id, maestroId: usuario.id, monto: monto ? parseInt(monto, 10) : null }) });
       } catch (e) {}
       setEnviando(false); setRespId(null);
-      cargar(miOficio);
+      cargar(misOficios);
     });
   }
 
@@ -88,7 +93,7 @@ export default function PresupuestosMaestro({ usuario }) {
     return (
       <div style={{ ...card, marginTop: 14 }}>
         <b style={{ fontSize: 14 }}>{'\u{1F3A5} Cotizaciones'}</b>
-        <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Cuando completes tu ficha como maestro, aquí verás los videos de clientes que piden presupuesto en tu oficio.</div>
+        <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Cuando completes tu ficha como maestro, aquí verás los videos de clientes que piden presupuesto en tu especialidad.</div>
       </div>
     );
   }
