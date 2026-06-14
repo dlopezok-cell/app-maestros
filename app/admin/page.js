@@ -48,6 +48,7 @@ export default function Admin() {
   const [cotizaciones, setCotizaciones] = useState([]);
   const [denuncias, setDenuncias] = useState([]);
   const [comunicados, setComunicados] = useState([]);
+  const [listaEspera, setListaEspera] = useState([]);
   const [hilo, setHilo] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [urls, setUrls] = useState({});
@@ -79,6 +80,7 @@ export default function Admin() {
       supabase.from('cotizaciones').select('*'),
       supabase.from('denuncias').select('*').order('creado_en', { ascending: false }),
       supabase.from('comunicados').select('*').order('creado_en', { ascending: false }),
+      supabase.from('lista_espera').select('*').order('creado_en', { ascending: false }),
     ]).then(function (rs) {
       setVerifs(rs[0].data || []);
       setMaestros(rs[1].data || []);
@@ -91,6 +93,7 @@ export default function Admin() {
       setCotizaciones(rs[8].data || []);
       setDenuncias(rs[9].data || []);
       setComunicados(rs[10].data || []);
+      setListaEspera(rs[11].data || []);
       setCargando(false);
       (rs[0].data || []).forEach(function (v) {
         if (!v.carnet_path || v.estado !== 'pendiente') return;
@@ -460,6 +463,7 @@ export default function Admin() {
           return ((p.nombre || '') + ' ' + (p.telefono || '')).toLowerCase().indexOf(busca.toLowerCase()) >= 0;
         });
         return (
+          <>
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <b style={{ fontSize: 14 }}>{clientes.length + ' clientes'}</b>
@@ -486,6 +490,32 @@ export default function Admin() {
               </table>
             </div>
           </div>
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <b style={{ fontSize: 14 }}>{'\u{1F4CB} Lista de espera (' + listaEspera.length + ')'}</b>
+              <span style={{ fontSize: 11, color: '#9aa1b5' }}>Correos del formulario "Avísenme"</span>
+            </div>
+            {listaEspera.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Nadie en la lista de espera todavía.</div>}
+            {listaEspera.length > 0 && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
+                  <thead><tr><th style={th}>Correo</th><th style={th}>Etiqueta</th><th style={th}>Fecha</th></tr></thead>
+                  <tbody>
+                    {listaEspera.map(function (e) {
+                      return (
+                        <tr key={e.id}>
+                          <td style={td}>{e.email}</td>
+                          <td style={td}>{tag('LISTA DE ESPERA', 'pend')}</td>
+                          <td style={{ ...td, color: '#9aa1b5' }}>{fecha(e.creado_en)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          </>
         );
       })()}
 
