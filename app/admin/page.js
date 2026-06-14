@@ -5,14 +5,28 @@ import { supabase } from '../../lib/supabase';
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen' },
-  { id: 'verificaciones', icono: '\u{1F6E1}', nombre: 'Verificaciones' },
+  { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
-  { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios' },
+  { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
   { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
+  { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
+  { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
+  { id: 'verificaciones', icono: '\u{1F6E1}', nombre: 'Verificaciones' },
+  { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
 ];
+
+// Detecta intentos de pasar contacto fuera de la plataforma
+function flagContacto(txt) {
+  if (!txt) return false;
+  const t = ('' + txt).toLowerCase();
+  if (/\d[\d\s.\-]{7,}\d/.test(t)) return true;
+  if (t.indexOf('@') >= 0) return true;
+  if (/whats|wsp|whatsapp|telegram|instagram|fono|llamame|escribeme/.test(t)) return true;
+  return false;
+}
 
 export default function Admin() {
   const [usuario, setUsuario] = useState(null);
@@ -26,10 +40,18 @@ export default function Admin() {
   const [resenas, setResenas] = useState([]);
   const [mensajes, setMensajes] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
-  const [hilo, setHilo] = useState(null); // clave 'presupuestoId|maestroId' del chat abierto
+  const [cotizaciones, setCotizaciones] = useState([]);
+  const [denuncias, setDenuncias] = useState([]);
+  const [comunicados, setComunicados] = useState([]);
+  const [hilo, setHilo] = useState(null);
+  const [pedido, setPedido] = useState(null);
   const [urls, setUrls] = useState({});
   const [busca, setBusca] = useState('');
   const [msg, setMsg] = useState(null);
+  // form comunicado
+  const [cTitulo, setCTitulo] = useState('');
+  const [cCuerpo, setCCuerpo] = useState('');
+  const [cSegmento, setCSegmento] = useState('maestros');
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) {
@@ -44,11 +66,14 @@ export default function Admin() {
       supabase.from('verificaciones').select('*').order('creado_at', { ascending: false }),
       supabase.from('maestros').select('*'),
       supabase.from('perfiles').select('*').order('creado_en', { ascending: false }),
-      supabase.from('reservas').select('*').order('creado_en', { ascending: false }).limit(25),
-      supabase.from('pagos').select('*').order('creado_en', { ascending: false }).limit(25),
+      supabase.from('reservas').select('*').order('creado_en', { ascending: false }).limit(50),
+      supabase.from('pagos').select('*').order('creado_en', { ascending: false }).limit(50),
       supabase.from('resenas').select('*').order('creado_en', { ascending: false }).limit(25),
-      supabase.from('mensajes').select('*').order('creado_en', { ascending: true }).limit(1000),
-      supabase.from('presupuestos').select('id, cliente_id, oficio, descripcion, comuna, creado_en'),
+      supabase.from('mensajes').select('*').order('creado_en', { ascending: true }).limit(2000),
+      supabase.from('presupuestos').select('*').order('creado_en', { ascending: false }),
+      supabase.from('cotizaciones').select('*'),
+      supabase.from('denuncias').select('*').order('creado_en', { ascending: false }),
+      supabase.from('comunicados').select('*').order('creado_en', { ascending: false }),
     ]).then(function (rs) {
       setVerifs(rs[0].data || []);
       setMaestros(rs[1].data || []);
@@ -58,6 +83,9 @@ export default function Admin() {
       setResenas(rs[5].data || []);
       setMensajes(rs[6].data || []);
       setPresupuestos(rs[7].data || []);
+      setCotizaciones(rs[8].data || []);
+      setDenuncias(rs[9].data || []);
+      setComunicados(rs[10].data || []);
       setCargando(false);
       (rs[0].data || []).forEach(function (v) {
         if (!v.carnet_path || v.estado !== 'pendiente') return;
@@ -77,7 +105,7 @@ export default function Admin() {
 
   function nombreDe(id) {
     const p = perfiles.find(function (x) { return x.id === id; });
-    return p ? p.nombre : id ? id.slice(0, 8) : '—';
+    return p ? (p.nombre || (id ? id.slice(0, 8) : '—')) : (id ? id.slice(0, 8) : '—');
   }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'; }
@@ -100,15 +128,42 @@ export default function Admin() {
     supabase.from('maestros').update({ suspendido: valor, disponible: !valor }).eq('id', m.id)
       .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
   }
+  function resolverDenuncia(d) {
+    const nota = window.prompt('Nota de resolución (queda en el registro):', '');
+    if (nota === null) return;
+    supabase.from('denuncias').update({ estado: 'resuelta', nota_admin: nota, resuelto_en: new Date().toISOString() }).eq('id', d.id)
+      .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
+  }
+  function publicarComunicado() {
+    if (!cTitulo.trim() || !cCuerpo.trim()) { setMsg('Escribe título y mensaje'); return; }
+    supabase.from('comunicados').insert({ titulo: cTitulo.trim(), cuerpo: cCuerpo.trim(), segmento: cSegmento, activo: true })
+      .then(function (r) {
+        if (r.error) { setMsg('Error: ' + r.error.message); return; }
+        setCTitulo(''); setCCuerpo(''); cargarTodo();
+      });
+  }
+  function toggleComunicado(c) {
+    supabase.from('comunicados').update({ activo: !c.activo }).eq('id', c.id)
+      .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
+  }
+  function borrarComunicado(c) {
+    if (!window.confirm('¿Borrar este comunicado?')) return;
+    supabase.from('comunicados').delete().eq('id', c.id)
+      .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
+  }
 
-  const wrap = { maxWidth: 860, margin: '0 auto', padding: 16 };
+  const wrap = { maxWidth: 920, margin: '0 auto', padding: 16 };
   const card = { background: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
   const th = { textAlign: 'left', fontWeight: 700, padding: '6px 6px', color: '#7c8499', fontSize: 12 };
   const td = { padding: '8px 6px', fontSize: 13, borderTop: '1px solid #f1f1f1' };
+  const inp = { width: '100%', padding: 10, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 14, boxSizing: 'border-box', marginBottom: 8 };
   const btnS = { fontSize: 12, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ddd', background: '#fff', cursor: 'pointer', fontWeight: 700 };
   const tag = function (texto, tipo) {
     const c = tipo === 'ok' ? ['#f2fbf6', '#0d9456'] : tipo === 'mal' ? ['#fdeeee', '#b3261e'] : ['#fff9f0', '#b07a1e'];
     return <span style={{ background: c[0], color: c[1], borderRadius: 8, padding: '3px 9px', fontSize: 11, fontWeight: 800 }}>{texto}</span>;
+  };
+  const kpi = function (titulo, valor, color) {
+    return <div style={{ ...card, marginBottom: 0 }}><div style={{ fontSize: 12, color: '#7c8499' }}>{titulo}</div><div style={{ fontSize: 25, fontWeight: 800, color: color || '#1c1f2b' }}>{valor}</div></div>;
   };
 
   if (cargando) return <main style={wrap}><p>Cargando panel...</p></main>;
@@ -121,6 +176,7 @@ export default function Admin() {
     </main>
   );
 
+  // ---- métricas ----
   const pendientes = verifs.filter(function (v) { return v.estado === 'pendiente'; });
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -128,26 +184,82 @@ export default function Admin() {
   const comisionMes = pagos.filter(function (p) { return new Date(p.creado_en) >= inicioMes; })
     .reduce(function (s, p) { return s + (p.comision_plataforma || 0); }, 0);
   const activos = maestros.filter(function (m) { return !m.suspendido; }).length;
+  const disputasAbiertas = denuncias.filter(function (d) { return d.estado === 'abierta'; }).length;
+
+  // embudo
+  const totalSolic = presupuestos.length;
+  const presConCotiz = {};
+  cotizaciones.forEach(function (c) { presConCotiz[c.presupuesto_id] = true; });
+  const solicCotizadas = Object.keys(presConCotiz).length;
+  const totalReservas = reservas.length;
+  const convPct = totalSolic ? Math.round(totalReservas / totalSolic * 100) : 0;
+  const gmv = reservas.reduce(function (s, r) { return s + (r.precio_cotizado || 0); }, 0);
+
+  // tiempo a primera cotización (horas, promedio)
+  const primeraCotizDe = {};
+  cotizaciones.forEach(function (c) {
+    if (!c.creado_en) return;
+    const t = new Date(c.creado_en).getTime();
+    if (!primeraCotizDe[c.presupuesto_id] || t < primeraCotizDe[c.presupuesto_id]) primeraCotizDe[c.presupuesto_id] = t;
+  });
+  let sumaHoras = 0, nTiempos = 0;
+  presupuestos.forEach(function (p) {
+    if (primeraCotizDe[p.id] && p.creado_en) {
+      const h = (primeraCotizDe[p.id] - new Date(p.creado_en).getTime()) / 3600000;
+      if (h >= 0) { sumaHoras += h; nTiempos++; }
+    }
+  });
+  const tiempoMedio = nTiempos ? (sumaHoras / nTiempos) : null;
+  const tiempoTxt = tiempoMedio === null ? '—' : tiempoMedio < 1 ? Math.round(tiempoMedio * 60) + ' min' : (Math.round(tiempoMedio * 10) / 10) + ' h';
+
+  // top comunas / oficios (demanda)
+  function topDe(campo) {
+    const m = {};
+    presupuestos.forEach(function (p) { const k = p[campo] || '—'; m[k] = (m[k] || 0) + 1; });
+    return Object.keys(m).map(function (k) { return { k: k, n: m[k] }; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 6);
+  }
+  const topComunas = topDe('comuna');
+  const topOficios = topDe('oficio');
+
+  // por maestro
+  const cotizPorM = {}; cotizaciones.forEach(function (c) { cotizPorM[c.maestro_id] = (cotizPorM[c.maestro_id] || 0) + 1; });
+  const reservasPorM = {}; reservas.forEach(function (r) { reservasPorM[r.maestro_id] = (reservasPorM[r.maestro_id] || 0) + 1; });
 
   const maestrosFiltrados = maestros.filter(function (m) {
     if (!busca) return true;
-    const n = (nombreDe(m.id) + ' ' + m.oficio).toLowerCase();
+    const n = (nombreDe(m.id) + ' ' + (m.oficio || '')).toLowerCase();
     return n.indexOf(busca.toLowerCase()) >= 0;
   });
 
-  // Agrupar mensajes en hilos (presupuesto + maestro) para Conversaciones
+  // pipeline de onboarding
+  const verifPorUser = {}; verifs.forEach(function (v) { if (!verifPorUser[v.user_id]) verifPorUser[v.user_id] = v.estado; });
+  function etapaDe(m) {
+    if (m.suspendido) return 'Suspendido';
+    if (m.verificado) return 'Activo';
+    if (verifPorUser[m.id] === 'pendiente') return 'En revisión';
+    return 'Sin verificar';
+  }
+  const etapas = { 'Sin verificar': [], 'En revisión': [], 'Activo': [], 'Suspendido': [] };
+  maestros.forEach(function (m) { (etapas[etapaDe(m)] = etapas[etapaDe(m)] || []).push(m); });
+  const perfMaestros = perfiles.filter(function (p) { return p.rol === 'maestro'; });
+  const maestroIds = {}; maestros.forEach(function (m) { maestroIds[m.id] = true; });
+  const sinFicha = perfMaestros.filter(function (p) { return !maestroIds[p.id]; });
+
+  // hilos de conversación
   const presById = {};
   presupuestos.forEach(function (p) { presById[p.id] = p; });
   const hilosMap = {};
   mensajes.forEach(function (m) {
     const k = m.presupuesto_id + '|' + m.maestro_id;
-    if (!hilosMap[k]) hilosMap[k] = { key: k, presupuesto_id: m.presupuesto_id, maestro_id: m.maestro_id, msgs: [] };
+    if (!hilosMap[k]) hilosMap[k] = { key: k, presupuesto_id: m.presupuesto_id, maestro_id: m.maestro_id, msgs: [], flag: false };
     hilosMap[k].msgs.push(m);
+    if (flagContacto(m.texto)) hilosMap[k].flag = true;
   });
   const hilos = Object.keys(hilosMap).map(function (k) { return hilosMap[k]; }).sort(function (a, b) {
     const la = a.msgs[a.msgs.length - 1].creado_en, lb = b.msgs[b.msgs.length - 1].creado_en;
     return la < lb ? 1 : -1;
   });
+  const hilosFlag = hilos.filter(function (h) { return h.flag; }).length;
 
   return (
     <main style={wrap}>
@@ -162,11 +274,12 @@ export default function Admin() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {SECCIONES.map(function (s) {
           const on = seccion === s.id;
+          const badge = s.id === 'verificaciones' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : 0;
           return (
             <button key={s.id} onClick={function () { setSeccion(s.id); }}
               style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
               {s.icono + ' ' + s.nombre}
-              {s.id === 'verificaciones' && pendientes.length > 0 && <span style={{ marginLeft: 5, background: on ? '#fff' : '#ff5a3c', color: on ? '#ff5a3c' : '#fff', borderRadius: 8, padding: '1px 6px', fontSize: 10 }}>{pendientes.length}</span>}
+              {badge > 0 && <span style={{ marginLeft: 5, background: on ? '#fff' : '#ff5a3c', color: on ? '#ff5a3c' : '#fff', borderRadius: 8, padding: '1px 6px', fontSize: 10 }}>{badge}</span>}
             </button>
           );
         })}
@@ -174,27 +287,260 @@ export default function Admin() {
 
       {msg && <p style={{ color: '#b3261e', fontSize: 13 }}>{msg}</p>}
 
+      {/* ---------------- RESUMEN ---------------- */}
       {seccion === 'resumen' && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 14 }}>
-            <div style={{ ...card, marginBottom: 0 }}><div style={{ fontSize: 12, color: '#7c8499' }}>Maestros activos</div><div style={{ fontSize: 26, fontWeight: 800 }}>{activos}</div></div>
-            <div style={{ ...card, marginBottom: 0 }}><div style={{ fontSize: 12, color: '#7c8499' }}>Verif. pendientes</div><div style={{ fontSize: 26, fontWeight: 800, color: pendientes.length ? '#b07a1e' : '#1c1f2b' }}>{pendientes.length}</div></div>
-            <div style={{ ...card, marginBottom: 0 }}><div style={{ fontSize: 12, color: '#7c8499' }}>Reservas hoy</div><div style={{ fontSize: 26, fontWeight: 800 }}>{reservasHoy}</div></div>
-            <div style={{ ...card, marginBottom: 0 }}><div style={{ fontSize: 12, color: '#7c8499' }}>Comisión del mes</div><div style={{ fontSize: 26, fontWeight: 800 }}>{plata(comisionMes)}</div></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
+            {kpi('Maestros activos', activos)}
+            {kpi('Solicitudes', totalSolic)}
+            {kpi('Reservas', totalReservas)}
+            {kpi('Conversión', convPct + '%', convPct >= 20 ? '#0d9456' : '#b07a1e')}
+            {kpi('GMV total', plata(gmv))}
+            {kpi('Comisión del mes', plata(comisionMes), '#0d9456')}
+            {kpi('1ª cotización (prom.)', tiempoTxt)}
+            {kpi('Verif. pendientes', pendientes.length, pendientes.length ? '#b07a1e' : '#1c1f2b')}
           </div>
+
           <div style={card}>
-            <b style={{ fontSize: 14 }}>Actividad reciente</b>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+            <b style={{ fontSize: 14 }}>Embudo de conversión</b>
+            <div style={{ marginTop: 10 }}>
+              {[['Solicitudes', totalSolic], ['Con cotización', solicCotizadas], ['Agendadas (reservas)', totalReservas]].map(function (row, i) {
+                const pct = totalSolic ? Math.round(row[1] / totalSolic * 100) : 0;
+                return (
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#5b6275', marginBottom: 3 }}><span>{row[0]}</span><span>{row[1] + ' · ' + pct + '%'}</span></div>
+                    <div style={{ background: '#f1f1f5', borderRadius: 6, height: 10 }}><div style={{ width: pct + '%', background: '#ff5a3c', height: 10, borderRadius: 6 }} /></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+            <div style={card}>
+              <b style={{ fontSize: 14 }}>Top comunas (demanda)</b>
+              {topComunas.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Sin datos</div>}
+              {topComunas.map(function (c, i) { return <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '5px 0', borderTop: i ? '1px solid #f4f4f7' : 'none' }}><span>{c.k}</span><b>{c.n}</b></div>; })}
+            </div>
+            <div style={card}>
+              <b style={{ fontSize: 14 }}>Top oficios (demanda)</b>
+              {topOficios.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Sin datos</div>}
+              {topOficios.map(function (c, i) { return <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '5px 0', borderTop: i ? '1px solid #f4f4f7' : 'none' }}><span style={{ textTransform: 'capitalize' }}>{c.k}</span><b>{c.n}</b></div>; })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- ONBOARDING / PIPELINE ---------------- */}
+      {seccion === 'pipeline' && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+            {[['Sin ficha', sinFicha.length, '#9aa1b5'], ['Sin verificar', etapas['Sin verificar'].length, '#b07a1e'], ['En revisión', etapas['En revisión'].length, '#b07a1e'], ['Activos', etapas['Activo'].length, '#0d9456'], ['Suspendidos', etapas['Suspendido'].length, '#b3261e']].map(function (e, i) {
+              return <div key={i} style={{ ...card, marginBottom: 0 }}><div style={{ fontSize: 12, color: '#7c8499' }}>{e[0]}</div><div style={{ fontSize: 24, fontWeight: 800, color: e[2] }}>{e[1]}</div></div>;
+            })}
+          </div>
+          {['Sin verificar', 'En revisión', 'Activo', 'Suspendido'].map(function (et) {
+            return (
+              <div key={et} style={card}>
+                <b style={{ fontSize: 14 }}>{et + ' (' + etapas[et].length + ')'}</b>
+                {etapas[et].length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Vacío</div>}
+                {etapas[et].map(function (m) {
+                  return <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '7px 0', borderTop: '1px solid #f4f4f7' }}>
+                    <span>{nombreDe(m.id)} <span style={{ color: '#9aa1b5' }}>· {m.oficio}</span></span>
+                    <span style={{ fontSize: 11, color: '#9aa1b5' }}>{(cotizPorM[m.id] || 0) + ' cotiz · ' + (reservasPorM[m.id] || 0) + ' reservas'}</span>
+                  </div>;
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ---------------- MAESTROS (scorecard) ---------------- */}
+      {seccion === 'maestros' && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <b style={{ fontSize: 14 }}>{maestros.length + ' maestros'}</b>
+            <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+              <thead><tr><th style={th}>Nombre</th><th style={th}>Oficio</th><th style={th}>Rating</th><th style={th}>Trabajos</th><th style={th}>Cotiz.</th><th style={th}>Reservas</th><th style={th}>Estado</th><th style={th}>Acción</th></tr></thead>
               <tbody>
-                {verifs.slice(0, 3).map(function (v) { return <tr key={'v' + v.id}><td style={td}>{'\u{1F6E1} Verificación de ' + (v.email || '')}</td><td style={td}>{tag(v.estado.toUpperCase(), v.estado === 'aprobado' ? 'ok' : v.estado === 'rechazado' ? 'mal' : 'pend')}</td><td style={{ ...td, color: '#9aa1b5' }}>{fecha(v.creado_at)}</td></tr>; })}
-                {reservas.slice(0, 3).map(function (r) { return <tr key={'r' + r.id}><td style={td}>{'\u{1F4C5} Reserva: ' + (r.descripcion_problema || r.tipo || '')}</td><td style={td}>{tag((r.estado || '—').toUpperCase(), 'pend')}</td><td style={{ ...td, color: '#9aa1b5' }}>{fecha(r.creado_en)}</td></tr>; })}
-                {verifs.length === 0 && reservas.length === 0 && <tr><td style={td}>Sin actividad todavía</td></tr>}
+                {maestrosFiltrados.map(function (m) {
+                  return (
+                    <tr key={m.id}>
+                      <td style={td}>{nombreDe(m.id)}</td>
+                      <td style={{ ...td, color: '#7c8499' }}>{m.oficio}</td>
+                      <td style={td}>{'★ ' + (m.rating_promedio || '—')}</td>
+                      <td style={td}>{m.total_trabajos || 0}</td>
+                      <td style={td}>{cotizPorM[m.id] || 0}</td>
+                      <td style={td}>{reservasPorM[m.id] || 0}</td>
+                      <td style={td}>{m.suspendido ? tag('SUSPENDIDO', 'mal') : m.verificado ? tag('VERIFICADO', 'ok') : tag('SIN VERIF', 'pend')}</td>
+                      <td style={td}>
+                        {m.suspendido
+                          ? <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { suspender(m, false); }}>Reactivar</button>
+                          : <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { suspender(m, true); }}>Suspender</button>}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
+      {/* ---------------- PEDIDOS (timeline) ---------------- */}
+      {seccion === 'pedidos' && (
+        <div>
+          {presupuestos.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin pedidos todavía</b></div>}
+          {presupuestos.map(function (p) {
+            const cots = cotizaciones.filter(function (c) { return c.presupuesto_id === p.id; });
+            const msgs = mensajes.filter(function (m) { return m.presupuesto_id === p.id; });
+            const reserva = reservas.find(function (r) { return r.cliente_id === p.cliente_id && (r.descripcion_problema === p.descripcion); });
+            const abierto = pedido === p.id;
+            return (
+              <div key={p.id} style={card}>
+                <div onClick={function () { setPedido(abierto ? null : p.id); }} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <b style={{ fontSize: 14, textTransform: 'capitalize' }}>{(p.oficio || 'servicio')}</b>
+                    <div style={{ fontSize: 12, color: '#7c8499', maxWidth: 520, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.descripcion}</div>
+                    <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 2 }}>{nombreDe(p.cliente_id) + ' · ' + (p.comuna || 's/comuna') + ' · ' + fecha(p.creado_en)}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {reserva ? tag('AGENDADO', 'ok') : cots.length ? tag(cots.length + ' COTIZ', 'pend') : tag('ESPERANDO', 'pend')}
+                    <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 4 }}>{abierto ? 'Cerrar' : 'Ver timeline'}</div>
+                  </div>
+                </div>
+                {abierto && (
+                  <div style={{ marginTop: 12, borderTop: '1px solid #f1f1f1', paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}><b>1. Solicitud</b> · {fecha(p.creado_en)} · {nombreDe(p.cliente_id)} pidió: {p.descripcion}</div>
+                    <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}><b>2. Cotizaciones</b>
+                      {cots.length === 0 && <span style={{ color: '#9aa1b5' }}> · ninguna aún</span>}
+                      {cots.map(function (c) { return <div key={c.id} style={{ marginLeft: 12, marginTop: 4 }}>{'• ' + nombreDe(c.maestro_id) + ' → ' + (c.monto ? plata(c.monto) : 's/monto') + (c.mensaje ? ' · ' + c.mensaje : '')}</div>; })}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}><b>3. Conversación</b> · {msgs.length + ' mensaje(s)'} {flagContacto(msgs.map(function (m) { return m.texto; }).join(' ')) ? <span style={{ color: '#b3261e', fontWeight: 800 }}>· {'\u{1F6A9}'} posible contacto fuera de la app</span> : null}</div>
+                    <div style={{ fontSize: 12, color: '#5b6275' }}><b>4. Reserva</b> · {reserva ? (fecha(reserva.fecha_hora) + ' · ' + plata(reserva.precio_cotizado) + ' · ' + (reserva.estado || '')) : <span style={{ color: '#9aa1b5' }}>aún no agenda</span>}</div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ---------------- CONVERSACIONES ---------------- */}
+      {seccion === 'conversaciones' && (
+        <div>
+          {hilosFlag > 0 && <div style={{ ...card, background: '#fff7ea', borderColor: '#f0d9a8' }}><b style={{ fontSize: 13, color: '#b07a1e' }}>{'\u{1F6A9} ' + hilosFlag + ' conversación(es) con posible intercambio de contacto fuera de la plataforma'}</b></div>}
+          {hilos.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin conversaciones todavía</b><div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 4 }}>Aquí verás los chats entre clientes y maestros para supervisar dudas, calidad o disputas.</div></div>}
+          {hilos.map(function (h) {
+            const p = presById[h.presupuesto_id] || {};
+            const ultimo = h.msgs[h.msgs.length - 1];
+            const abierto = hilo === h.key;
+            return (
+              <div key={h.key} style={{ ...card, borderColor: h.flag ? '#f0c8a8' : '#eee' }}>
+                <div onClick={function () { setHilo(abierto ? null : h.key); }} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <b style={{ fontSize: 14 }}>{nombreDe(p.cliente_id) + ' ↔ ' + nombreDe(h.maestro_id)} {h.flag ? <span title="posible contacto fuera de la app">{'\u{1F6A9}'}</span> : null}</b>
+                    <div style={{ fontSize: 12, color: '#7c8499' }}>{((p.oficio || 'servicio') + (p.comuna ? ' · ' + p.comuna : '')).trim()}</div>
+                    <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 2, maxWidth: 460, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(ultimo.autor_rol === 'cliente' ? 'Cliente: ' : 'Maestro: ') + (ultimo.texto || (ultimo.foto_url ? '\u{1F4F7} foto' : ''))}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span style={{ background: '#eef0f5', color: '#5b6275', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>{h.msgs.length}</span>
+                    <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 4 }}>{fecha(ultimo.creado_en)}</div>
+                    <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 2 }}>{abierto ? 'Cerrar' : 'Ver chat'}</div>
+                  </div>
+                </div>
+                {abierto && (
+                  <div style={{ marginTop: 12, borderTop: '1px solid #f1f1f1', paddingTop: 12, maxHeight: 380, overflowY: 'auto' }}>
+                    {p.descripcion && <div style={{ fontSize: 12, color: '#7c8499', background: '#fafafc', borderRadius: 8, padding: 8, marginBottom: 10 }}>{'Solicitud: ' + p.descripcion}</div>}
+                    {h.msgs.map(function (m) {
+                      const cli = m.autor_rol === 'cliente';
+                      return (
+                        <div key={m.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 8 }}>
+                          <div style={{ maxWidth: '75%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 14, padding: '8px 11px' }}>
+                            <div style={{ fontSize: 10, opacity: 0.75, fontWeight: 800, marginBottom: 2 }}>{cli ? nombreDe(p.cliente_id) : nombreDe(h.maestro_id)}</div>
+                            {m.foto_url && <img src={m.foto_url} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: m.texto ? 6 : 0, display: 'block' }} />}
+                            {m.texto && <div style={{ fontSize: 13.5, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>}
+                            <div style={{ fontSize: 9.5, opacity: 0.7, marginTop: 3, textAlign: 'right' }}>{fecha(m.creado_en)}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ---------------- DISPUTAS ---------------- */}
+      {seccion === 'disputas' && (
+        <div>
+          {denuncias.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin reportes</b><div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 4 }}>Cuando un cliente o maestro reporta una conversación, aparece aquí para que la revises y resuelvas.</div></div>}
+          {denuncias.map(function (d) {
+            const p = presById[d.presupuesto_id] || {};
+            return (
+              <div key={d.id} style={{ ...card, borderColor: d.estado === 'abierta' ? '#f0c8a8' : '#eee' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <b style={{ fontSize: 14 }}>{d.motivo}</b>
+                  {d.estado === 'abierta' ? tag('ABIERTA', 'pend') : tag('RESUELTA', 'ok')}
+                </div>
+                <div style={{ fontSize: 12, color: '#5b6275' }}>{'Reportó: ' + (d.reportante_rol === 'cliente' ? 'Cliente' : 'Maestro') + ' ' + nombreDe(d.reportante_id)}</div>
+                {p.oficio && <div style={{ fontSize: 12, color: '#7c8499' }}>{'Pedido: ' + p.oficio + ' · ' + (p.descripcion || '')}</div>}
+                {d.detalle && <div style={{ fontSize: 13, color: '#444', marginTop: 4 }}>{d.detalle}</div>}
+                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 4 }}>{fecha(d.creado_en)}</div>
+                {d.nota_admin && <div style={{ fontSize: 12, color: '#0d9456', marginTop: 6 }}>{'Resolución: ' + d.nota_admin}</div>}
+                {d.estado === 'abierta' && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { resolverDenuncia(d); }}>Resolver con nota</button>
+                    <button style={{ ...btnS }} onClick={function () { setSeccion('conversaciones'); }}>Ver conversaciones</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ---------------- COMUNICADOS ---------------- */}
+      {seccion === 'comunicados' && (
+        <div>
+          <div style={card}>
+            <b style={{ fontSize: 14 }}>{'\u{1F4E2} Nuevo comunicado'}</b>
+            <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Aparece como aviso dentro de la app para el segmento elegido.</div>
+            <input value={cTitulo} onChange={function (e) { setCTitulo(e.target.value); }} placeholder="Título (ej: Nueva función disponible)" style={inp} />
+            <textarea value={cCuerpo} onChange={function (e) { setCCuerpo(e.target.value); }} placeholder="Mensaje para tus usuarios..." rows={3} style={{ ...inp, resize: 'vertical' }} />
+            <select value={cSegmento} onChange={function (e) { setCSegmento(e.target.value); }} style={inp}>
+              <option value="maestros">Para maestros</option>
+              <option value="clientes">Para clientes</option>
+              <option value="todos">Para todos</option>
+            </select>
+            <button className="gbtn" style={{ width: '100%' }} onClick={publicarComunicado}>Publicar comunicado</button>
+          </div>
+          {comunicados.map(function (c) {
+            return (
+              <div key={c.id} style={card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <b style={{ fontSize: 14 }}>{c.titulo}</b>
+                  {c.activo ? tag('ACTIVO', 'ok') : tag('OCULTO', 'pend')}
+                </div>
+                <div style={{ fontSize: 13, color: '#444', margin: '4px 0' }}>{c.cuerpo}</div>
+                <div style={{ fontSize: 11, color: '#9aa1b5' }}>{'Segmento: ' + c.segmento + ' · ' + fecha(c.creado_en)}</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button style={btnS} onClick={function () { toggleComunicado(c); }}>{c.activo ? 'Ocultar' : 'Activar'}</button>
+                  <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { borrarComunicado(c); }}>Borrar</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ---------------- VERIFICACIONES ---------------- */}
       {seccion === 'verificaciones' && (
         <div>
           {pendientes.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin pendientes ✓</b></div>}
@@ -233,149 +579,85 @@ export default function Admin() {
         </div>
       )}
 
-      {seccion === 'maestros' && (
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <b style={{ fontSize: 14 }}>{maestros.length + ' maestros'}</b>
-            <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={th}>Nombre</th><th style={th}>Oficio</th><th style={th}>Rating</th><th style={th}>Estado</th><th style={th}>Acciones</th></tr></thead>
-            <tbody>
-              {maestrosFiltrados.map(function (m) {
-                return (
-                  <tr key={m.id}>
-                    <td style={td}>{nombreDe(m.id)}</td>
-                    <td style={{ ...td, color: '#7c8499' }}>{m.oficio}</td>
-                    <td style={td}>{'★ ' + (m.rating_promedio || '—') + ' · ' + (m.total_trabajos || 0)}</td>
-                    <td style={td}>{m.suspendido ? tag('SUSPENDIDO', 'mal') : m.verificado ? tag('VERIFICADO', 'ok') : tag('SIN VERIFICAR', 'pend')}</td>
-                    <td style={td}>
-                      {m.suspendido
-                        ? <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { suspender(m, false); }}>Reactivar</button>
-                        : <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { suspender(m, true); }}>Suspender</button>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
+      {/* ---------------- USUARIOS ---------------- */}
       {seccion === 'usuarios' && (
         <div style={card}>
           <b style={{ fontSize: 14 }}>{perfiles.length + ' usuarios registrados'}</b>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-            <thead><tr><th style={th}>Nombre</th><th style={th}>Rol</th><th style={th}>Teléfono</th><th style={th}>Registrado</th></tr></thead>
-            <tbody>
-              {perfiles.map(function (p) {
-                return (
-                  <tr key={p.id}>
-                    <td style={td}>{p.nombre || '—'}</td>
-                    <td style={td}>{tag((p.rol || 'cliente').toUpperCase(), p.rol === 'maestro' ? 'pend' : 'ok')}</td>
-                    <td style={{ ...td, color: '#7c8499' }}>{p.telefono || '—'}</td>
-                    <td style={{ ...td, color: '#9aa1b5' }}>{fecha(p.creado_en)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, minWidth: 520 }}>
+              <thead><tr><th style={th}>Nombre</th><th style={th}>Rol</th><th style={th}>Teléfono</th><th style={th}>Registrado</th></tr></thead>
+              <tbody>
+                {perfiles.map(function (p) {
+                  return (
+                    <tr key={p.id}>
+                      <td style={td}>{p.nombre || '—'}</td>
+                      <td style={td}>{tag((p.rol || 'cliente').toUpperCase(), p.rol === 'maestro' ? 'pend' : 'ok')}</td>
+                      <td style={{ ...td, color: '#7c8499' }}>{p.telefono || '—'}</td>
+                      <td style={{ ...td, color: '#9aa1b5' }}>{fecha(p.creado_en)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           <p style={{ fontSize: 11, color: '#9aa1b5', marginTop: 10 }}>El correo y bloqueo de cuentas se gestionan en Supabase Auth (requiere clave de servidor; se integrará con API routes).</p>
         </div>
       )}
 
-      {seccion === 'conversaciones' && (
-        <div>
-          {hilos.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin conversaciones todavía</b><div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 4 }}>Aquí verás los chats entre clientes y maestros para supervisar dudas, calidad o disputas.</div></div>}
-          {hilos.map(function (h) {
-            const p = presById[h.presupuesto_id] || {};
-            const ultimo = h.msgs[h.msgs.length - 1];
-            const abierto = hilo === h.key;
-            return (
-              <div key={h.key} style={card}>
-                <div onClick={function () { setHilo(abierto ? null : h.key); }} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <b style={{ fontSize: 14 }}>{nombreDe(p.cliente_id) + ' ↔ ' + nombreDe(h.maestro_id)}</b>
-                    <div style={{ fontSize: 12, color: '#7c8499' }}>{((p.oficio || 'servicio') + (p.comuna ? ' · ' + p.comuna : '')).trim()}</div>
-                    <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 2, maxWidth: 460, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(ultimo.autor_rol === 'cliente' ? 'Cliente: ' : 'Maestro: ') + (ultimo.texto || (ultimo.foto_url ? '\u{1F4F7} foto' : ''))}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span style={{ background: '#eef0f5', color: '#5b6275', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>{h.msgs.length}</span>
-                    <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 4 }}>{fecha(ultimo.creado_en)}</div>
-                    <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 2 }}>{abierto ? 'Cerrar' : 'Ver chat'}</div>
-                  </div>
-                </div>
-                {abierto && (
-                  <div style={{ marginTop: 12, borderTop: '1px solid #f1f1f1', paddingTop: 12, maxHeight: 380, overflowY: 'auto' }}>
-                    {p.descripcion && <div style={{ fontSize: 12, color: '#7c8499', background: '#fafafc', borderRadius: 8, padding: 8, marginBottom: 10 }}>{'Solicitud: ' + p.descripcion}</div>}
-                    {h.msgs.map(function (m) {
-                      const cli = m.autor_rol === 'cliente';
-                      return (
-                        <div key={m.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 8 }}>
-                          <div style={{ maxWidth: '75%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 14, padding: '8px 11px' }}>
-                            <div style={{ fontSize: 10, opacity: 0.75, fontWeight: 800, marginBottom: 2 }}>{cli ? nombreDe(p.cliente_id) : nombreDe(h.maestro_id)}</div>
-                            {m.foto_url && <img src={m.foto_url} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: m.texto ? 6 : 0, display: 'block' }} />}
-                            {m.texto && <div style={{ fontSize: 13.5, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>}
-                            <div style={{ fontSize: 9.5, opacity: 0.7, marginTop: 3, textAlign: 'right' }}>{fecha(m.creado_en)}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
+      {/* ---------------- RESERVAS ---------------- */}
       {seccion === 'reservas' && (
         <div style={card}>
           <b style={{ fontSize: 14 }}>Últimas reservas</b>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-            <thead><tr><th style={th}>Problema</th><th style={th}>Cliente</th><th style={th}>Maestro</th><th style={th}>Estado</th><th style={th}>Cotizado</th></tr></thead>
-            <tbody>
-              {reservas.map(function (r) {
-                return (
-                  <tr key={r.id}>
-                    <td style={td}>{r.descripcion_problema || r.tipo || '—'}</td>
-                    <td style={{ ...td, color: '#7c8499' }}>{nombreDe(r.cliente_id)}</td>
-                    <td style={{ ...td, color: '#7c8499' }}>{nombreDe(r.maestro_id)}</td>
-                    <td style={td}>{tag((r.estado || '—').toUpperCase(), 'pend')}</td>
-                    <td style={td}>{plata(r.precio_cotizado)}</td>
-                  </tr>
-                );
-              })}
-              {reservas.length === 0 && <tr><td style={td}>Sin reservas todavía</td></tr>}
-            </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, minWidth: 600 }}>
+              <thead><tr><th style={th}>Problema</th><th style={th}>Cliente</th><th style={th}>Maestro</th><th style={th}>Estado</th><th style={th}>Cotizado</th></tr></thead>
+              <tbody>
+                {reservas.map(function (r) {
+                  return (
+                    <tr key={r.id}>
+                      <td style={td}>{r.descripcion_problema || r.tipo || '—'}</td>
+                      <td style={{ ...td, color: '#7c8499' }}>{nombreDe(r.cliente_id)}</td>
+                      <td style={{ ...td, color: '#7c8499' }}>{nombreDe(r.maestro_id)}</td>
+                      <td style={td}>{tag((r.estado || '—').toUpperCase(), 'pend')}</td>
+                      <td style={td}>{plata(r.precio_cotizado)}</td>
+                    </tr>
+                  );
+                })}
+                {reservas.length === 0 && <tr><td style={td}>Sin reservas todavía</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
+      {/* ---------------- PAGOS ---------------- */}
       {seccion === 'pagos' && (
         <div style={card}>
           <b style={{ fontSize: 14 }}>Últimos pagos</b>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-            <thead><tr><th style={th}>Bruto</th><th style={th}>Comisión</th><th style={th}>Pasarela</th><th style={th}>SII</th><th style={th}>Líquido</th><th style={th}>Estado</th></tr></thead>
-            <tbody>
-              {pagos.map(function (p) {
-                return (
-                  <tr key={p.id}>
-                    <td style={td}>{plata(p.monto_bruto)}</td>
-                    <td style={{ ...td, color: '#0d9456' }}>{plata(p.comision_plataforma)}</td>
-                    <td style={{ ...td, color: '#7c8499' }}>{plata(p.costo_pasarela)}</td>
-                    <td style={{ ...td, color: '#7c8499' }}>{plata(p.retencion_sii)}</td>
-                    <td style={td}><b>{plata(p.liquido_maestro)}</b></td>
-                    <td style={td}>{tag((p.estado || '—').toUpperCase(), p.estado === 'pagado' ? 'ok' : 'pend')}</td>
-                  </tr>
-                );
-              })}
-              {pagos.length === 0 && <tr><td style={td}>Sin pagos todavía</td></tr>}
-            </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, minWidth: 600 }}>
+              <thead><tr><th style={th}>Bruto</th><th style={th}>Comisión</th><th style={th}>Pasarela</th><th style={th}>SII</th><th style={th}>Líquido</th><th style={th}>Estado</th></tr></thead>
+              <tbody>
+                {pagos.map(function (p) {
+                  return (
+                    <tr key={p.id}>
+                      <td style={td}>{plata(p.monto_bruto)}</td>
+                      <td style={{ ...td, color: '#0d9456' }}>{plata(p.comision_plataforma)}</td>
+                      <td style={{ ...td, color: '#7c8499' }}>{plata(p.costo_pasarela)}</td>
+                      <td style={{ ...td, color: '#7c8499' }}>{plata(p.retencion_sii)}</td>
+                      <td style={td}><b>{plata(p.liquido_maestro)}</b></td>
+                      <td style={td}>{tag((p.estado || '—').toUpperCase(), p.estado === 'pagado' ? 'ok' : 'pend')}</td>
+                    </tr>
+                  );
+                })}
+                {pagos.length === 0 && <tr><td style={td}>Sin pagos todavía</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
+      {/* ---------------- RESEÑAS ---------------- */}
       {seccion === 'resenas' && (
         <div style={card}>
           <b style={{ fontSize: 14 }}>Últimas reseñas</b>
