@@ -6,6 +6,7 @@ import RegistroMaestro from '../RegistroMaestro';
 import PresupuestosMaestro from '../PresupuestosMaestro';
 import AgendaMaestro from '../AgendaMaestro';
 import GananciasMaestro from '../GananciasMaestro';
+import MensajesMaestro from '../MensajesMaestro';
 import AccesoMaestro from '../AccesoMaestro';
 import ComunicadosBanner from '../ComunicadosBanner';
 
@@ -70,11 +71,14 @@ export default function Maestros() {
 
       {pestana === 'ganancias' && <div style={{ paddingBottom: 90 }}><GananciasMaestro usuario={usuario} /></div>}
 
+      {pestana === 'mensajes' && <div style={{ paddingBottom: 90 }}><MensajesMaestro usuario={usuario} /></div>}
+
       <div className="tabbar">
         <Tab id="perfil" icono={'\u{1F6E0}'} nombre="Perfil" />
         <Tab id="solicitudes" icono={'\u{1F4CB}'} nombre="Cotizaciones" />
         <Tab id="agenda" icono={'\u{1F4C5}'} nombre="Agenda" />
         <Tab id="ganancias" icono={'\u{1F4B0}'} nombre="Ganancias" />
+        <Tab id="mensajes" icono={'\u{1F4AC}'} nombre="Mensajes" />
       </div>
     </main>
   );
