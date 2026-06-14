@@ -11,7 +11,7 @@ export default function CabeceraMaestro({ usuario }) {
   const [url, setUrl] = useState(null);
   const [nombre, setNombre] = useState('');
   const [oficios, setOficios] = useState([]);
-  const [verificado, setVerificado] = useState(false);
+  const [estado, setEstado] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [cargado, setCargado] = useState(false);
 
@@ -19,11 +19,13 @@ export default function CabeceraMaestro({ usuario }) {
     if (!usuario) return;
     Promise.all([
       supabase.from('perfiles').select('nombre, avatar_url').eq('id', usuario.id).maybeSingle(),
-      supabase.from('maestros').select('oficios, oficio, verificado').eq('id', usuario.id).maybeSingle()
+      supabase.from('maestros').select('oficios, oficio').eq('id', usuario.id).maybeSingle(),
+      supabase.from('verificaciones').select('estado').eq('user_id', usuario.id).maybeSingle()
     ]).then(function (res) {
-      var p = res[0].data, m = res[1].data;
+      var p = res[0].data, m = res[1].data, v = res[2].data;
       if (p) { setNombre(p.nombre || ''); setUrl(p.avatar_url || null); }
-      if (m) { setOficios(m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : [])); setVerificado(!!m.verificado); }
+      if (m) { setOficios(m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : [])); }
+      setEstado(v ? v.estado : null);
       setCargado(true);
     });
   }, [usuario]);
@@ -60,9 +62,11 @@ export default function CabeceraMaestro({ usuario }) {
       </div>
       <h2 style={{ margin: '0 0 4px' }}>{nombre || (usuario.email || '').split('@')[0]}</h2>
       <div style={{ color: '#b9c0d4', fontSize: 13 }}>{oficiosTxt || 'Completa tu ficha de maestro abajo'}</div>
-      {verificado
+      {estado === 'aprobado'
         ? <div style={{ display: 'inline-block', marginTop: 12, background: 'rgba(13,148,86,.20)', color: '#7ee2b0', borderRadius: 999, padding: '5px 13px', fontSize: 12, fontWeight: 800 }}>{'\u{1F6E1} Identidad verificada'}</div>
-        : <div style={{ display: 'inline-block', marginTop: 12, background: 'rgba(255,255,255,.12)', color: '#cdd3e3', borderRadius: 999, padding: '5px 13px', fontSize: 12, fontWeight: 700 }}>{'\u{23F3} Verificación pendiente'}</div>}
+        : estado === 'pendiente'
+          ? <div style={{ display: 'inline-block', marginTop: 12, background: 'rgba(255,170,60,.18)', color: '#ffce8a', borderRadius: 999, padding: '5px 13px', fontSize: 12, fontWeight: 800 }}>{'\u{23F3} Verificación en revisión'}</div>
+          : <div style={{ display: 'inline-block', marginTop: 12, background: 'rgba(255,255,255,.12)', color: '#cdd3e3', borderRadius: 999, padding: '5px 13px', fontSize: 12, fontWeight: 700 }}>{'\u{23F3} Verificación pendiente'}</div>}
       {subiendo && <div style={{ fontSize: 11, color: '#b9c0d4', marginTop: 8 }}>Subiendo foto...</div>}
     </div>
   );
