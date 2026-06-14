@@ -37,6 +37,7 @@ export default function Home() {
     const [error, setError] = useState(null);
     const [usuario, setUsuario] = useState(null);
     const [authTab, setAuthTab] = useState('ingresar');
+    const [nombre, setNombre] = useState('');
     const [email, setEmail] = useState('');
     const [pass, setPass] = useState('');
     const [authMsg, setAuthMsg] = useState(null);
@@ -55,11 +56,13 @@ export default function Home() {
 
     function entrar() {
           setAuthMsg('Procesando...');
-          const fn = authTab === 'ingresar'
-            ? supabase.auth.signInWithPassword({ email: email, password: pass })
-                  : supabase.auth.signUp({ email: email, password: pass });
+          const esCrear = authTab === 'crear';
+          const fn = esCrear
+            ? supabase.auth.signUp({ email: email, password: pass, options: { data: { nombre: nombre.trim() } } })
+            : supabase.auth.signInWithPassword({ email: email, password: pass });
           fn.then(function (r) {
                   if (r.error) { setAuthMsg(r.error.message); return; }
+                  if (esCrear) { try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'bienvenida', email: email.trim(), nombre: nombre.trim(), rol: 'cliente' }) }); } catch (e) {} }
                   setUsuario(r.data.user);
                   setAuthMsg(null);
                   setVista(volverA || 'cliente');
@@ -370,6 +373,7 @@ export default function Home() {
           <button onClick={function () { setAuthTab('ingresar'); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#ff5a3c' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
                 <button onClick={function () { setAuthTab('crear'); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#ff5a3c' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
       </div>
+              {authTab === 'crear' && <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />}
               <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="tucorreo@ejemplo.cl" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
               <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contrasena" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
 {authMsg && <p className="error">{authMsg}</p>}
