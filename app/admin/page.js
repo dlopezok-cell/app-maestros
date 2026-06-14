@@ -13,7 +13,6 @@ const SECCIONES = [
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
   { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
   { id: 'verificaciones', icono: '\u{1F6E1}', nombre: 'Verificaciones' },
-  { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
@@ -675,31 +674,6 @@ export default function Admin() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* ---------------- USUARIOS ---------------- */}
-      {seccion === 'usuarios' && (
-        <div style={card}>
-          <b style={{ fontSize: 14 }}>{perfiles.length + ' usuarios registrados'}</b>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, minWidth: 520 }}>
-              <thead><tr><th style={th}>Nombre</th><th style={th}>Rol</th><th style={th}>Teléfono</th><th style={th}>Registrado</th></tr></thead>
-              <tbody>
-                {perfiles.map(function (p) {
-                  return (
-                    <tr key={p.id}>
-                      <td style={td}>{p.nombre || '—'}</td>
-                      <td style={td}>{tag((p.rol || 'cliente').toUpperCase(), p.rol === 'maestro' ? 'pend' : 'ok')}</td>
-                      <td style={{ ...td, color: '#7c8499' }}>{p.telefono || '—'}</td>
-                      <td style={{ ...td, color: '#9aa1b5' }}>{fecha(p.creado_en)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ fontSize: 11, color: '#9aa1b5', marginTop: 10 }}>El correo y bloqueo de cuentas se gestionan en Supabase Auth (requiere clave de servidor; se integrará con API routes).</p>
         </div>
       )}
 
