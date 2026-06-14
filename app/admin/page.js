@@ -32,6 +32,11 @@ export default function Admin() {
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [seccion, setSeccion] = useState('resumen');
+  // login propio del panel
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [authMsg, setAuthMsg] = useState(null);
+  const [entrando, setEntrando] = useState(false);
   const [verifs, setVerifs] = useState([]);
   const [maestros, setMaestros] = useState([]);
   const [perfiles, setPerfiles] = useState([]);
@@ -103,6 +108,25 @@ export default function Admin() {
     });
   }
 
+  function entrar(e) {
+    if (e) e.preventDefault();
+    setEntrando(true); setAuthMsg(null);
+    supabase.auth.signInWithPassword({ email: email.trim(), password: pass }).then(function (r) {
+      setEntrando(false);
+      if (r.error) { setAuthMsg('Correo o contraseña incorrectos'); return; }
+      const u = r.data && r.data.user;
+      setUsuario(u || null);
+      if (u && u.email === ADMIN_EMAIL) cargarTodo();
+    });
+  }
+  function conGoogle() {
+    const base = (typeof window !== 'undefined' ? window.location.origin : 'https://www.maestrosenlinea.cl');
+    supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: base + '/admin' } });
+  }
+  function salir() {
+    supabase.auth.signOut().then(function () { setUsuario(null); });
+  }
+
   function nombreDe(id) {
     const p = perfiles.find(function (x) { return x.id === id; });
     return p ? (p.nombre || (id ? id.slice(0, 8) : '—')) : (id ? id.slice(0, 8) : '—');
@@ -168,11 +192,33 @@ export default function Admin() {
 
   if (cargando) return <main style={wrap}><p>Cargando panel...</p></main>;
 
-  if (!usuario || usuario.email !== ADMIN_EMAIL) return (
+  // ---- Sin sesión: pantalla de acceso PROPIA del panel ----
+  if (!usuario) return (
+    <main>
+      <div className="darkhead" style={{ textAlign: 'center', paddingBottom: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: '#ff8a6b' }}>{'\u{1F6E0} PANEL DE ADMINISTRACIÓN'}</div>
+        <h2 style={{ margin: '12px 0 2px' }}>MaestrosEnLínea</h2>
+        <div style={{ color: '#b9c0d4', fontSize: 13 }}>Acceso solo para el equipo</div>
+      </div>
+      <div className="body" style={{ maxWidth: 380, margin: '0 auto', paddingTop: 20 }}>
+        <form onSubmit={entrar}>
+          <input type="email" value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="Correo" style={{ ...inp, padding: 12 }} />
+          <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contraseña" style={{ ...inp, padding: 12 }} />
+          {authMsg && <p style={{ color: '#b3261e', fontSize: 13, margin: '2px 0 8px' }}>{authMsg}</p>}
+          <button type="submit" className="gbtn full" disabled={entrando} style={{ opacity: entrando ? 0.6 : 1 }}>{entrando ? 'Entrando...' : 'Entrar al panel'}</button>
+        </form>
+        <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '14px 0 10px' }}>o</div>
+        <button onClick={conGoogle} style={{ width: '100%', padding: 12, borderRadius: 12, border: '1.5px solid #e4e4ef', background: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{'\u{1F310} Continuar con Google'}</button>
+      </div>
+    </main>
+  );
+
+  // ---- Con sesión pero sin permisos de admin ----
+  if (usuario.email !== ADMIN_EMAIL) return (
     <main style={wrap}>
       <h2>Acceso restringido</h2>
-      <p style={{ color: '#7c8499', fontSize: 14 }}>Esta seccion es solo para administradores. Ingresa con tu cuenta de admin desde la app y vuelve a /admin.</p>
-      <a href="/" style={{ color: '#ff5a3c', fontWeight: 800, fontSize: 14 }}>Ir al inicio</a>
+      <p style={{ color: '#7c8499', fontSize: 14 }}>La cuenta <b>{usuario.email}</b> no tiene permisos de administrador.</p>
+      <button onClick={salir} style={{ ...btnS, marginTop: 10, padding: '8px 14px' }}>Cerrar sesión</button>
     </main>
   );
 
@@ -268,7 +314,7 @@ export default function Admin() {
           <h2 style={{ margin: 0 }}>{'\u{1F6E0} Panel de administración'}</h2>
           <span style={{ fontSize: 12, color: '#9aa1b5' }}>{usuario.email}</span>
         </div>
-        <a href="/" style={{ color: '#9aa1b5', fontWeight: 700, fontSize: 13 }}>Ver app →</a>
+        <button onClick={salir} style={{ background: 'none', border: '1.5px solid #f0c8c2', color: '#b3261e', fontWeight: 800, fontSize: 12, cursor: 'pointer', borderRadius: 10, padding: '6px 12px' }}>Cerrar sesión</button>
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
