@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import CabeceraMaestro from '../CabeceraMaestro';
 import Verificacion from '../Verificacion';
-import FotoPerfilMaestro from '../FotoPerfilMaestro';
 import PresupuestosMaestro from '../PresupuestosMaestro';
 import RegistroMaestro from '../RegistroMaestro';
 import GaleriaMaestro from '../GaleriaMaestro';
@@ -32,17 +32,10 @@ export default function Maestros() {
 
   return (
     <main>
-      <div className="darkhead">
-        <div className="dh1">{'\u{1F6E0} Modo maestro'}</div>
-        <h2>{'Hola ' + (usuario.email || '').split('@')[0]}</h2>
-        <div className="dh2">Tu perfil de maestro y tus trabajos</div>
-      </div>
-
+      <CabeceraMaestro usuario={usuario} />
       <RegistroMaestro usuario={usuario} />
-      <FotoPerfilMaestro usuario={usuario} />
       <GaleriaMaestro usuario={usuario} />
       <Verificacion usuario={usuario} />
-
       <PresupuestosMaestro usuario={usuario} />
 
       <div className="body" style={{ paddingTop: 4, paddingBottom: 34 }}>
