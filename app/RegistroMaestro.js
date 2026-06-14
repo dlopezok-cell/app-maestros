@@ -161,14 +161,7 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
     <div style={card}>
       {/* Tus datos */}
       {seccion('\u{1F464}', 'Tus datos')}
-      <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre y apellido" style={{ ...inp, marginBottom: 14 }} />
-      {lbl('Especialidades (elige una o varias)')}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-        {OFICIOS.map(function (o) {
-          var on = oficios.indexOf(o.id) >= 0;
-          return <button key={o.id} type="button" onClick={function () { toggle(oficios, setOficios, o.id); }} style={chip(on)}>{o.nombre}</button>;
-        })}
-      </div>
+      <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre y apellido" style={{ ...inp, marginBottom: 0 }} />
 
       <div style={divider} />
 
@@ -179,6 +172,14 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
           <span style={{ fontSize: 13, fontWeight: 800, color: '#3C3489' }}>Arma tu descripción</span>
         </div>
         <div style={{ fontSize: 12, color: '#534AB7', margin: '4px 0 14px', lineHeight: 1.5 }}>Responde y la descripción se escribe sola abajo.</div>
+
+        <div style={{ fontSize: 12, color: '#534AB7', margin: '0 0 8px' }}>Especialidades (elige una o varias)</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+          {OFICIOS.map(function (o) {
+            var on = oficios.indexOf(o.id) >= 0;
+            return <button key={o.id} type="button" onClick={function () { toggle(oficios, setOficios, o.id); }} style={chip(on, true)}>{o.nombre}</button>;
+          })}
+        </div>
 
         <input value={anos} onChange={function (e) { setAnos(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="Años de experiencia" style={{ ...inp, marginBottom: 14 }} />
 
