@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Flujo de verificacion de identidad del maestro:
@@ -13,6 +13,9 @@ export default function Verificacion({ usuario, plano, onGuardado }) {
   const [numSerie, setNumSerie] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [sugs, setSugs] = useState([]);
+  const [buscando, setBuscando] = useState(false);
+  const debRef = useRef(null);
   const [msg, setMsg] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [cargado, setCargado] = useState(false);
@@ -46,6 +49,32 @@ export default function Verificacion({ usuario, plano, onGuardado }) {
     const res = 11 - (suma % 11);
     const dvCalc = res === 11 ? '0' : res === 10 ? 'K' : String(res);
     return dv === dvCalc;
+  }
+
+  // Autocompletado de direcciones (Photon / OpenStreetMap, Chile)
+  function onDireccion(v) {
+    setDireccion(v);
+    if (debRef.current) clearTimeout(debRef.current);
+    if (!v || v.trim().length < 4) { setSugs([]); return; }
+    debRef.current = setTimeout(function () {
+      setBuscando(true);
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(v) + '&limit=8&lat=-33.45&lon=-70.66')
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          var feats = (j.features || []).filter(function (f) { return f.properties && f.properties.countrycode === 'CL'; });
+          setSugs(feats);
+          setBuscando(false);
+        })
+        .catch(function () { setBuscando(false); });
+    }, 350);
+  }
+
+  function elegirSug(f) {
+    var p = f.properties || {};
+    var calle = [p.name || p.street, p.housenumber].filter(Boolean).join(' ');
+    var com = p.city || p.district || p.county || '';
+    setDireccion([calle || p.name, com].filter(Boolean).join(', '));
+    setSugs([]);
   }
 
   function enviar() {
@@ -150,8 +179,26 @@ export default function Verificacion({ usuario, plano, onGuardado }) {
           <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Necesitamos tu teléfono, dirección, RUT, una foto de tu carnet (por delante) y una selfie. Solo los verá nuestro equipo y las fotos se eliminan al aprobarte.</div>
           <input value={telefono} onChange={function (e) { setTelefono(e.target.value); }} inputMode="tel" placeholder="Teléfono (ej: +56 9 1234 5678)"
             style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
-          <input value={direccion} onChange={function (e) { setDireccion(e.target.value); }} placeholder="Dirección (calle, número, comuna)"
-            style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
+          <div style={{ position: 'relative', marginBottom: 10 }}>
+            <input value={direccion} onChange={function (e) { onDireccion(e.target.value); }} placeholder="Dirección (escribe calle y número)" autoComplete="off"
+              style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 0 }} />
+            {buscando && <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 4 }}>Buscando direcciones...</div>}
+            {sugs.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: '#fff', border: '1.5px solid #eee', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,.10)', overflow: 'hidden', marginTop: 4 }}>
+                {sugs.map(function (f, i) {
+                  var p = f.properties || {};
+                  var linea = [p.name || p.street, p.housenumber].filter(Boolean).join(' ');
+                  var sub = [p.city || p.district, p.state].filter(Boolean).join(', ');
+                  return (
+                    <div key={i} onClick={function () { elegirSug(f); }} style={{ padding: '10px 12px', borderBottom: i < sugs.length - 1 ? '1px solid #f3f3f3' : 'none', cursor: 'pointer', fontSize: 13 }}>
+                      <div style={{ fontWeight: 700 }}>{linea || p.name || 'Dirección'}</div>
+                      {sub && <div style={{ fontSize: 11, color: '#9aa1b5' }}>{sub}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <input value={rut} onChange={function (e) { setRut(e.target.value); }} placeholder="RUT (ej: 12.345.678-9)"
             style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
           <input value={numSerie} onChange={function (e) { setNumSerie(e.target.value); }} placeholder="N° de documento del carnet (ej: 123456789)"
