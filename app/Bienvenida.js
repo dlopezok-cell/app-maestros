@@ -135,7 +135,7 @@ export default function Bienvenida() {
                 <p style={{ fontSize: 13.5, fontWeight: 800, textAlign: 'center', margin: '0 0 10px' }}>¿Quieres ser de los primeros en probarla?</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input value={correo} onChange={function (e) { setCorreo(e.target.value); }} placeholder="Tu correo" style={{ flex: 1, padding: 13, borderRadius: 12, border: '1.5px solid #e4e4ea', fontSize: 14, boxSizing: 'border-box' }} />
-                  <button onClick={function () { if (correo.indexOf('@') > 0) setAviso(true); }} style={{ background: '#16181f', color: '#fff', border: 'none', borderRadius: 12, padding: '0 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Avísenme</button>
+                  <button onClick={function () { var c = correo.trim(); if (c.indexOf('@') > 0) { try { supabase.from('lista_espera').insert({ email: c }).then(function () {}); } catch (e) {} setAviso(true); } }} style={{ background: '#16181f', color: '#fff', border: 'none', borderRadius: 12, padding: '0 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Avísenme</button>
                 </div>
               </div>
             ) : (
