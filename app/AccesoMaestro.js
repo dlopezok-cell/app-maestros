@@ -26,6 +26,8 @@ export default function AccesoMaestro() {
     }).then(function (r) {
       setCargando(false);
       if (r.error) { setMsg(r.error.message); return; }
+      // correo de bienvenida (sin frenar la UI)
+      try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'bienvenida', email: email.trim(), nombre: nombre.trim(), rol: 'maestro' }) }); } catch (e) {}
       var sesion = r.data ? r.data.session : null;
       if (sesion) { window.location.reload(); return; } // sin confirmacion de correo
       setOk(true); // requiere confirmar correo
