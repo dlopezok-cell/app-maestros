@@ -93,6 +93,20 @@ export async function POST(req) {
         '<p>Te escribieron en la conversación de tu ' + (p.oficio ? 'solicitud de <b>' + p.oficio + '</b>' : 'cotización') + '. Entra para responder.</p>',
         'Ver conversación', SITE
       );
+    } else if (tipo === 'bienvenida') {
+      // Correo de bienvenida y agradecimiento al registrarse (cliente o maestro)
+      to = body.email || (await emailDe(body.userId));
+      const nombre = body.nombre || '';
+      const esMaestro = body.rol === 'maestro';
+      subject = '¡Bienvenido a MaestrosEnLínea!';
+      html = plantilla(
+        '¡Gracias por registrarte' + (nombre ? ', ' + nombre : '') + '! \u{1F389}',
+        esMaestro
+          ? '<p>Ya eres parte de MaestrosEnLínea. Completa tu ficha y verifica tu identidad para empezar a recibir solicitudes de trabajo.</p>'
+          : '<p>Tu cuenta está lista. Ya puedes pedir presupuestos por video y agendar maestros verificados, con pago protegido.</p>',
+        esMaestro ? 'Completar mi perfil' : 'Pedir un presupuesto',
+        esMaestro ? SITE + '/maestros' : SITE
+      );
     } else {
       return Response.json({ error: 'tipo desconocido' }, { status: 400 });
     }
