@@ -23,9 +23,14 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [authMsg, setAuthMsg] = useState(null);
+  const [pagoMsg, setPagoMsg] = useState(null);
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
+    if (typeof window !== 'undefined') {
+      var pg = new URLSearchParams(window.location.search).get('pago');
+      if (pg) { setPagoMsg(pg); setVista('cotizar'); window.history.replaceState({}, '', '/'); }
+    }
     supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
       .then(function (r) { setCats(r.data || []); });
     supabase.from('maestros').select('id, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comuna, region, verificado, perfiles(nombre, avatar_url)')
@@ -159,6 +164,15 @@ export default function Home() {
   if (vista === 'cotizar') return (
     <main>
       <div className="darkhead"><div className="dh1">{'\u{1F3A5} Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
+      {pagoMsg && (
+        <div className="body" style={{ paddingTop: 14, paddingBottom: 0 }}>
+          <div style={{ background: pagoMsg === 'ok' ? '#f2fbf6' : '#fff9f0', border: '1px solid ' + (pagoMsg === 'ok' ? '#bce5cf' : '#ffe2b8'), borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{pagoMsg === 'ok' ? '✅' : pagoMsg === 'pendiente' ? '\u{23F3}' : '⚠️'}</span>
+            <div style={{ flex: 1, fontSize: 13, color: pagoMsg === 'ok' ? '#0d9456' : '#b07a1e' }}>{pagoMsg === 'ok' ? '¡Pago realizado! Tu trabajo quedó agendado. El maestro lo verá en su agenda.' : pagoMsg === 'pendiente' ? 'Tu pago quedó pendiente. Te confirmaremos en cuanto se acredite.' : 'El pago no se completó. Puedes intentar agendar de nuevo.'}</div>
+            <button onClick={function () { setPagoMsg(null); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}>{'✕'}</button>
+          </div>
+        </div>
+      )}
       <div style={{ paddingBottom: 90 }}>
         <PresupuestoCliente usuario={usuario} maestros={maestrosFlat} />
       </div>
