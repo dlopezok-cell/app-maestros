@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // Galeria de trabajos del maestro: sube fotos de trabajos realizados.
 // Las fotos van al bucket publico "avatares" (carpeta del usuario) y la lista
 // de URLs se guarda en maestros.galeria via RPC guardar_galeria.
-export default function GaleriaMaestro({ usuario }) {
+export default function GaleriaMaestro({ usuario, plano, onGuardado }) {
   const [urls, setUrls] = useState([]);
   const [subiendo, setSubiendo] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -64,12 +64,14 @@ export default function GaleriaMaestro({ usuario }) {
 
   if (!usuario || !cargado) return null;
 
-  var card = { background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' };
+  var card = plano
+    ? { background: 'transparent', borderRadius: 0, padding: 0, margin: 0, border: 'none' }
+    : { background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' };
 
   return (
     <div style={card}>
-      <b style={{ fontSize: 15 }}>{'\u{1F4F8} Galería de trabajos'}</b>
-      <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>
+      {!plano && <b style={{ fontSize: 15 }}>{'\u{1F4F8} Galería de trabajos'}</b>}
+      <div style={{ fontSize: 12, color: '#7c8499', margin: plano ? '0 0 12px' : '4px 0 12px' }}>
         Sube fotos de trabajos que ya hiciste. Las fotos <b>dan más confianza</b>: los clientes contratan mucho más a los maestros que muestran su trabajo terminado.
       </div>
 
@@ -93,6 +95,8 @@ export default function GaleriaMaestro({ usuario }) {
 
       {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', margin: 0 }}>{msg}</p>}
       {urls.length === 0 && !msg && <div style={{ fontSize: 11, color: '#9aa1b5' }}>Aún no subes fotos. Toca "Agregar" para empezar.</div>}
+      {plano && <button onClick={function () { if (onGuardado) onGuardado(); }} disabled={subiendo}
+        style={{ width: '100%', marginTop: 12, background: '#26215C', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: subiendo ? 0.6 : 1 }}>Listo</button>}
     </div>
   );
 }
