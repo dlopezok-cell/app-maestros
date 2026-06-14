@@ -7,6 +7,7 @@ const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen' },
   { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
+  { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
   { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
@@ -151,6 +152,16 @@ export default function Admin() {
   function suspender(m, valor) {
     supabase.from('maestros').update({ suspendido: valor, disponible: !valor }).eq('id', m.id)
       .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
+  }
+  function eliminarMaestro(m) {
+    if (!window.confirm('¿Eliminar definitivamente a este maestro? Se borra su ficha de la plataforma. Esta acción no se puede deshacer.')) return;
+    supabase.from('maestros').delete().eq('id', m.id)
+      .then(function (r) { if (r.error) setMsg('No se pudo eliminar: ' + r.error.message); else cargarTodo(); });
+  }
+  function eliminarCliente(p) {
+    if (!window.confirm('¿Eliminar definitivamente a este cliente? Se borra su perfil de la plataforma. Esta acción no se puede deshacer.')) return;
+    supabase.from('perfiles').delete().eq('id', p.id)
+      .then(function (r) { if (r.error) setMsg('No se pudo eliminar: ' + r.error.message); else cargarTodo(); });
   }
   function resolverDenuncia(d) {
     const nota = window.prompt('Nota de resolución (queda en el registro):', '');
@@ -424,9 +435,12 @@ export default function Admin() {
                       <td style={td}>{reservasPorM[m.id] || 0}</td>
                       <td style={td}>{m.suspendido ? tag('SUSPENDIDO', 'mal') : m.verificado ? tag('VERIFICADO', 'ok') : tag('SIN VERIF', 'pend')}</td>
                       <td style={td}>
-                        {m.suspendido
-                          ? <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { suspender(m, false); }}>Reactivar</button>
-                          : <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { suspender(m, true); }}>Suspender</button>}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {m.suspendido
+                            ? <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { suspender(m, false); }}>Reactivar</button>
+                            : <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { suspender(m, true); }}>Suspender</button>}
+                          <button style={{ ...btnS, color: '#fff', background: '#b3261e', border: 'none' }} onClick={function () { eliminarMaestro(m); }}>Eliminar</button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -436,6 +450,45 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* ---------------- CLIENTES ---------------- */}
+      {seccion === 'clientes' && (function () {
+        const clientes = perfiles.filter(function (p) { return (p.rol || 'cliente') === 'cliente'; });
+        const pedidosPorC = {}; presupuestos.forEach(function (p) { pedidosPorC[p.cliente_id] = (pedidosPorC[p.cliente_id] || 0) + 1; });
+        const reservasPorC = {}; reservas.forEach(function (r) { reservasPorC[r.cliente_id] = (reservasPorC[r.cliente_id] || 0) + 1; });
+        const filtrados = clientes.filter(function (p) {
+          if (!busca) return true;
+          return ((p.nombre || '') + ' ' + (p.telefono || '')).toLowerCase().indexOf(busca.toLowerCase()) >= 0;
+        });
+        return (
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <b style={{ fontSize: 14 }}>{clientes.length + ' clientes'}</b>
+              <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+                <thead><tr><th style={th}>Nombre</th><th style={th}>Teléfono</th><th style={th}>Pedidos</th><th style={th}>Reservas</th><th style={th}>Registrado</th><th style={th}>Acción</th></tr></thead>
+                <tbody>
+                  {filtrados.map(function (p) {
+                    return (
+                      <tr key={p.id}>
+                        <td style={td}>{p.nombre || '—'}</td>
+                        <td style={{ ...td, color: '#7c8499' }}>{p.telefono || '—'}</td>
+                        <td style={td}>{pedidosPorC[p.id] || 0}</td>
+                        <td style={td}>{reservasPorC[p.id] || 0}</td>
+                        <td style={{ ...td, color: '#9aa1b5' }}>{fecha(p.creado_en)}</td>
+                        <td style={td}><button style={{ ...btnS, color: '#fff', background: '#b3261e', border: 'none' }} onClick={function () { eliminarCliente(p); }}>Eliminar</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filtrados.length === 0 && <tr><td style={td}>Sin clientes todavía</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ---------------- PEDIDOS (timeline) ---------------- */}
       {seccion === 'pedidos' && (
