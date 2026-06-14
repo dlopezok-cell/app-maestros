@@ -72,8 +72,18 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
 
   function hora(f) { return f ? new Date(f).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''; }
 
+  function reportar() {
+    var motivo = window.prompt('¿Qué quieres reportar de esta conversación? (lo revisa el equipo de MaestrosEnLínea)', '');
+    if (!motivo) return;
+    supabase.from('denuncias').insert({ presupuesto_id: presupuestoId, maestro_id: maestroId, reportante_id: usuario.id, reportante_rol: miRol, motivo: motivo.trim() })
+      .then(function (r) { window.alert(r.error ? ('No se pudo enviar: ' + r.error.message) : 'Gracias, recibimos tu reporte. Lo revisaremos.'); });
+  }
+
   return (
     <div style={{ border: '1px solid #eef0f5', borderRadius: 14, overflow: 'hidden', marginTop: 10, background: '#fff' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 10px 0' }}>
+        <button onClick={reportar} style={{ background: 'none', border: 'none', color: '#b07a1e', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{'\u{26A0} Reportar'}</button>
+      </div>
       <div style={{ maxHeight: 260, overflowY: 'auto', padding: 12, background: '#fafafc' }}>
         {!cargado && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Cargando conversación...</div>}
         {cargado && mensajes.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5' }}>{miRol === 'maestro' ? 'Pregúntale al cliente lo que necesites para cotizar bien (¿qué material?, ¿qué piso?, manda una foto de cerca).' : 'Escríbele al maestro si tienes dudas sobre el presupuesto.'}</div>}
