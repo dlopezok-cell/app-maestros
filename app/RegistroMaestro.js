@@ -3,12 +3,12 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Registro del maestro en 3 pasos (obligatorios en orden):
-//   1) Identidad  -> foto de perfil, nombre, teléfono (+56 9), dirección (Google Places),
-//                    RUT (autoformateado), foto del carnet + selfie  -> verificaciones (privado)
-//   2) Descripción -> especialidades/tipos/qué ofreces (desde catálogos editables),
-//                     años, región + comunas (autodetectadas de la dirección), sello -> descripción IA
-//   3) Trabajos   -> galería de fotos (bucket avatares)
-// Identidad es obligatoria para publicar. Si ya está registrado, se ve el resumen.
+//   1) Identidad  -> foto de perfil (con reencuadre), nombre, teléfono (+56 9 fijo),
+//                    dirección (Google Places), RUT (autoformateado), carnet + selfie
+//   2) Descripción -> especialidades/tipos/qué ofreces (catálogos editables),
+//                     años, región + comunas (autodetectadas), sello -> descripción IA
+//   3) Trabajos   -> galería de fotos
+// Identidad obligatoria para publicar. Si ya está registrado, se ve el resumen.
 
 const REGIONES = {
   'Arica y Parinacota': ['Arica','Camarones','Putre','General Lagos'],
@@ -29,6 +29,9 @@ const REGIONES = {
   'Magallanes': ['Punta Arenas','Puerto Natales','Porvenir','Cabo de Hornos','Torres del Paine','Natales']
 };
 const MAP_REGION = { 'metropolitana':'Región Metropolitana','valpara':'Valparaíso','arica':'Arica y Parinacota','tarapac':'Tarapacá','antofagasta':'Antofagasta','atacama':'Atacama','coquimbo':'Coquimbo',"o'higgins":"O'Higgins",'libertador':"O'Higgins",'maule':'Maule','nuble':'Ñuble','biob':'Biobío','araucan':'La Araucanía','los rios':'Los Ríos','los lagos':'Los Lagos','aysen':'Aysén','magallanes':'Magallanes' };
+
+const BD = 260; // tamaño del recuadro de recorte
+const OUT = 512; // tamaño de salida de la foto
 
 function norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
 function matchRegion(name) { var n = norm(name); for (var k in MAP_REGION) { if (n.indexOf(k) >= 0) return MAP_REGION[k]; } return ''; }
@@ -52,22 +55,13 @@ function rutValido(r) {
   var dvc = res === 11 ? '0' : res === 10 ? 'K' : String(res);
   return dv === dvc;
 }
-function formatTel(d) {
-  d = (d || '').replace(/\D/g, '');
-  if (d.indexOf('56') === 0) d = d.slice(2);
-  if (d.indexOf('9') === 0) d = d.slice(1);
-  d = d.slice(0, 8);
-  if (!d.length) return '';
-  var out = '+56 9 ' + d.slice(0, 4);
-  if (d.length > 4) out += ' ' + d.slice(4, 8);
-  return out;
-}
 function telDigitos(t) { var d = (t || '').replace(/\D/g, ''); if (d.indexOf('56') === 0) d = d.slice(2); if (d.indexOf('9') === 0) d = d.slice(1); return d.slice(0, 8); }
+function telVisible(d) { return d.length > 4 ? d.slice(0, 4) + ' ' + d.slice(4) : d; }
 
 export default function RegistroMaestro({ usuario, onGuardado }) {
   const [cat, setCat] = useState({ especialidad: [], tipo: [], ofrece: [] });
   const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
+  const [tel8, setTel8] = useState('');
   const [direccion, setDireccion] = useState('');
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
@@ -98,6 +92,13 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   const [err, setErr] = useState(null);
   const [msg, setMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  // recorte de foto
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropImg, setCropImg] = useState(null); // { w, h, base }
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOff, setCropOff] = useState({ x: 0, y: 0 });
+  const dragRef = useRef(null);
   const dirRef = useRef(null);
 
   useEffect(function () {
@@ -114,7 +115,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
       setCat(c);
       var m = res[1].data, p = res[2].data, v = res[3].data;
       if (p) { setNombre(p.nombre || ''); if (p.lat != null) setLat(p.lat); if (p.lng != null) setLng(p.lng); setAvatarUrl(p.avatar_url || null); }
-      if (v) { setVerif(v); if (v.rut) setRut(v.rut); if (v.telefono) setTelefono(formatTel(v.telefono)); if (v.direccion) setDireccion(v.direccion); }
+      if (v) { setVerif(v); if (v.rut) setRut(formatRut(v.rut)); if (v.telefono) setTel8(telDigitos(v.telefono)); if (v.direccion) setDireccion(v.direccion); }
       if (m) {
         setYaRegistrado(true);
         setOficios(m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []));
@@ -171,6 +172,61 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   function espNombre(slug) { var e = cat.especialidad.filter(function (x) { return x.slug === slug; })[0]; return e ? e.valor : slug; }
   var oficiosTxt = oficios.map(espNombre).join(' · ');
 
+  // ---------- recorte de foto de perfil ----------
+  function elegirFoto(file) {
+    if (!file) return;
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var base = Math.max(BD / img.width, BD / img.height);
+      setCropImg({ w: img.width, h: img.height, base: base });
+      setCropZoom(1); setCropOff({ x: 0, y: 0 }); setCropSrc(url); setCropOpen(true);
+    };
+    img.src = url;
+  }
+  function dimCrop(z) { return cropImg ? { w: cropImg.w * cropImg.base * z, h: cropImg.h * cropImg.base * z } : { w: 0, h: 0 }; }
+  function clampOff(nx, ny, z) {
+    var d = dimCrop(z);
+    var mx = Math.max(0, (d.w - BD) / 2), my = Math.max(0, (d.h - BD) / 2);
+    return { x: Math.min(mx, Math.max(-mx, nx)), y: Math.min(my, Math.max(-my, ny)) };
+  }
+  function dragStart(cx, cy) { dragRef.current = { sx: cx, sy: cy, ox: cropOff.x, oy: cropOff.y }; }
+  function dragMove(cx, cy) { if (!dragRef.current) return; setCropOff(clampOff(dragRef.current.ox + (cx - dragRef.current.sx), dragRef.current.oy + (cy - dragRef.current.sy), cropZoom)); }
+  function dragEnd() { dragRef.current = null; }
+  function onZoom(z) { setCropZoom(z); setCropOff(function (o) { return clampOff(o.x, o.y, z); }); }
+  function cerrarCrop() { if (cropSrc) URL.revokeObjectURL(cropSrc); setCropOpen(false); setCropSrc(null); setCropImg(null); }
+  function usarFoto() {
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas'); canvas.width = OUT; canvas.height = OUT;
+      var ctx = canvas.getContext('2d');
+      var f = OUT / BD;
+      var d = dimCrop(cropZoom);
+      var l = (BD / 2 + cropOff.x - d.w / 2) * f;
+      var t = (BD / 2 + cropOff.y - d.h / 2) * f;
+      ctx.drawImage(img, l, t, d.w * f, d.h * f);
+      canvas.toBlob(function (blob) {
+        if (blob) subirAvatar(new File([blob], 'perfil.jpg', { type: 'image/jpeg' }));
+        cerrarCrop();
+      }, 'image/jpeg', 0.9);
+    };
+    img.src = cropSrc;
+  }
+
+  function subirAvatar(file) {
+    if (!file) return;
+    setMsg('Subiendo foto...');
+    var ruta = usuario.id + '/perfil_' + Date.now() + '.jpg';
+    supabase.storage.from('avatares').upload(ruta, file, { upsert: true }).then(function (r) {
+      if (r.error) throw new Error(r.error.message);
+      var pub = supabase.storage.from('avatares').getPublicUrl(ruta);
+      return supabase.from('perfiles').upsert({ id: usuario.id, avatar_url: pub.data.publicUrl, rol: 'maestro' }, { onConflict: 'id' }).then(function (r2) {
+        if (r2.error) throw new Error(r2.error.message);
+        setAvatarUrl(pub.data.publicUrl); setMsg(null);
+      });
+    }).catch(function (e) { setMsg('Error: ' + e.message); });
+  }
+
   function pedirIA() {
     if (!oficios.length) return;
     setGenerando(true);
@@ -197,32 +253,25 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
       var carnetPath = verif && verif.carnet_path ? verif.carnet_path : uid + '/carnet.jpg';
       var selfiePath = verif && verif.selfie_path ? verif.selfie_path : uid + '/selfie.jpg';
       var huboFoto = !!(carnetFile || selfieFile);
+      var telGuardar = '+56 9 ' + tel8.slice(0, 4) + ' ' + tel8.slice(4);
       function subirC() { if (!carnetFile) return Promise.resolve(); carnetPath = uid + '/carnet.jpg'; return supabase.storage.from('verificaciones').upload(carnetPath, carnetFile, { upsert: true }).then(function (r) { if (r.error) throw new Error('al subir el carnet: ' + r.error.message); }); }
       function subirS() { if (!selfieFile) return Promise.resolve(); selfiePath = uid + '/selfie.jpg'; return supabase.storage.from('verificaciones').upload(selfiePath, selfieFile, { upsert: true }).then(function (r) { if (r.error) throw new Error('al subir la selfie: ' + r.error.message); }); }
-      return subirC().then(subirS).then(function () {
+      // Aseguramos que exista la fila de perfil (rol es obligatorio) antes de publicar la ficha.
+      return supabase.from('perfiles').upsert({ id: uid, nombre: nombre.trim(), lat: lat, lng: lng, rol: 'maestro' }, { onConflict: 'id' }).then(function (rp) {
+        if (rp.error) throw new Error('al guardar tu perfil: ' + rp.error.message);
+        return subirC();
+      }).then(subirS).then(function () {
         var estado = huboFoto ? 'pendiente' : (verif && verif.estado ? verif.estado : 'pendiente');
         return supabase.from('verificaciones').upsert({
           user_id: uid, email: sesion.user.email, rut: rut.trim().toUpperCase(),
-          telefono: telefono.trim(), direccion: direccion.trim(),
+          telefono: telGuardar, direccion: direccion.trim(),
           carnet_path: carnetPath, selfie_path: selfiePath, estado: estado
         }, { onConflict: 'user_id' }).select().single();
       }).then(function (r) {
         if (r.error) throw new Error('al guardar identidad: ' + r.error.message);
         setVerif(r.data);
-        return supabase.from('perfiles').update({ nombre: nombre.trim(), lat: lat, lng: lng }).eq('id', uid);
       });
     });
-  }
-
-  function subirAvatar(file) {
-    if (!file) return;
-    setMsg('Subiendo foto...');
-    var ruta = usuario.id + '/perfil_' + Date.now() + '.jpg';
-    supabase.storage.from('avatares').upload(ruta, file, { upsert: true }).then(function (r) {
-      if (r.error) throw new Error(r.error.message);
-      var pub = supabase.storage.from('avatares').getPublicUrl(ruta);
-      return supabase.from('perfiles').update({ avatar_url: pub.data.publicUrl }).eq('id', usuario.id).then(function () { setAvatarUrl(pub.data.publicUrl); setMsg(null); });
-    }).catch(function (e) { setMsg('Error: ' + e.message); });
   }
 
   function subirTrabajos(fileList) {
@@ -257,7 +306,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   function next1() {
     var e = [];
     if (!nombre.trim()) e.push('nombre');
-    if (telDigitos(telefono).length < 8) e.push('teléfono');
+    if (tel8.length < 8) e.push('teléfono completo');
     if (direccion.trim().length < 5) e.push('dirección');
     if (!rutValido(rut)) e.push('RUT válido');
     if (!(verif && verif.carnet_path) && !carnetFile) e.push('foto del carnet');
@@ -298,6 +347,43 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   const lbl = { display: 'block', fontSize: 12, color: '#534AB7', margin: '12px 0 6px' };
   function chip(on) { return { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer', border: on ? '1px solid #7F77DD' : '1px solid #e0e0ec', background: on ? '#fff' : '#fafafc', color: on ? '#3C3489' : '#6b7184' }; }
   var inicial = (nombre || (usuario.email || '?')).trim().charAt(0).toUpperCase();
+
+  // ---------- modal de recorte ----------
+  function Cropper() {
+    var d = dimCrop(cropZoom);
+    var left = BD / 2 + cropOff.x - d.w / 2;
+    var top = BD / 2 + cropOff.y - d.h / 2;
+    return (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(20,20,40,.7)', zIndex: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ width: '100%', maxWidth: 320, background: '#1c2030', borderRadius: 20, padding: 18, textAlign: 'center' }}>
+          <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Ajusta tu foto</div>
+          <div
+            style={{ position: 'relative', width: BD, height: BD, margin: '0 auto', borderRadius: 12, overflow: 'hidden', background: '#000', touchAction: 'none', cursor: 'move' }}
+            onMouseDown={function (e) { dragStart(e.clientX, e.clientY); }}
+            onMouseMove={function (e) { dragMove(e.clientX, e.clientY); }}
+            onMouseUp={dragEnd}
+            onMouseLeave={dragEnd}
+            onTouchStart={function (e) { var t = e.touches[0]; dragStart(t.clientX, t.clientY); }}
+            onTouchMove={function (e) { var t = e.touches[0]; dragMove(t.clientX, t.clientY); }}
+            onTouchEnd={dragEnd}
+          >
+            {cropSrc && <img src={cropSrc} alt="" draggable={false} style={{ position: 'absolute', left: left, top: top, width: d.w, height: d.h, maxWidth: 'none', userSelect: 'none', pointerEvents: 'none' }} />}
+            <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.85)', borderRadius: '50%' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 4px 4px' }}>
+            <span style={{ color: '#b9c0d4', fontSize: 16 }}>{'\u{1F5BC}'}</span>
+            <input type="range" min={1} max={3} step={0.01} value={cropZoom} onChange={function (e) { onZoom(parseFloat(e.target.value)); }} style={{ flex: 1 }} />
+            <span style={{ color: '#b9c0d4', fontSize: 18, fontWeight: 800 }}>+</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#9aa1b5', marginBottom: 14 }}>Arrastra para centrar · desliza para acercar</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={cerrarCrop} style={{ flex: 1, background: 'transparent', color: '#b9c0d4', border: '1px solid #3a3f52', borderRadius: 11, padding: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
+            <button onClick={usarFoto} style={{ flex: 1, background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 11, padding: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Usar foto</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function verAnterior(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i <= 0 ? galeria.length - 1 : i - 1; }); }
   function verSiguiente(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i >= galeria.length - 1 ? 0 : i + 1; }); }
@@ -385,6 +471,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   return (
     <div style={card}>
       {verPerfil && <Preview />}
+      {cropOpen && <Cropper />}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
         {pasoMeta.map(function (s, i) {
@@ -407,15 +494,20 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '8px 0 14px' }}>
             <label style={{ width: 86, height: 86, borderRadius: '50%', overflow: 'hidden', background: avatarUrl ? '#eee' : '#fafafc', border: '2px dashed #d6d3ee', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 26, color: '#7F77DD' }}>{'\u{1F4F7}'}</span>}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={function (e) { subirAvatar(e.target.files[0]); }} />
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={function (e) { elegirFoto(e.target.files[0]); e.target.value = ''; }} />
             </label>
-            <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>{avatarUrl ? 'Cambiar foto de perfil' : 'Agregar foto de perfil'}</span>
+            <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>{avatarUrl ? 'Cambiar / reencuadrar foto' : 'Agregar foto de perfil'}</span>
           </div>
 
           <label style={lbl}>Nombre y apellido</label>
           <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre y apellido" style={inp} />
+
           <label style={lbl}>Teléfono</label>
-          <input value={telefono} onChange={function (e) { setTelefono(formatTel(e.target.value)); }} inputMode="tel" placeholder="+56 9 1234 5678" style={inp} />
+          <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #e4e4ef', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f3f2fb', color: '#3C3489', fontWeight: 600, fontSize: 14, padding: '0 13px', borderRight: '1px solid #e4e4ef', whiteSpace: 'nowrap' }}>{'\u{1F1E8}\u{1F1F1} +56 9'}</div>
+            <input value={telVisible(tel8)} onChange={function (e) { setTel8(e.target.value.replace(/\D/g, '').slice(0, 8)); }} inputMode="numeric" placeholder="1234 5678" style={{ flex: 1, padding: 12, border: 'none', fontSize: 14, outline: 'none', color: '#1c1f2b', minWidth: 0 }} />
+          </div>
+
           <label style={lbl}>Dirección</label>
           <input ref={dirRef} value={direccion} onChange={function (e) { setDireccion(e.target.value); }} placeholder="Escribe tu dirección" autoComplete="off" style={inp} />
           <label style={lbl}>RUT</label>
