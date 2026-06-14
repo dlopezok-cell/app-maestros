@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 // Flujo de verificacion de identidad del maestro:
 // foto del carnet + selfie -> bucket privado "verificaciones" -> estado pendiente
-export default function Verificacion({ usuario }) {
+export default function Verificacion({ usuario, plano, onGuardado }) {
   const [registro, setRegistro] = useState(null);
   const [abierto, setAbierto] = useState(false);
   const [carnet, setCarnet] = useState(null);
@@ -93,6 +93,7 @@ export default function Verificacion({ usuario }) {
           setAbierto(false);
           setMsg(null);
           setSubiendo(false);
+          if (onGuardado) onGuardado();
         })
         .catch(function (e) { setMsg('Error ' + e.message); setSubiendo(false); });
     });
@@ -100,12 +101,16 @@ export default function Verificacion({ usuario }) {
 
   if (!usuario || !cargado) return null;
 
-  const card = { background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' };
+  const card = plano
+    ? { background: 'transparent', borderRadius: 0, padding: 0, margin: 0, border: 'none' }
+    : { background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' };
   const btn = { background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: '11px 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer', width: '100%' };
   const fileBox = { display: 'block', width: '100%', padding: 12, border: '1.5px dashed #ccc', borderRadius: 12, fontSize: 13, marginBottom: 10, background: '#fafafa', cursor: 'pointer' };
 
+  // En modo plano (dentro del acordeón) siempre mostramos el formulario,
+  // con una línea de estado. Fuera del acordeón mantenemos las tarjetas de estado.
   // Ya aprobado
-  if (registro && registro.estado === 'aprobado') return (
+  if (!plano && registro && registro.estado === 'aprobado') return (
     <div style={{ ...card, borderColor: '#bce5cf', background: '#f2fbf6' }}>
       <b style={{ color: '#0d9456', fontSize: 14 }}>{'\u{1F6E1} Identidad verificada'}</b>
       <div style={{ fontSize: 12, color: '#7c8499', marginTop: 4 }}>Tu insignia de verificado ya es visible para los clientes.</div>
@@ -113,7 +118,7 @@ export default function Verificacion({ usuario }) {
   );
 
   // En revision
-  if (registro && registro.estado === 'pendiente') return (
+  if (!plano && registro && registro.estado === 'pendiente') return (
     <div style={{ ...card, borderColor: '#ffe2b8', background: '#fff9f0' }}>
       <b style={{ fontSize: 14 }}>{'\u{23F3} Verificación en revisión'}</b>
       <div style={{ fontSize: 12, color: '#7c8499', marginTop: 4 }}>Recibimos tu carnet y selfie. Te avisaremos en menos de 24 horas.</div>
@@ -128,7 +133,7 @@ export default function Verificacion({ usuario }) {
           <b>Verificación rechazada.</b>{registro.notas ? ' Motivo: ' + registro.notas : ''} Vuelve a intentarlo con fotos más claras.
         </div>
       )}
-      {!abierto ? (
+      {(!plano && !abierto) ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 26 }}>{'\u{1FAAA}'}</span>
           <div style={{ flex: 1 }}>
@@ -139,7 +144,9 @@ export default function Verificacion({ usuario }) {
         </div>
       ) : (
         <div>
-          <b style={{ fontSize: 14 }}>Tus datos y verificación</b>
+          {plano && registro && registro.estado === 'aprobado' && <div style={{ fontSize: 12, color: '#0d9456', fontWeight: 700, marginBottom: 10 }}>{'\u{1F6E1} Identidad verificada. Puedes actualizar tus datos abajo.'}</div>}
+          {plano && registro && registro.estado === 'pendiente' && <div style={{ fontSize: 12, color: '#b07a1e', fontWeight: 700, marginBottom: 10 }}>{'\u{23F3} Verificación en revisión. Si necesitas, corrige tus datos.'}</div>}
+          {!plano && <b style={{ fontSize: 14 }}>Tus datos y verificación</b>}
           <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Necesitamos tu teléfono, dirección, RUT, una foto de tu carnet (por delante) y una selfie. Solo los verá nuestro equipo y las fotos se eliminan al aprobarte.</div>
           <input value={telefono} onChange={function (e) { setTelefono(e.target.value); }} inputMode="tel" placeholder="Teléfono (ej: +56 9 1234 5678)"
             style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
@@ -163,8 +170,8 @@ export default function Verificacion({ usuario }) {
           <button style={{ ...btn, opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>
             {subiendo ? 'Enviando...' : 'Enviar para revisión'}
           </button>
-          <button style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 12, cursor: 'pointer', width: '100%', marginTop: 8 }}
-            onClick={function () { setAbierto(false); setMsg(null); }}>Cancelar</button>
+          {!plano && <button style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 12, cursor: 'pointer', width: '100%', marginTop: 8 }}
+            onClick={function () { setAbierto(false); setMsg(null); }}>Cancelar</button>}
         </div>
       )}
     </div>
