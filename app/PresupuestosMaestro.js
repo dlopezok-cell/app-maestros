@@ -64,6 +64,10 @@ export default function PresupuestosMaestro({ usuario }) {
       mensaje: mensaje.trim() || null,
     }).then(function (r) {
       if (r.error) { setMsg('Error: ' + r.error.message); setEnviando(false); return; }
+      // avisar por correo al cliente (sin frenar la UI)
+      try {
+        fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'cotizacion', presupuestoId: p.id, maestroId: usuario.id, monto: monto ? parseInt(monto, 10) : null }) });
+      } catch (e) {}
       setEnviando(false); setRespId(null);
       cargar(miOficio);
     });
