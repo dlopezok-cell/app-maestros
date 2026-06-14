@@ -39,6 +39,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   const [yaRegistrado, setYaRegistrado] = useState(false);
   const [editando, setEditando] = useState(false);
   const [verPerfil, setVerPerfil] = useState(false);
+  const [trabajoIdx, setTrabajoIdx] = useState(-1); // foto de galería abierta en grande
 
   // Cuestionario para la IA
   const [tipos, setTipos] = useState([]);
@@ -158,8 +159,12 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   var inicial = (nombre || (usuario.email || '?')).trim().charAt(0).toUpperCase();
 
   // ---- Vista previa (modal): así te ven los clientes ----
+  function verAnterior(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i <= 0 ? galeria.length - 1 : i - 1; }); }
+  function verSiguiente(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i >= galeria.length - 1 ? 0 : i + 1; }); }
+
   function Preview() {
     return (
+      <>
       <div onClick={function () { setVerPerfil(false); }}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(20,20,40,.55)', zIndex: 120, overflowY: 'auto', padding: '22px 14px', boxSizing: 'border-box' }}>
         <div onClick={function (e) { e.stopPropagation(); }}
@@ -186,12 +191,18 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
 
             {galeria && galeria.length > 0 && (
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#2b2f3a', margin: '0 0 8px' }}>{'\u{1F4F8} Trabajos realizados'}</div>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#1c1f2b', margin: '4px 0 10px' }}>{'\u{1F4F8} Trabajos realizados'} <span style={{ color: '#9aa1b5', fontWeight: 600 }}>({galeria.length})</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                   {galeria.map(function (u, i) {
-                    return <img key={i} src={u} alt="" style={{ height: 130, minWidth: 130, width: 130, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee', flexShrink: 0 }} />;
+                    return (
+                      <button key={i} type="button" onClick={function () { setTrabajoIdx(i); }}
+                        style={{ position: 'relative', paddingTop: '100%', padding: 0, border: 'none', borderRadius: 12, overflow: 'hidden', background: '#eef0f5', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
+                        <img src={u} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </button>
+                    );
                   })}
                 </div>
+                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 7 }}>{'\u{1F50D} Toca una foto para verla en grande'}</div>
               </div>
             )}
 
@@ -199,6 +210,19 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
           </div>
         </div>
       </div>
+
+      {/* Visor de trabajos a pantalla completa */}
+      {trabajoIdx >= 0 && galeria[trabajoIdx] && (
+        <div onClick={function () { setTrabajoIdx(-1); }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,.93)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
+          <button onClick={function (e) { e.stopPropagation(); setTrabajoIdx(-1); }} style={{ position: 'absolute', top: 14, right: 16, width: 38, height: 38, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>{'✕'}</button>
+          {galeria.length > 1 && <button onClick={verAnterior} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 24, cursor: 'pointer', lineHeight: '42px', padding: 0 }}>{'‹'}</button>}
+          <img src={galeria[trabajoIdx]} alt="" onClick={function (e) { e.stopPropagation(); }} style={{ maxWidth: '92vw', maxHeight: '82vh', borderRadius: 12, objectFit: 'contain' }} />
+          {galeria.length > 1 && <button onClick={verSiguiente} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 24, cursor: 'pointer', lineHeight: '42px', padding: 0 }}>{'›'}</button>}
+          <div style={{ position: 'absolute', bottom: 18, left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: 700 }}>{(trabajoIdx + 1) + ' / ' + galeria.length}</div>
+        </div>
+      )}
+      </>
     );
   }
 
