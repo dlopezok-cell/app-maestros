@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Registro del maestro: ficha en una pagina, ordenada por secciones con estilo
-// moderno. La descripcion se ARMA SOLA con IA a medida que responde (respeta
-// lo que edite a mano). Las comunas se eligen como chips.
+// Registro del maestro. Dos estados:
+//  - Editando / sin registrar: formulario completo (cuestionario + IA) y botón guardar.
+//  - Ya registrado: se ocultan las herramientas y queda un resumen con
+//    "Editar perfil" y "Ver mi perfil" (vista previa de cómo lo ven los clientes).
 const OFICIOS = [
   { id: 'gasfiteria', nombre: 'Gasfitería' },
   { id: 'electricidad', nombre: 'Electricidad' },
@@ -19,8 +20,9 @@ const COMUNAS = [
   'Santiago Centro', 'Macul', 'Peñalolén', 'La Florida', 'San Miguel', 'Maipú',
   'Estación Central', 'Recoleta', 'Independencia', 'Quilicura', 'Huechuraba', 'Puente Alto',
 ];
+function oficioNombre(id) { var o = OFICIOS.filter(function (x) { return x.id === id; })[0]; return o ? o.nombre : id; }
 
-export default function RegistroMaestro({ usuario, plano, onGuardado }) {
+export default function RegistroMaestro({ usuario, onGuardado }) {
   const [nombre, setNombre] = useState('');
   const [oficios, setOficios] = useState([]);
   const [descripcion, setDescripcion] = useState('');
@@ -29,10 +31,14 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
   const [precioVisita, setPrecioVisita] = useState('');
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [galeria, setGaleria] = useState([]);
   const [msg, setMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [cargado, setCargado] = useState(false);
   const [yaRegistrado, setYaRegistrado] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [verPerfil, setVerPerfil] = useState(false);
 
   // Cuestionario para la IA
   const [tipos, setTipos] = useState([]);
@@ -50,18 +56,21 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
     if (!usuario) return;
     Promise.all([
       supabase.from('maestros').select('*').eq('id', usuario.id).maybeSingle(),
-      supabase.from('perfiles').select('nombre, lat, lng').eq('id', usuario.id).maybeSingle()
+      supabase.from('perfiles').select('nombre, lat, lng, avatar_url').eq('id', usuario.id).maybeSingle()
     ]).then(function (res) {
       var m = res[0].data;
       var p = res[1].data;
-      if (p) { setNombre(p.nombre || ''); if (p.lat != null) setLat(p.lat); if (p.lng != null) setLng(p.lng); }
+      if (p) { setNombre(p.nombre || ''); if (p.lat != null) setLat(p.lat); if (p.lng != null) setLng(p.lng); setAvatarUrl(p.avatar_url || null); }
       if (m) {
         setYaRegistrado(true);
         setOficios(m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []));
         setAnos(m.anos_experiencia != null ? String(m.anos_experiencia) : '');
         setPrecioVideo(m.precio_videollamada != null ? String(m.precio_videollamada) : '');
         setPrecioVisita(m.precio_visita != null ? String(m.precio_visita) : '');
+        if (m.galeria) setGaleria(m.galeria);
         if (m.descripcion) { setDescripcion(m.descripcion); setEditado(true); } // no sobreescribir lo guardado
+      } else {
+        setEditando(true); // sin registrar -> mostrar el formulario
       }
       setCargado(true);
     });
@@ -90,11 +99,11 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
   // Auto-genera la descripcion (con debounce) mientras el maestro responde,
   // siempre que no la haya editado a mano y tenga al menos una especialidad.
   useEffect(function () {
-    if (!cargado || !oficios.length || editado) return;
+    if (!cargado || !editando || !oficios.length || editado) return;
     var t = setTimeout(function () { pedirIA(); }, 1300);
     return function () { clearTimeout(t); };
     // eslint-disable-next-line
-  }, [cargado, editado, oficios, anos, tipos, fds, urgencias, garantia, boleta, comunas, sello, nombre]);
+  }, [cargado, editando, editado, oficios, anos, tipos, fds, urgencias, garantia, boleta, comunas, sello, nombre]);
 
   function guardar() {
     if (!nombre.trim()) { setMsg('Escribe tu nombre'); return; }
@@ -114,8 +123,10 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
     }).then(function (r) {
       if (r.error) { setMsg('Error: ' + r.error.message); setGuardando(false); return; }
       setYaRegistrado(true);
-      setMsg('Perfil de maestro guardado ✓ Ya apareces para los clientes.');
+      setMsg(null);
       setGuardando(false);
+      setEditando(false); // colapsa: oculta las herramientas y muestra el resumen
+      window.scrollTo(0, 0);
       if (onGuardado) onGuardado();
     });
   }
@@ -124,9 +135,7 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
 
   // --- estilos ---
   const inp = { width: '100%', padding: 12, border: '1px solid #e4e4ef', borderRadius: 12, fontSize: 14, background: '#fff', color: '#1c1f2b', boxSizing: 'border-box' };
-  const card = plano
-    ? { background: 'transparent', borderRadius: 0, padding: 0, margin: 0, border: 'none' }
-    : { background: '#fff', borderRadius: 18, padding: 18, margin: '14px 16px', border: '1px solid #eef0f5' };
+  const card = { background: '#fff', borderRadius: 18, padding: 18, margin: '14px 16px', border: '1px solid #eef0f5' };
   const divider = { borderTop: '1px solid #eef0f5', margin: '18px 0' };
   function seccion(icono, titulo) {
     return (
@@ -136,7 +145,6 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
       </div>
     );
   }
-  // chip morado (moderno, liviano)
   function chip(on, small) {
     return {
       padding: small ? '6px 11px' : '7px 13px', borderRadius: 999, fontSize: small ? 12 : 13,
@@ -146,8 +154,78 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
     };
   }
 
+  var oficiosTxt = oficios.map(oficioNombre).join(' · ');
+  var inicial = (nombre || (usuario.email || '?')).trim().charAt(0).toUpperCase();
+
+  // ---- Vista previa (modal): así te ven los clientes ----
+  function Preview() {
+    return (
+      <div onClick={function () { setVerPerfil(false); }}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(20,20,40,.55)', zIndex: 120, overflowY: 'auto', padding: '22px 14px', boxSizing: 'border-box' }}>
+        <div onClick={function (e) { e.stopPropagation(); }}
+          style={{ maxWidth: 420, margin: '0 auto', background: '#fff', borderRadius: 22, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,.4)' }}>
+          <div style={{ background: '#1c2030', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ color: '#fff', fontSize: 12.5, fontWeight: 800 }}>{'\u{1F441} Así te ven los clientes'}</span>
+            <button onClick={function () { setVerPerfil(false); }} style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,.15)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', lineHeight: '30px', padding: 0 }}>{'✕'}</button>
+          </div>
+          <div style={{ padding: 18 }}>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: '#ff5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 30, flexShrink: 0 }}>
+                {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : inicial}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#1c1f2b' }}>{nombre || 'Tu nombre'}</div>
+                <div style={{ fontSize: 13, color: '#7c8499' }}>{oficiosTxt || 'Tus especialidades'}</div>
+                <div style={{ display: 'inline-block', marginTop: 6, background: '#E1F5EE', color: '#0F6E56', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 800 }}>{'\u{1F6E1} Verificado'}</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: '#b07a1e', background: '#fff7ea', borderRadius: 10, padding: '8px 11px', margin: '14px 0' }}>{'⭐ Nuevo en MaestrosEnLínea · aún sin reseñas'}</div>
+
+            {descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, color: '#2b2f3a', margin: '0 0 14px' }}>{descripcion}</p>}
+
+            {galeria && galeria.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#2b2f3a', margin: '0 0 8px' }}>{'\u{1F4F8} Trabajos realizados'}</div>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                  {galeria.map(function (u, i) {
+                    return <img key={i} src={u} alt="" style={{ height: 130, minWidth: 130, width: 130, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee', flexShrink: 0 }} />;
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button onClick={function () { setVerPerfil(false); }} style={{ width: '100%', marginTop: 16, background: '#26215C', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Cerrar vista previa</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Estado: YA REGISTRADO (resumen, sin herramientas) ----
+  if (yaRegistrado && !editando) {
+    return (
+      <div style={card}>
+        {verPerfil && <Preview />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 18 }}>{'\u{1F9F0}'}</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: '#1c1f2b' }}>Mi ficha de maestro</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#0F6E56', background: '#E1F5EE', borderRadius: 999, padding: '3px 9px' }}>Publicada</span>
+        </div>
+        <div style={{ fontSize: 13, color: '#7c8499', marginBottom: 4 }}>{[oficiosTxt, anos ? anos + ' años' : ''].filter(Boolean).join(' · ') || 'Tu ficha'}</div>
+        {descripcion && <div style={{ fontSize: 13, lineHeight: 1.55, color: '#2b2f3a', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{descripcion}</div>}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+          <button onClick={function () { setEditando(true); setMsg(null); }} style={{ background: '#fff', color: '#3C3489', border: '1.5px solid #cfc9f3', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'✏️ Editar perfil'}</button>
+          <button onClick={function () { setVerPerfil(true); }} style={{ background: '#26215C', color: '#fff', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'\u{1F441} Ver mi perfil'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Estado: EDITANDO / SIN REGISTRAR (formulario completo) ----
   return (
     <div style={card}>
+      {verPerfil && <Preview />}
       {/* Tus datos */}
       {seccion('\u{1F464}', 'Tus datos')}
       <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre y apellido" style={{ ...inp, marginBottom: 0 }} />
@@ -218,6 +296,7 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
       <button className="gbtn full" style={{ marginTop: 6, opacity: guardando ? 0.6 : 1 }} disabled={guardando} onClick={guardar}>
         {yaRegistrado ? 'Guardar cambios' : 'Registrarme como maestro'}
       </button>
+      {yaRegistrado && <button onClick={function () { setEditando(false); setMsg(null); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 12, cursor: 'pointer', width: '100%', marginTop: 8 }}>Cancelar</button>}
     </div>
   );
 }
