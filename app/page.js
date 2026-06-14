@@ -1,477 +1,239 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import PerfilCliente from './PerfilCliente';
 import PresupuestoCliente from './PresupuestoCliente';
-import MisPedidos from './MisPedidos';
-import Bienvenida from './Bienvenida';
+import PerfilCliente from './PerfilCliente';
 
-const OWNER = 'dlopezok@gmail.com';
-
-const OFICIOS = [
-  { id: null, emoji: '✨', nombre: 'Todos' },
-  { id: 'gasfiteria', emoji: '\u{1F6B0}', nombre: 'Gasfiteria' },
-  { id: 'electricidad', emoji: '⚡', nombre: 'Electricidad' },
-  { id: 'cerrajeria', emoji: '\u{1F511}', nombre: 'Cerrajeria' },
-  { id: 'pintura', emoji: '\u{1F3A8}', nombre: 'Pintura' },
-  { id: 'calefont', emoji: '\u{1F525}', nombre: 'Calefont' },
-  { id: 'limpieza', emoji: '\u{1F9F9}', nombre: 'Limpieza' },
-  ];
-const GRADS = [
-    'linear-gradient(150deg,#3b6ef0,#7fa8ff)',
-    'linear-gradient(150deg,#e9842f,#ffc06b)',
-    'linear-gradient(150deg,#11a36c,#6fe0ae)',
-    'linear-gradient(150deg,#7048e8,#a78bfa)',
-    'linear-gradient(150deg,#d6336c,#f783ac)',
-    'linear-gradient(150deg,#0e7490,#5eead4)',
-  ];
-const CARAS = ['\u{1F468}', '\u{1F469}', '\u{1F9D4}', '\u{1F477}', '\u{1F468}', '\u{1F469}'];
+// App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
+// Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
+const EMO = { gasfiteria: '\u{1F6B0}', electricidad: '⚡', cerrajeria: '\u{1F511}', pintura: '\u{1F3A8}', calefont: '\u{1F525}', limpieza: '\u{1F9F9}' };
+const GRAD = ['linear-gradient(150deg,#3b6ef0,#7fa8ff)', 'linear-gradient(150deg,#e9842f,#ffc06b)', 'linear-gradient(150deg,#11a36c,#6fe0ae)', 'linear-gradient(150deg,#7048e8,#a78bfa)', 'linear-gradient(150deg,#d6336c,#f783ac)', 'linear-gradient(150deg,#0e7490,#5eead4)'];
 
 export default function Home() {
-    const [vista, setVista] = useState('home');
-    const [oficio, setOficio] = useState(null);
-    const [maestros, setMaestros] = useState([]);
-    const [sel, setSel] = useState(null);
-    const [selIdx, setSelIdx] = useState(0);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState(null);
-    const [usuario, setUsuario] = useState(null);
-    const [authTab, setAuthTab] = useState('ingresar');
-    const [nombre, setNombre] = useState('');
-    const [email, setEmail] = useState('');
-    const [pass, setPass] = useState('');
-    const [authMsg, setAuthMsg] = useState(null);
-    const [pagando, setPagando] = useState(false);
-    const [volverA, setVolverA] = useState('cliente');
-    const [q, setQ] = useState('');
-    const [locTexto, setLocTexto] = useState('\u{1F4CD} Cerca de ti');
-    const [authReady, setAuthReady] = useState(false);
-
-    function pedirLogin(volver) {
-          setVolverA(volver);
-          setAuthMsg(null);
-          setVista('auth');
-          window.scrollTo(0, 0);
-    }
-
-    function entrar() {
-          setAuthMsg('Procesando...');
-          const esCrear = authTab === 'crear';
-          const fn = esCrear
-            ? supabase.auth.signUp({ email: email, password: pass, options: { data: { nombre: nombre.trim() } } })
-            : supabase.auth.signInWithPassword({ email: email, password: pass });
-          fn.then(function (r) {
-                  if (r.error) { setAuthMsg(r.error.message); return; }
-                  if (esCrear) { try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'bienvenida', email: email.trim(), nombre: nombre.trim(), rol: 'cliente' }) }); } catch (e) {} }
-                  setUsuario(r.data.user);
-                  setAuthMsg(null);
-                  setVista(volverA || 'cliente');
-          });
-    }
-    function conGoogle() {
-          supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-    }
-    function salir() {
-          supabase.auth.signOut().then(function () { setUsuario(null); setVista('home'); });
-    }
-
-    function pagar(tipo, monto, descripcion, maestroId) {
-          if (!usuario) { pedirLogin(vista); return; }
-          setPagando(true);
-          fetch('/api/pagar', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: tipo, monto: monto, descripcion: descripcion, maestroId: maestroId || null, email: usuario ? usuario.email : null }),
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                    if (d.init_point) { window.location.href = d.init_point; }
-                    else { alert(d.error || 'No se pudo iniciar el pago'); setPagando(false); }
-            })
-            .catch(function () { alert('Error de conexión con el pago'); setPagando(false); });
-    }
-
-  function cargar(lat, lng) {
-        supabase.rpc('maestros_cercanos', { lat: lat, lng: lng, oficio_buscado: null })
-          .then(function (r) {
-                    if (r.error) setError(r.error.message);
-                    else {
-                      var data = r.data || [];
-                      setMaestros(data);
-                      if (typeof window !== 'undefined' && data.length) {
-                        var pm = new URLSearchParams(window.location.search).get('p');
-                        if (pm && (pm === 'detalle' || pm === 'video')) { setSel(data[0]); setSelIdx(0); setVista(pm); }
-                      }
-                    }
-                    setCargando(false);
-          });
-  }
+  const [vista, setVista] = useState('inicio');
+  const [usuario, setUsuario] = useState(null);
+  const [cargado, setCargado] = useState(false);
+  const [maestros, setMaestros] = useState([]);
+  const [cats, setCats] = useState([]);
+  const [oficio, setOficio] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [gIdx, setGIdx] = useState(-1);
+  const [destinoLogin, setDestinoLogin] = useState('cuenta');
+  const [authTab, setAuthTab] = useState('ingresar');
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [authMsg, setAuthMsg] = useState(null);
 
   useEffect(function () {
-        supabase.auth.getUser().then(function (r) { if (r.data && r.data.user) setUsuario(r.data.user); setAuthReady(true); });
-        if (typeof window !== 'undefined') {
-                var p = new URLSearchParams(window.location.search).get('p');
-                if (p && ['home', 'presupuesto', 'cuenta', 'cliente', 'pedidos', 'auth', 'track'].indexOf(p) >= 0) setVista(p);
-        }
-        cargar(-33.43, -70.61);
-        if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                          function (pos) { cargar(pos.coords.latitude, pos.coords.longitude); },
-                          function () {}
-                        );
-        }
+    supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
+    supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
+      .then(function (r) { setCats(r.data || []); });
+    supabase.from('maestros').select('id, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comuna, region, verificado, perfiles(nombre, avatar_url)')
+      .then(function (r) { setMaestros(r.data || []); });
   }, []);
 
-  function video(id) {
-        window.open('https://meet.jit.si/maestros-demo-' + id, '_blank');
+  function entrar() {
+    setAuthMsg('Procesando...');
+    var fn = authTab === 'ingresar'
+      ? supabase.auth.signInWithPassword({ email: email.trim(), password: pass })
+      : supabase.auth.signUp({ email: email.trim(), password: pass });
+    fn.then(function (r) {
+      if (r.error) { setAuthMsg(r.error.message); return; }
+      if (authTab === 'crear' && (!r.data.session)) { setAuthMsg('Te enviamos un correo para confirmar tu cuenta. Ábrelo y vuelve a ingresar.'); return; }
+      setUsuario(r.data.user); setAuthMsg(null); setVista(destinoLogin); window.scrollTo(0, 0);
+    });
   }
-  function ubicarme() {
-        if (!navigator.geolocation) { setLocTexto('\u{1F4CD} Cerca de ti'); return; }
-        setLocTexto('\u{1F4CD} Buscando tu ubicación...');
-        navigator.geolocation.getCurrentPosition(
-          function (pos) { setLocTexto('\u{1F4CD} Cerca de ti ✓'); cargar(pos.coords.latitude, pos.coords.longitude); },
-          function () { setLocTexto('\u{1F4CD} Activa la ubicación en tu navegador'); }
-        );
+  function conGoogle() {
+    supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined } });
   }
-    function abrir(m, i) {
-          setSel(m); setSelIdx(i); setVista('detalle'); window.scrollTo(0, 0);
-    }
-    function agendar() {
-          if (!usuario) { pedirLogin('video'); return; }
-          setVista('video');
-    }
-    function plata(n) {
-          return '$' + (n || 0).toLocaleString('es-CL');
-    }
+  function salir() { supabase.auth.signOut().then(function () { setUsuario(null); setVista('inicio'); }); }
 
-  const ql = (q || '').trim().toLowerCase();
-  const lista = maestros.filter(function (m) {
-        if (oficio && (m.oficios && m.oficios.length ? m.oficios.indexOf(oficio) < 0 : m.oficio !== oficio)) return false;
-        if (ql && (m.nombre || '').toLowerCase().indexOf(ql) < 0 && (m.oficio || '').toLowerCase().indexOf(ql) < 0) return false;
-        return true;
-  });
-    const desg = { bruto: 28000, comision: Math.round(28000 * .10 * 1.19), pasarela: Math.round(28000 * .0235 * 1.19), retencion: Math.round(28000 * .1525) };
-    desg.liquido = desg.bruto - desg.comision - desg.pasarela - desg.retencion;
+  function nombreM(m) { return (m.perfiles && m.perfiles.nombre) || 'Maestro'; }
+  function fotoM(m) { return m.foto_url || (m.perfiles && m.perfiles.avatar_url) || null; }
+  function oficiosM(m) { return m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []); }
+  function ofNombre(slug) { var c = cats.filter(function (x) { return x.slug === slug; })[0]; return c ? c.valor : (slug || ''); }
+  function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
 
-    function Tabs(props) {
-          const act = props.act;
-          return (
-                <div className="tabbar">
-                  <div className={'tab' + (act === 'home' ? ' on' : '')} onClick={function () { setVista('home'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-                  <div className={'tab' + (act === 'cotizar' ? ' on' : '')} onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}><span className="ti">{'\u{1F9F0}'}</span>Cotizar</div>
-                  <div className={'tab' + (act === 'cuenta' ? ' on' : '')} onClick={function () { if (usuario) setVista('cuenta'); else pedirLogin('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
-                </div>
-          );
-    }
+  function abrirFicha(m) { setSel(m); setGIdx(-1); setVista('ficha'); window.scrollTo(0, 0); }
+  function irTab(v) {
+    if ((v === 'cotizar' || v === 'cuenta') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
+    setVista(v); window.scrollTo(0, 0);
+  }
+  function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
 
-  if (!authReady) return null;
-  if (!usuario || (usuario.email || '').toLowerCase() !== OWNER) return <Bienvenida />;
+  var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
+  var lista = maestros.filter(function (m) { return !oficio || oficiosM(m).indexOf(oficio) >= 0; });
 
-  if (vista === 'home') return (
-        <main>
-          <div className="hero">
-            <span className="locpill" style={{ cursor: 'pointer' }} onClick={ubicarme}>{locTexto}</span>
-          <h1>{'Hola \u{1F44B} Que arreglamos hoy?'}</h1>
-          <input className="searchfloat" value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={'\u{1F50D} Busca un servicio o maestro'} style={{ border: 'none', outline: 'none', width: '100%', fontSize: 15, color: '#1c1f2b' }} />
-    </div>
-        <div className="body">
-            <div className="catscroll">
-  {OFICIOS.map(function (o) {
-                return (
-                                <div key={String(o.id)} className="catv2" onClick={function () { setOficio(o.id); }}>
-                                  <div className={'cico' + (oficio === o.id ? ' on' : '')}>{o.emoji}</div>
-                               <div className="clbl">{o.nombre}</div>
-               </div>
-                           );
-})}
-</div>
-        <div className="promo">
-            <span style={{ fontSize: 28 }}>{'\u{1F3A5}'}</span>
-          <div style={{ flex: 1 }}>
-            <div className="pt">Pide tu presupuesto por video</div>
-            <div className="pd">Manda un video y recibe precios, sin compromiso</div>
-  </div>
-          <button className="cta" onClick={function () { if (usuario) setVista('presupuesto'); else pedirLogin('presupuesto'); }}>Cotizar</button>
-  </div>
-        <div className="seehead"><h3>{'⚡ Disponibles ahora'}</h3></div>
-{cargando && <p>Buscando maestros cerca de ti...</p>}
-{error && <p className="error">{error}</p>}
-         <div className="cardscroll">
- {lista.map(function (m, i) {
-             return (
-                           <div key={m.id} className="mcard" onClick={function () { abrir(m, i); }}>
-                 <div className="photo" style={{ background: GRADS[i % 6] }}>
-           <img src={m.foto || ('https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 17 + 23) % 90) + '.jpg')} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                 <span className="ratepill">{'★ ' + m.rating + ' · ' + m.trabajos}</span>
-  </div>
-              <div className="minfo">
-                  <div className="nm">{m.nombre}</div>
-                <div className="mt"><span className="live"></span>{'Disponible · ' + (m.distancia_km != null ? 'a ' + m.distancia_km + ' km · ' : '') + m.oficio}</div>
-                  <div className="mt">{'Diagnostico ' + plata(m.precio_videollamada) + ' · primera vez GRATIS'}</div>
-  </div>
-  </div>
-          );
-})}
-  </div>
-        <div className="seehead"><h3>{'\u{1F3C6} Los mejor puntuados'}</h3></div>
-          <div className="cardscroll">
-{lista.slice().sort(function (a, b) { return b.rating - a.rating; }).map(function (m, i) {
-            return (
-                          <div key={'r' + m.id} className="mcard" onClick={function () { abrir(m, i); }}>
-                <div className="photo" style={{ background: GRADS[(i + 2) % 6] }}>
-                <img src={m.foto || ('https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'women/' : 'men/') + ((i * 13 + 40) % 90) + '.jpg')} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <span className="ratepill">{'★ ' + m.rating}</span>
-  </div>
-              <div className="minfo">
-                  <div className="nm">{m.nombre}</div>
-                <div className="mt">{m.oficio + ' · ' + m.trabajos + ' trabajos'}</div>
-  </div>
-  </div>
-          );
-})}
-</div>
-        <div className="seehead"><h3>{'\u{1F4B0} Precios convenientes'}</h3></div>
-          <div className="cardscroll">
-{lista.slice().sort(function (a, b) { return a.precio_videollamada - b.precio_videollamada; }).map(function (m, i) {
-            return (
-                          <div key={'p' + m.id} className="mcard" onClick={function () { abrir(m, i); }}>
-                <div className="photo" style={{ background: GRADS[(i + 4) % 6] }}>
-                <img src={m.foto || ('https://randomuser.me/api/portraits/' + (i % 2 === 0 ? 'men/' : 'women/') + ((i * 11 + 60) % 90) + '.jpg')} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <span className="ratepill">{'Desde ' + plata(m.precio_videollamada)}</span>
-  </div>
-              <div className="minfo">
-                  <div className="nm">{m.nombre}</div>
-                <div className="mt">{'Diagnostico ' + plata(m.precio_videollamada)}</div>
-  </div>
-  </div>
-          );
-})}
-</div>
-{!cargando && lista.length === 0 && <p>No hay maestros de este oficio todavia.</p>}
-  </div>
-       <Tabs act="home" />
-  </main>
-   );
+  function Nav() {
+    return (
+      <div className="tabbar">
+        <div className={'tab' + (vista === 'inicio' || vista === 'ficha' ? ' on' : '')} onClick={function () { irTab('inicio'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
+        <div className={'tab' + (vista === 'cotizar' ? ' on' : '')} onClick={function () { irTab('cotizar'); }}><span className="ti">{'\u{1F3A5}'}</span>Cotizar</div>
+        <div className={'tab' + (vista === 'cuenta' ? ' on' : '')} onClick={function () { irTab('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
+      </div>
+    );
+  }
 
-  if (vista === 'detalle' && sel) return (
-        <main>
-          <div className="dhero" style={{ background: GRADS[selIdx % 6] }}>
-{sel.foto ? <img src={sel.foto} alt="" style={{ width: 104, height: 104, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,.65)' }} /> : CARAS[selIdx % 6]}
-        <button className="dback" onClick={function () { setVista('home'); }}>{'←'}</button>
-          </div>
-      <div className="dsheet">
-                  <h2>{sel.nombre}</h2>
-        <div className="dmeta">{(sel.oficios && sel.oficios.length ? sel.oficios.join(' · ') : sel.oficio) + ' · certificado · verificado'}</div>
-        <div className="dbadges">
-                    <span className="dbadge g">{'● Disponible ahora'}</span>
-          {sel.distancia_km != null && <span className="dbadge">{'\u{1F4CD} a ' + sel.distancia_km + ' km'}</span>}
-          <span className="dbadge">{'\u{1F6E1} Identidad verificada'}</span>
-          </div>
-        <div className="statgrid">
-                    <div className="sg"><div className="v">{'★ ' + sel.rating}</div><div className="k">rating</div></div>
-          <div className="sg"><div className="v">{sel.trabajos}</div><div className="k">trabajos</div></div>
-          <div className="sg"><div className="v">98%</div><div className="k">a tiempo</div></div>
-          <div className="sg"><div className="v">{'<1 h'}</div><div className="k">respuesta</div></div>
-          </div>
-        {sel.galeria && sel.galeria.length > 0 && (
-          <div>
-            <div className="seehead"><h3>{'\u{1F4F8} Trabajos realizados'}</h3></div>
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 0 10px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
-              {sel.galeria.map(function (u, i) {
-                return <img key={i} src={u} alt="" style={{ height: 160, minWidth: 160, width: 160, objectFit: 'cover', borderRadius: 14, scrollSnapAlign: 'start', flexShrink: 0, border: '1px solid #eee' }} />;
-              })}
-            </div>
-          </div>
-        )}
-        <div className="seehead"><h3>Opiniones verificadas</h3></div>
-                  <div className="rev2">
-                    <b>{'Maria Jose P. ★★★★★'}</b>
-          <div className="rverif">{'✓ Trabajo pagado en la app'}</div>
-          El diagnostico por video me ahorro la visita. Llego con el repuesto exacto y en 40 minutos estaba listo.
-            </div>
-        <div className="rev2">
-                      <b>{'Rodrigo C. ★★★★★'}</b>
-          <div className="rverif">{'✓ Trabajo pagado en la app'}</div>
-          El precio final fue exactamente el cotizado por videollamada. Cero sorpresas.
-            </div>
-            </div>
-      <div className="stickycta">
-                    <div style={{ flex: 1 }}>
-          <div className="p1">{plata(sel.precio_videollamada)} <span style={{ fontWeight: 400, fontSize: 12, color: '#7c8499' }}>videollamada</span></div>
-                      <div className="p2">primera vez GRATIS</div>
-            </div>
-        <button className="gbtn" onClick={agendar}>{'Agendar \u{1F4F9}'}</button>
-            </div>
-            </main>
-  );
+  function Avatar(props) {
+    var m = props.m, sz = props.size || 56;
+    var f = fotoM(m);
+    return f
+      ? <img src={f} alt="" style={{ width: sz, height: sz, borderRadius: '50%', objectFit: 'cover' }} />
+      : <div style={{ width: sz, height: sz, borderRadius: '50%', background: GRAD[(nombreM(m).charCodeAt(0) || 0) % 6], display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: sz * 0.4 }}>{nombreM(m).charAt(0).toUpperCase()}</div>;
+  }
 
-  if (vista === 'video' && sel) return (
-        <main>
-          <div className="dhero" style={{ background: GRADS[selIdx % 6] }}>
-{'\u{1F4F9}'}
-        <button className="dback" onClick={function () { setVista('detalle'); }}>{'←'}</button>
-          </div>
-      <div className="dsheet" style={{ paddingBottom: 30 }}>
-        <h2>Videollamada de diagnostico</h2>
-        <div className="dmeta">{'Con ' + sel.nombre + ' · gratis tu primera vez'}</div>
-        <div style={{ height: 14 }}></div>
-        <div className="vopt sel">
-                    <div className="ve" style={{ background: '#e6efff' }}>{'\u{1F3A6}'}</div>
-          <div><div className="vt">Sala de video instantanea<span className="pillg">RECOMENDADO</span></div><div className="vd">Se abre al instante, sin registrarse. Comparte el link con el maestro.</div></div>
-          </div>
-        <div className="vopt">
-                    <div className="ve" style={{ background: '#fff1e6' }}>{'\u{1F4F1}'}</div>
-          <div><div className="vt">Video en la app<span className="pillo">PRONTO</span></div><div className="vd">Con cotizacion en pantalla y grabacion integrada</div></div>
-          </div>
-        <button className="gbtn full" onClick={function () { video(sel.id); }}>Iniciar videollamada ahora</button>
-        <button className="gbtn full" style={{ background: '#009ee3', boxShadow: 'none', opacity: pagando ? .6 : 1 }} disabled={pagando} onClick={function () { pagar('diagnostico', sel.precio_videollamada, 'Diagnóstico con ' + sel.nombre, sel.id); }}>{'\u{1F4B3} Pagar diagnóstico ' + plata(sel.precio_videollamada) + ' con Mercado Pago'}</button>
-        <button className="gbtn full" style={{ background: '#fff', color: '#ff5a3c', border: '2px solid #ffd6cb', boxShadow: 'none' }} onClick={function () { setVista('track'); }}>Ver seguimiento del trabajo (demo)</button>
-          </div>
-          </main>
-  );
+  if (!cargado) return <main><div className="body" style={{ paddingTop: 30 }}><p>Cargando...</p></div></main>;
 
-  if (vista === 'track') return (
-        <main>
-          <div className="darkhead">
-            <div className="dh1">Pedido en curso</div>
-        <h2>{'Tu maestro va en camino \u{1F698}'}</h2>
-        <div className="dh2">Cambio de sifon · cotizado por videollamada</div>
-    </div>
-      <div className="body" style={{ paddingTop: 20 }}>
-        <div className="eta2"><div className="e1">Llega entre</div><div className="e2">10:12 - 10:25</div></div>
-        <div className="progress"><div className="seg done"></div><div className="seg done"></div><div className="seg done"></div><div className="seg"></div></div>
-        <div className="steps"><span>Confirmado</span><span>Preparando</span><span style={{ color: '#ff5a3c' }}>En camino</span><span>Trabajando</span></div>
-        <div className="driver">
-              <div className="da">{'\u{1F468}'}</div>
-          <div style={{ flex: 1 }}>
-            <div className="nm">{(sel ? sel.nombre : 'Luis Morales') + ' · ★ 4.9'}</div>
-            <div className="mt">{'Pago protegido ✓ · se libera cuando confirmes'}</div>
-    </div>
-    </div>
-        <div style={{ background: '#fff', borderRadius: 18, padding: 16, margin: '16px 0', boxShadow: '0 6px 18px rgba(20,20,40,.08)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <div><div style={{ fontSize: 12, color: '#7c8499' }}>Total del trabajo cotizado</div><div style={{ fontSize: 24, fontWeight: 800 }}>{plata(desg.bruto)}</div></div>
-            <span className="dbadge g">{'\u{1F512} Pago protegido'}</span>
-          </div>
-          <button className="gbtn full" style={{ background: '#009ee3', boxShadow: 'none', opacity: pagando ? .6 : 1 }} disabled={pagando} onClick={function () { pagar('trabajo', desg.bruto, 'Trabajo: ' + (sel ? sel.nombre : 'maestro'), sel ? sel.id : null); }}>{'\u{1F4B3} Pagar ' + plata(desg.bruto) + ' con Mercado Pago'}</button>
-          <div style={{ fontSize: 11, color: '#9aa1b5', textAlign: 'center', marginTop: 6 }}>El dinero se libera al maestro cuando confirmes que el trabajo quedó listo.</div>
+  // ---- ACCESO (login del cliente) ----
+  if (vista === 'acceso') return (
+    <main>
+      <div className="darkhead" style={{ textAlign: 'center', paddingBottom: 20 }}>
+        <div className="dh1">{'\u{1F44B} Tu cuenta'}</div>
+        <h2 style={{ margin: '8px 0 2px' }}>Ingresa o crea tu cuenta</h2>
+        <div className="dh2">Para pedir presupuestos y agendar</div>
+      </div>
+      <div className="body" style={{ paddingTop: 18 }}>
+        <div style={{ display: 'flex', background: '#fff', borderRadius: 14, padding: 4, marginBottom: 16, border: '1.5px solid #eee' }}>
+          <button onClick={function () { setAuthTab('ingresar'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#ff5a3c' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
+          <button onClick={function () { setAuthTab('crear'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#ff5a3c' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
         </div>
-        <button className="gbtn full" style={{ background: '#fff', color: '#ff5a3c', border: '2px solid #ffd6cb', boxShadow: 'none' }} onClick={function () { setVista('home'); }}>Volver al inicio</button>
-    </div>
+        <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="tucorreo@ejemplo.cl" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
+        <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contraseña" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
+        {authMsg && <p style={{ fontSize: 13, color: authMsg.indexOf('correo') >= 0 ? '#0d9456' : '#b3261e', margin: '2px 0 8px' }}>{authMsg}</p>}
+        <button className="gbtn full" onClick={entrar}>{authTab === 'ingresar' ? 'Ingresar' : 'Crear cuenta'}</button>
+        <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '8px 0' }}>o</div>
+        <button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #ddd', boxShadow: 'none' }} onClick={conGoogle}>{'\u{1F310} Continuar con Google'}</button>
+        <button onClick={function () { setVista('inicio'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 10 }}>Volver al inicio</button>
+      </div>
+      <Nav />
     </main>
   );
 
-    if (vista === 'auth') return (
-          <main>
-            <div className="darkhead">
-              <div className="dh1">Tu cuenta</div>
-              <h2>{authTab === 'ingresar' ? 'Bienvenido de vuelta' : 'Crea tu cuenta'}</h2>
-              <div className="dh2">Ingresa para agendar, pagar y ver tus pedidos</div>
-      </div>
-            <div className="body" style={{ paddingTop: 18 }}>
-        <div style={{ display: 'flex', background: '#fff', borderRadius: 14, padding: 4, marginBottom: 16, border: '1.5px solid #eee' }}>
-          <button onClick={function () { setAuthTab('ingresar'); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#ff5a3c' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
-                <button onClick={function () { setAuthTab('crear'); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#ff5a3c' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
-      </div>
-              {authTab === 'crear' && <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />}
-              <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="tucorreo@ejemplo.cl" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
-              <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contrasena" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
-{authMsg && <p className="error">{authMsg}</p>}
-          <button className="gbtn full" onClick={entrar}>{authTab === 'ingresar' ? 'Ingresar' : 'Crear cuenta'}</button>
-          <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '6px 0' }}>o</div>
-          <button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #ddd', boxShadow: 'none' }} onClick={conGoogle}>{'\u{1F310} Continuar con Google'}</button>
-          <p style={{ fontSize: 11, color: '#9aa1b5', textAlign: 'center', marginTop: 8 }}>Al continuar aceptas los Terminos y la Politica de Privacidad</p>
-          <button onClick={function () { setVista('home'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 8 }}>Volver al inicio</button>
-  </div>
-  </main>
+  // ---- FICHA del maestro ----
+  if (vista === 'ficha' && sel) {
+    var ofs = oficiosM(sel).map(ofNombre).join(' · ');
+    var gal = sel.galeria || [];
+    return (
+      <main>
+        <div className="dhero" style={{ background: GRAD[(nombreM(sel).charCodeAt(0) || 0) % 6], display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          {fotoM(sel) ? <img src={fotoM(sel)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 60, color: '#fff', fontWeight: 800 }}>{nombreM(sel).charAt(0).toUpperCase()}</span>}
+          <button className="dback" onClick={function () { setVista('inicio'); }}>{'←'}</button>
+        </div>
+        <div className="dsheet">
+          <h2>{nombreM(sel)}</h2>
+          <div className="dmeta">{ofs || 'Maestro'}</div>
+          <div className="dbadges">
+            {sel.verificado && <span className="dbadge">{'\u{1F6E1} Identidad verificada'}</span>}
+            {sel.comuna && <span className="dbadge">{'\u{1F4CD} ' + sel.comuna}</span>}
+            <span className="dbadge g">{'● Disponible'}</span>
+          </div>
+          {sel.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, color: '#2b2f3a', margin: '12px 0' }}>{sel.descripcion}</p>}
+          {gal.length > 0 && (
+            <div>
+              <div className="seehead"><h3>{'\u{1F4F8} Trabajos realizados'}</h3></div>
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                {gal.map(function (u, i) { return <img key={i} src={u} alt="" onClick={function () { setGIdx(i); }} style={{ height: 130, borderRadius: 12, flexShrink: 0, cursor: 'pointer' }} />; })}
+              </div>
+            </div>
+          )}
+          <div style={{ height: 90 }} />
+        </div>
+        <div className="stickycta">
+          <div style={{ flex: 1 }}>
+            <div className="p1">{plata(sel.precio_videollamada)} <span style={{ fontWeight: 400, fontSize: 12, color: '#7c8499' }}>diagnóstico</span></div>
+            <div className="p2">primera vez gratis</div>
+          </div>
+          <button className="gbtn" onClick={function () { pedir(sel); }}>{'Pedir presupuesto'}</button>
+        </div>
+        {gIdx >= 0 && gal[gIdx] && (
+          <div onClick={function () { setGIdx(-1); }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,.93)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
+            <img src={gal[gIdx]} alt="" style={{ maxWidth: '92vw', maxHeight: '85vh', borderRadius: 12, objectFit: 'contain' }} />
+          </div>
+        )}
+        <Nav />
+      </main>
     );
+  }
 
-    if (vista === 'presupuesto') return (
-          <main>
-            <div className="darkhead">
-              <div className="dh1">{'\u{1F3A5} Cotizar por video'}</div>
-              <h2>Muestra el problema, recibe soluciones</h2>
-              <div className="dh2">Graba un video y un maestro te responde con precio · sin coordinar videollamada</div>
+  // ---- COTIZAR ----
+  if (vista === 'cotizar') return (
+    <main>
+      <div className="darkhead"><div className="dh1">{'\u{1F3A5} Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
+      <div style={{ paddingBottom: 90 }}>
+        <PresupuestoCliente usuario={usuario} maestros={maestrosFlat} />
       </div>
-      <PresupuestoCliente usuario={usuario} maestros={maestros} />
-      <Tabs act="cotizar" />
-          </main>
-    );
+      <Nav />
+    </main>
+  );
 
-    if (vista === 'cuenta') return (
-          <main>
-            <div className="darkhead">
-              <div className="dh1">{'\u{1F464} Mi cuenta'}</div>
-              <h2>{'Hola ' + (usuario ? (usuario.email || '').split('@')[0] : '')}</h2>
-              <div className="dh2">Tu cuenta y tu actividad</div>
+  // ---- CUENTA ----
+  if (vista === 'cuenta') return (
+    <main>
+      <div className="darkhead"><div className="dh1">{'\u{1F464} Mi cuenta'}</div><h2 style={{ margin: '8px 0 2px' }}>{(usuario && usuario.email) || ''}</h2></div>
+      <div style={{ paddingBottom: 90 }}>
+        <PerfilCliente usuario={usuario} />
+        <div className="body" style={{ paddingTop: 0 }}>
+          <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
+        </div>
       </div>
-      <div className="body" style={{ paddingTop: 18 }}>
-        <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 2px 6px' }}>Mi actividad</div>
-        <div style={{ background: '#fff', border: '1.5px solid #eee', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
-          <div onClick={function () { setVista('cliente'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
-            <span style={{ fontSize: 22 }}>{'\u{1F464}'}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Mi perfil y dirección</div>
-              <div style={{ fontSize: 12, color: '#9aa1b5' }}>Tus datos y a dónde llega el maestro</div>
-            </div>
-            <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
+      <Nav />
+    </main>
+  );
+
+  // ---- INICIO ----
+  return (
+    <main>
+      <div className="hero">
+        <span className="locpill">{'\u{1F4CD} Maestros verificados'}</span>
+        <h1>{'Hola \u{1F44B} ¿Qué arreglamos hoy?'}</h1>
+        <div className="searchfloat">{'\u{1F50D} Busca por especialidad'}</div>
+      </div>
+      <div className="body">
+        <div className="catscroll">
+          <div className="catv2" onClick={function () { setOficio(null); }}>
+            <div className={'cico' + (oficio === null ? ' on' : '')}>{'✨'}</div>
+            <div className="clbl">Todos</div>
           </div>
-          <div onClick={function () { setVista('pedidos'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}>
-            <span style={{ fontSize: 22 }}>{'\u{1F4E6}'}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Mis pedidos</div>
-              <div style={{ fontSize: 12, color: '#9aa1b5' }}>Servicios que agendaste y su estado</div>
-            </div>
-            <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
-          </div>
-          <div onClick={function () { setVista('presupuesto'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }}>
-            <span style={{ fontSize: 22 }}>{'\u{1F9FE}'}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Mis cotizaciones</div>
-              <div style={{ fontSize: 12, color: '#9aa1b5' }}>Presupuestos por video que pediste</div>
-            </div>
-            <span style={{ color: '#c5c9d6', fontSize: 18 }}>{'›'}</span>
-          </div>
+          {cats.map(function (c) {
+            return (
+              <div key={c.slug} className="catv2" onClick={function () { setOficio(c.slug); }}>
+                <div className={'cico' + (oficio === c.slug ? ' on' : '')}>{EMO[c.slug] || '\u{1F6E0}'}</div>
+                <div className="clbl">{c.valor}</div>
+              </div>
+            );
+          })}
         </div>
 
-        <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 2px 6px' }}>Cuenta y soporte</div>
-        <div style={{ background: '#fff', border: '1.5px solid #eee', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
-          <div onClick={salir} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F6AA}'}</span>
-            <span style={{ flex: 1, fontSize: 14, color: '#b3261e' }}>Cerrar sesión</span>
+        <div className="promo">
+          <span style={{ fontSize: 28 }}>{'\u{1F3A5}'}</span>
+          <div style={{ flex: 1 }}>
+            <div className="pt">Pide presupuesto por video</div>
+            <div className="pd">Graba el problema y recibe precios</div>
           </div>
+          <button className="cta" onClick={function () { irTab('cotizar'); }}>Empezar</button>
         </div>
-        <a href="/maestros" style={{ display: 'block', textAlign: 'center', color: '#9aa1b5', fontWeight: 700, fontSize: 13, marginTop: 4, textDecoration: 'none' }}>{'\u{1F6E0} ¿Eres maestro? Entra a la app de maestros →'}</a>
-      </div>
-      <Tabs act="cuenta" />
-          </main>
-    );
 
-    if (vista === 'pedidos') return (
-          <main>
-            <div className="darkhead">
-              <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Cuenta'}</button>
-              <div className="dh1">{'\u{1F4E6} Mis pedidos'}</div>
-              <h2>Tus solicitudes y trabajos</h2>
-              <div className="dh2">Aquí ves el estado de cada pedido</div>
+        <div className="seehead"><h3>{'\u{1F477} Maestros disponibles'}</h3></div>
+        {lista.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5' }}>Aún no hay maestros de esta especialidad. Prueba con "Todos".</p>}
+        <div className="cardscroll">
+          {lista.map(function (m, i) {
+            return (
+              <div key={m.id} className="mcard" onClick={function () { abrirFicha(m); }}>
+                <div className="photo" style={{ background: GRAD[i % 6], display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {fotoM(m) ? <img src={fotoM(m)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 40, color: '#fff', fontWeight: 800 }}>{nombreM(m).charAt(0).toUpperCase()}</span>}
+                  <span className="ratepill">{'★ ' + (m.rating_promedio || '—') + ' · ' + (m.total_trabajos || 0)}</span>
+                </div>
+                <div className="minfo">
+                  <div className="nm">{nombreM(m)}{sel ? '' : ''}{m.verificado ? ' \u{1F6E1}' : ''}</div>
+                  <div className="mt">{oficiosM(m).map(ofNombre).join(' · ') || 'Maestro'}</div>
+                  <div className="mt">{'Diagnóstico ' + plata(m.precio_videollamada)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <MisPedidos usuario={usuario} />
-      <Tabs act="cuenta" />
-          </main>
-    );
-
-    if (vista === 'cliente') return (
-          <main>
-            <div className="darkhead">
-              <button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: 10, padding: '6px 11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}>{'← Cuenta'}</button>
-              <div className="dh1">{'\u{1F464} Mi perfil'}</div>
-              <h2>{'Hola ' + (usuario ? (usuario.email || '').split('@')[0] : '')}</h2>
-              <div className="dh2">Tus datos y dirección</div>
-      </div>
-      <PerfilCliente usuario={usuario} />
-      <Tabs act="cuenta" />
-          </main>
-    );
-
-  return null;
+      <Nav />
+    </main>
+  );
 }
