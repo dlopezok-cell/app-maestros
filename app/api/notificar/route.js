@@ -107,6 +107,24 @@ export async function POST(req) {
         esMaestro ? 'Completar mi perfil' : 'Pedir un presupuesto',
         esMaestro ? SITE + '/maestros' : SITE
       );
+    } else if (tipo === 'lead') {
+      // Confirmacion a quien deja su correo en la lista de espera del home
+      to = body.email;
+      subject = 'Te anotamos en MaestrosEnLínea \u{1F389}';
+      html = plantilla(
+        '¡Gracias por anotarte! \u{1F389}',
+        '<p>Te sumamos a la lista de espera de <b>MaestrosEnLínea</b>. Te avisaremos apenas esté disponible para que seas de los primeros en probarla.</p>',
+        null, null
+      );
+    } else if (tipo === 'admin_mensaje') {
+      // El equipo le escribe directamente a un maestro (o usuario) por correo
+      to = await emailDe(body.maestroId || body.userId);
+      subject = body.asunto || 'Mensaje del equipo de MaestrosEnLínea';
+      html = plantilla(
+        body.asunto || 'Tienes un mensaje del equipo \u{1F4E9}',
+        '<p style="white-space:pre-wrap">' + (body.mensaje || '') + '</p>',
+        'Abrir mi panel', SITE + '/maestros'
+      );
     } else {
       return Response.json({ error: 'tipo desconocido' }, { status: 400 });
     }
