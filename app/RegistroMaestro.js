@@ -20,7 +20,7 @@ const COMUNAS = [
   'Estación Central', 'Recoleta', 'Independencia', 'Quilicura', 'Huechuraba', 'Puente Alto',
 ];
 
-export default function RegistroMaestro({ usuario }) {
+export default function RegistroMaestro({ usuario, plano, onGuardado }) {
   const [nombre, setNombre] = useState('');
   const [oficios, setOficios] = useState([]);
   const [descripcion, setDescripcion] = useState('');
@@ -126,6 +126,7 @@ export default function RegistroMaestro({ usuario }) {
       setYaRegistrado(true);
       setMsg('Perfil de maestro guardado ✓ Ya apareces para los clientes.');
       setGuardando(false);
+      if (onGuardado) onGuardado();
     });
   }
 
@@ -133,7 +134,9 @@ export default function RegistroMaestro({ usuario }) {
 
   // --- estilos ---
   const inp = { width: '100%', padding: 12, border: '1px solid #e4e4ef', borderRadius: 12, fontSize: 14, background: '#fff', color: '#1c1f2b', boxSizing: 'border-box' };
-  const card = { background: '#fff', borderRadius: 18, padding: 18, margin: '14px 16px', border: '1px solid #eef0f5' };
+  const card = plano
+    ? { background: 'transparent', borderRadius: 0, padding: 0, margin: 0, border: 'none' }
+    : { background: '#fff', borderRadius: 18, padding: 18, margin: '14px 16px', border: '1px solid #eef0f5' };
   const divider = { borderTop: '1px solid #eef0f5', margin: '18px 0' };
   function seccion(icono, titulo) {
     return (
