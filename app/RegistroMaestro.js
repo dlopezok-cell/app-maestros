@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Formulario de registro/edicion del maestro: oficios (varios), experiencia, precios y ubicacion.
-// Incluye un cuestionario con opciones + boton "Generar descripcion con IA" (Anthropic).
+// Registro del maestro: cuestionario guiado que ARMA SOLA la descripcion con IA
+// a medida que el maestro responde (respeta lo que edite a mano).
 const OFICIOS = [
   { id: 'gasfiteria', nombre: 'Gasfitería' },
   { id: 'electricidad', nombre: 'Electricidad' },
@@ -35,8 +35,11 @@ export default function RegistroMaestro({ usuario }) {
   const [urgencias, setUrgencias] = useState(false);
   const [garantia, setGarantia] = useState(false);
   const [boleta, setBoleta] = useState(false);
+  const [zona, setZona] = useState('');
+  const [sello, setSello] = useState('');
   const [generando, setGenerando] = useState(false);
   const [genMsg, setGenMsg] = useState(null);
+  const [editado, setEditado] = useState(false); // true = el maestro edito la descripcion a mano
 
   useEffect(function () {
     if (!usuario) return;
@@ -50,10 +53,10 @@ export default function RegistroMaestro({ usuario }) {
       if (m) {
         setYaRegistrado(true);
         setOficios(m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []));
-        setDescripcion(m.descripcion || '');
         setAnos(m.anos_experiencia != null ? String(m.anos_experiencia) : '');
         setPrecioVideo(m.precio_videollamada != null ? String(m.precio_videollamada) : '');
         setPrecioVisita(m.precio_visita != null ? String(m.precio_visita) : '');
+        if (m.descripcion) { setDescripcion(m.descripcion); setEditado(true); } // no sobreescribir lo guardado
       }
       setCargado(true);
     });
@@ -62,6 +65,31 @@ export default function RegistroMaestro({ usuario }) {
   function toggle(arr, set, id) {
     set(arr.indexOf(id) >= 0 ? arr.filter(function (x) { return x !== id; }) : arr.concat([id]));
   }
+
+  function pedirIA() {
+    if (!oficios.length) return;
+    setGenerando(true);
+    setGenMsg('Escribiendo tu descripción...');
+    fetch('/api/describir-maestro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: nombre.trim(), oficios: oficios, anos: anos, tipos: tipos, zona: zona.trim(), sello: sello.trim(), fds: fds, urgencias: urgencias, garantia: garantia, boleta: boleta })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      setGenerando(false);
+      if (d.error) { setGenMsg('Error: ' + d.error); return; }
+      if (d.descripcion) { setDescripcion(d.descripcion); setGenMsg('Descripción lista ✓ puedes editarla'); }
+      else { setGenMsg('No se pudo generar, intenta de nuevo'); }
+    }).catch(function () { setGenerando(false); setGenMsg('No se pudo generar, intenta de nuevo'); });
+  }
+
+  // Auto-genera la descripcion (con debounce) mientras el maestro responde,
+  // siempre que no la haya editado a mano y tenga al menos una especialidad.
+  useEffect(function () {
+    if (!cargado || !oficios.length || editado) return;
+    var t = setTimeout(function () { pedirIA(); }, 1300);
+    return function () { clearTimeout(t); };
+    // eslint-disable-next-line
+  }, [cargado, editado, oficios, anos, tipos, fds, urgencias, garantia, boleta, zona, sello, nombre]);
 
   function ubicar() {
     if (!navigator.geolocation) { setUbicMsg('Tu navegador no soporta ubicación'); return; }
@@ -72,26 +100,10 @@ export default function RegistroMaestro({ usuario }) {
     );
   }
 
-  function generar() {
-    if (!oficios.length) { setGenMsg('Elige al menos una especialidad primero'); return; }
-    setGenerando(true);
-    setGenMsg('Generando con IA...');
-    fetch('/api/describir-maestro', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre: nombre.trim(), oficios: oficios, anos: anos, tipos: tipos, fds: fds, urgencias: urgencias, garantia: garantia, boleta: boleta })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      setGenerando(false);
-      if (d.error) { setGenMsg('Error: ' + d.error); return; }
-      if (d.descripcion) { setDescripcion(d.descripcion); setGenMsg('Descripción generada ✓ revísala y edítala si quieres'); }
-      else { setGenMsg('No se pudo generar, intenta de nuevo'); }
-    }).catch(function () { setGenerando(false); setGenMsg('No se pudo generar, intenta de nuevo'); });
-  }
-
   function guardar() {
     if (!nombre.trim()) { setMsg('Escribe tu nombre'); return; }
     if (!oficios.length) { setMsg('Elige al menos una especialidad'); return; }
-    if (!descripcion.trim() || descripcion.trim().length < 20) { setMsg('Cuéntanos un poco más de tu experiencia (mín. 20 caracteres)'); return; }
+    if (!descripcion.trim() || descripcion.trim().length < 20) { setMsg('Falta tu descripción (responde el cuestionario y se arma sola)'); return; }
     setGuardando(true);
     setMsg('Guardando...');
     supabase.rpc('registrar_maestro', {
@@ -115,7 +127,6 @@ export default function RegistroMaestro({ usuario }) {
 
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#fff', color: '#1c1f2b' };
   const card = { background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' };
-
   function chip(on) {
     return { padding: '7px 13px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: on ? '1.5px solid #ff5a3c' : '1.5px solid #ddd', background: on ? '#fff5f2' : '#fff', color: on ? '#ff5a3c' : '#5b6275' };
   }
@@ -135,13 +146,13 @@ export default function RegistroMaestro({ usuario }) {
         })}
       </div>
 
-      <input value={anos} onChange={function (e) { setAnos(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="Años de experiencia" style={inp} />
-
       <div style={{ background: '#fbf7ff', border: '1.5px solid #ece3fb', borderRadius: 14, padding: 14, marginBottom: 12 }}>
-        <b style={{ fontSize: 13 }}>{'\u{2728} Optimiza tu perfil con IA'}</b>
-        <div style={{ fontSize: 12, color: '#7c8499', margin: '2px 0 10px' }}>Marca lo que aplique y deja que la IA escriba una buena descripción profesional. Después puedes editarla.</div>
+        <b style={{ fontSize: 13 }}>{'\u{2728} Arma tu descripción con IA'}</b>
+        <div style={{ fontSize: 12, color: '#7c8499', margin: '2px 0 12px' }}>Responde estas preguntas y la descripción se escribe sola abajo. Después puedes editarla.</div>
 
-        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>¿Qué tipo de trabajos haces?</div>
+        <input value={anos} onChange={function (e) { setAnos(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="¿Cuántos años de experiencia tienes?" style={inp} />
+
+        <div style={{ fontSize: 12, fontWeight: 700, margin: '4px 0 6px' }}>¿Qué tipo de trabajos haces?</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
           {TIPOS.map(function (t) {
             var on = tipos.indexOf(t) >= 0;
@@ -149,23 +160,27 @@ export default function RegistroMaestro({ usuario }) {
           })}
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
           <button type="button" onClick={function () { setFds(!fds); }} style={chip(fds)}>{(fds ? '✓ ' : '') + 'Fines de semana'}</button>
           <button type="button" onClick={function () { setUrgencias(!urgencias); }} style={chip(urgencias)}>{(urgencias ? '✓ ' : '') + 'Urgencias'}</button>
           <button type="button" onClick={function () { setGarantia(!garantia); }} style={chip(garantia)}>{(garantia ? '✓ ' : '') + 'Doy garantía'}</button>
           <button type="button" onClick={function () { setBoleta(!boleta); }} style={chip(boleta)}>{(boleta ? '✓ ' : '') + 'Emito boleta'}</button>
         </div>
 
-        <button type="button" onClick={generar} disabled={generando}
-          style={{ width: '100%', padding: 11, borderRadius: 11, border: 'none', background: '#7048e8', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: generando ? 0.6 : 1 }}>
-          {generando ? 'Generando...' : '\u{2728} Generar mi descripción con IA'}
-        </button>
-        {genMsg && <p style={{ fontSize: 12, color: genMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', margin: '8px 0 0' }}>{genMsg}</p>}
+        <input value={zona} onChange={function (e) { setZona(e.target.value); }} placeholder="¿En qué zonas/comunas trabajas? (ej: Providencia, Ñuñoa)" style={inp} />
+        <input value={sello} onChange={function (e) { setSello(e.target.value); }} placeholder="¿Qué te diferencia? (ej: puntualidad, limpieza, precio justo)" style={{ ...inp, marginBottom: 4 }} />
+
+        {generando && <div style={{ fontSize: 11, color: '#7048e8', marginTop: 6 }}>{'\u{2728} Escribiendo tu descripción...'}</div>}
       </div>
 
-      <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }}
-        placeholder="Describe tu experiencia (o genérala con IA arriba)"
-        style={{ ...inp, minHeight: 96, resize: 'vertical' }} />
+      <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); setEditado(true); }}
+        placeholder="Aquí aparece tu descripción (se arma sola al responder arriba). También puedes escribirla tú."
+        style={{ ...inp, minHeight: 96, resize: 'vertical', marginBottom: 4 }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 11, color: genMsg && genMsg.indexOf('Error') >= 0 ? '#b3261e' : '#9aa1b5' }}>{genMsg || ''}</span>
+        <button type="button" onClick={function () { setEditado(false); pedirIA(); }} disabled={generando}
+          style={{ background: 'none', border: 'none', color: '#7048e8', fontWeight: 800, fontSize: 12, cursor: 'pointer', opacity: generando ? 0.5 : 1 }}>{'\u{21BB} Regenerar con IA'}</button>
+      </div>
 
       <input value={precioVideo} onChange={function (e) { setPrecioVideo(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="Precio diagnóstico por videollamada (CLP)" style={inp} />
       <input value={precioVisita} onChange={function (e) { setPrecioVisita(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="Precio visita a domicilio (CLP)" style={inp} />
