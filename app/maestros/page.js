@@ -6,11 +6,10 @@ import Verificacion from '../Verificacion';
 import PresupuestosMaestro from '../PresupuestosMaestro';
 import RegistroMaestro from '../RegistroMaestro';
 import GaleriaMaestro from '../GaleriaMaestro';
-import Bienvenida from '../Bienvenida';
+import AccesoMaestro from '../AccesoMaestro';
 
-const OWNER = 'dlopezok@gmail.com';
-
-// App de MAESTROS (ruta /maestros). Separada de la app de clientes.
+// App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
+// cuenta y arme su ficha. La app de clientes (/) es aparte y privada.
 export default function Maestros() {
   const [usuario, setUsuario] = useState(null);
   const [cargado, setCargado] = useState(false);
@@ -28,14 +27,16 @@ export default function Maestros() {
 
   if (!cargado) return <main><div className="body" style={{ paddingTop: 30 }}><p>Cargando...</p></div></main>;
 
-  if (!usuario || (usuario.email || '').toLowerCase() !== OWNER) return <Bienvenida />;
+  // Sin sesion -> pantalla de acceso del maestro (crear cuenta / ingresar)
+  if (!usuario) return <AccesoMaestro />;
 
+  // Con sesion -> ficha del maestro. Identidad primero (carnet, selfie, dirección, teléfono).
   return (
     <main>
       <CabeceraMaestro usuario={usuario} />
+      <Verificacion usuario={usuario} />
       <RegistroMaestro usuario={usuario} />
       <GaleriaMaestro usuario={usuario} />
-      <Verificacion usuario={usuario} />
       <PresupuestosMaestro usuario={usuario} />
 
       <div className="body" style={{ paddingTop: 4, paddingBottom: 34 }}>
