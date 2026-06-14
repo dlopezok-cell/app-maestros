@@ -2,10 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import CabeceraMaestro from '../CabeceraMaestro';
-import Verificacion from '../Verificacion';
+import FichaMaestro from '../FichaMaestro';
 import PresupuestosMaestro from '../PresupuestosMaestro';
-import RegistroMaestro from '../RegistroMaestro';
-import GaleriaMaestro from '../GaleriaMaestro';
 import AgendaMaestro from '../AgendaMaestro';
 import GananciasMaestro from '../GananciasMaestro';
 import AccesoMaestro from '../AccesoMaestro';
@@ -47,9 +45,7 @@ export default function Maestros() {
       {pestana === 'perfil' && (
         <div>
           <CabeceraMaestro usuario={usuario} />
-          <Verificacion usuario={usuario} />
-          <RegistroMaestro usuario={usuario} />
-          <GaleriaMaestro usuario={usuario} />
+          <FichaMaestro usuario={usuario} />
           <div className="body" style={{ paddingTop: 4, paddingBottom: 90 }}>
             <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
             <a href="/" style={{ display: 'block', textAlign: 'center', color: '#9aa1b5', fontWeight: 700, fontSize: 13, marginTop: 14, textDecoration: 'none' }}>Ir a la app de clientes →</a>
