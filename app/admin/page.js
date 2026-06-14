@@ -9,6 +9,7 @@ const SECCIONES = [
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads' },
+  { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
   { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
@@ -49,6 +50,8 @@ export default function Admin() {
   const [denuncias, setDenuncias] = useState([]);
   const [comunicados, setComunicados] = useState([]);
   const [listaEspera, setListaEspera] = useState([]);
+  const [catalogos, setCatalogos] = useState([]);
+  const [nuevoCat, setNuevoCat] = useState({ especialidad: '', tipo: '', ofrece: '' });
   const [hilo, setHilo] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [maestroDet, setMaestroDet] = useState(null);
@@ -82,6 +85,7 @@ export default function Admin() {
       supabase.from('denuncias').select('*').order('creado_en', { ascending: false }),
       supabase.from('comunicados').select('*').order('creado_en', { ascending: false }),
       supabase.from('lista_espera').select('*').order('creado_en', { ascending: false }),
+      supabase.from('catalogos').select('*').order('tipo', { ascending: true }).order('orden', { ascending: true }),
     ]).then(function (rs) {
       setVerifs(rs[0].data || []);
       setMaestros(rs[1].data || []);
@@ -95,6 +99,7 @@ export default function Admin() {
       setDenuncias(rs[9].data || []);
       setComunicados(rs[10].data || []);
       setListaEspera(rs[11].data || []);
+      setCatalogos(rs[12].data || []);
       setCargando(false);
       (rs[0].data || []).forEach(function (v) {
         if (!v.carnet_path || v.estado !== 'pendiente') return;
@@ -206,6 +211,26 @@ export default function Admin() {
     if (!window.confirm('¿Borrar este lead (' + e.email + ')? Esta acción no se puede deshacer.')) return;
     supabase.from('lista_espera').delete().eq('id', e.id)
       .then(function (r) { if (r.error) setMsg('No se pudo borrar: ' + r.error.message); else cargarTodo(); });
+  }
+  function slugify(s) {
+    return ('' + s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '').slice(0, 40);
+  }
+  function agregarCatalogo(tipo) {
+    var valor = (nuevoCat[tipo] || '').trim();
+    if (!valor) return;
+    var maxOrden = catalogos.filter(function (c) { return c.tipo === tipo; }).reduce(function (m, c) { return Math.max(m, c.orden || 0); }, 0);
+    var fila = { tipo: tipo, valor: valor, orden: maxOrden + 1, activo: true };
+    if (tipo === 'especialidad') fila.slug = slugify(valor);
+    supabase.from('catalogos').insert(fila).then(function (r) {
+      if (r.error) { setMsg('No se pudo agregar: ' + r.error.message); return; }
+      setNuevoCat(function (p) { var n = { ...p }; n[tipo] = ''; return n; });
+      cargarTodo();
+    });
+  }
+  function quitarCatalogo(c) {
+    if (!window.confirm('¿Quitar "' + c.valor + '" del catálogo?')) return;
+    supabase.from('catalogos').delete().eq('id', c.id)
+      .then(function (r) { if (r.error) setMsg('No se pudo quitar: ' + r.error.message); else cargarTodo(); });
   }
 
   const wrap = { maxWidth: 920, margin: '0 auto', padding: 16 };
@@ -581,6 +606,39 @@ export default function Admin() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ---------------- CATÁLOGOS ---------------- */}
+      {seccion === 'catalogos' && (
+        <div>
+          <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 0 12px' }}>Lo que edites aquí aparece al instante en el registro de los maestros.</div>
+          {[['especialidad', '\u{1F527} Especialidades', 'Nueva especialidad...'], ['tipo', '\u{1F4BC} Tipos de trabajo', 'Nuevo tipo...'], ['ofrece', '✅ Qué ofreces', 'Nuevo ítem...']].map(function (g) {
+            var tipo = g[0];
+            var items = catalogos.filter(function (c) { return c.tipo === tipo; });
+            return (
+              <div key={tipo} style={card}>
+                <b style={{ fontSize: 14 }}>{g[1]}</b>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '12px 0' }}>
+                  {items.length === 0 && <span style={{ fontSize: 12, color: '#9aa1b5' }}>Sin ítems todavía</span>}
+                  {items.map(function (c) {
+                    return (
+                      <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 999, fontSize: 12.5, background: '#fff', border: '1px solid #e0e0ec', color: '#3C3489' }}>
+                        {c.valor}
+                        <button onClick={function () { quitarCatalogo(c); }} style={{ border: 'none', background: 'none', color: '#b3261e', fontWeight: 800, fontSize: 14, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
+                      </span>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: 7 }}>
+                  <input value={nuevoCat[tipo]} onChange={function (e) { var v = e.target.value; setNuevoCat(function (p) { var n = { ...p }; n[tipo] = v; return n; }); }}
+                    onKeyDown={function (e) { if (e.key === 'Enter') agregarCatalogo(tipo); }}
+                    placeholder={g[2]} style={{ flex: 1, padding: '9px 11px', border: '1.5px solid #ddd', borderRadius: 9, fontSize: 13 }} />
+                  <button onClick={function () { agregarCatalogo(tipo); }} style={{ background: '#26215C', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Agregar</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
