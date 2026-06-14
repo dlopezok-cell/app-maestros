@@ -11,7 +11,7 @@ const SECCIONES = [
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads' },
   { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
-  { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
+  { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
   { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
@@ -52,6 +52,9 @@ export default function Admin() {
   const [listaEspera, setListaEspera] = useState([]);
   const [catalogos, setCatalogos] = useState([]);
   const [nuevoCat, setNuevoCat] = useState({ especialidad: '', tipo: '', ofrece: '' });
+  const [msop, setMsop] = useState([]);
+  const [chatMaestro, setChatMaestro] = useState(null);
+  const [chatTxt, setChatTxt] = useState('');
   const [hilo, setHilo] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [maestroDet, setMaestroDet] = useState(null);
@@ -86,6 +89,7 @@ export default function Admin() {
       supabase.from('comunicados').select('*').order('creado_en', { ascending: false }),
       supabase.from('lista_espera').select('*').order('creado_en', { ascending: false }),
       supabase.from('catalogos').select('*').order('tipo', { ascending: true }).order('orden', { ascending: true }),
+      supabase.from('mensajes_soporte').select('*').order('creado_en', { ascending: true }),
     ]).then(function (rs) {
       setVerifs(rs[0].data || []);
       setMaestros(rs[1].data || []);
@@ -100,6 +104,7 @@ export default function Admin() {
       setComunicados(rs[10].data || []);
       setListaEspera(rs[11].data || []);
       setCatalogos(rs[12].data || []);
+      setMsop(rs[13].data || []);
       setCargando(false);
       (rs[0].data || []).forEach(function (v) {
         if (!v.carnet_path || v.estado !== 'pendiente') return;
@@ -232,6 +237,20 @@ export default function Admin() {
     supabase.from('catalogos').delete().eq('id', c.id)
       .then(function (r) { if (r.error) setMsg('No se pudo quitar: ' + r.error.message); else cargarTodo(); });
   }
+  function eliminarPedido(p) {
+    if (!window.confirm('¿Eliminar este pedido y toda su conversación y cotizaciones? No se puede deshacer.')) return;
+    supabase.rpc('admin_borrar_pedido', { p_id: p.id })
+      .then(function (r) { if (r.error) setMsg('No se pudo eliminar: ' + r.error.message); else cargarTodo(); });
+  }
+  function abrirChatMaestro(mid) {
+    setChatMaestro(mid);
+    supabase.from('mensajes_soporte').update({ leido: true }).eq('maestro_id', mid).eq('autor', 'maestro').eq('leido', false).then(function () {});
+  }
+  function enviarSoporte() {
+    if (!chatMaestro || !chatTxt.trim()) return;
+    supabase.from('mensajes_soporte').insert({ maestro_id: chatMaestro, autor: 'admin', texto: chatTxt.trim() })
+      .then(function (r) { if (r.error) { setMsg(r.error.message); return; } setChatTxt(''); cargarTodo(); });
+  }
 
   const wrap = { maxWidth: 920, margin: '0 auto', padding: 16 };
   const card = { background: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
@@ -281,6 +300,8 @@ export default function Admin() {
 
   // ---- métricas ----
   const pendientes = verifs.filter(function (v) { return v.estado === 'pendiente'; });
+  const verifSinFicha = pendientes.filter(function (v) { return !maestros.some(function (m) { return m.id === v.user_id; }); });
+  const soporteNoLeidos = msop.filter(function (m) { return m.autor === 'maestro' && !m.leido; }).length;
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const reservasHoy = reservas.filter(function (r) { return new Date(r.creado_en) >= hoy; }).length;
@@ -377,7 +398,7 @@ export default function Admin() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {SECCIONES.map(function (s) {
           const on = seccion === s.id;
-          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : 0;
+          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : 0;
           return (
             <button key={s.id} onClick={function () { setSeccion(s.id); }}
               style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
@@ -466,6 +487,22 @@ export default function Admin() {
             <b style={{ fontSize: 14 }}>{maestros.length + ' maestros'}</b>
             <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
           </div>
+          {verifSinFicha.length > 0 && (
+            <div style={{ background: '#fff9f0', border: '1px solid #ffe2b8', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <b style={{ fontSize: 13, color: '#b07a1e' }}>{'\u{23F3} ' + verifSinFicha.length + ' en verificación (aún sin ficha publicada)'}</b>
+              {verifSinFicha.map(function (v) {
+                return (
+                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f4ead2', paddingTop: 8, marginTop: 8 }}>
+                    <div style={{ fontSize: 12 }}>{nombreDe(v.user_id)} <span style={{ color: '#9aa1b5' }}>{'· RUT ' + (v.rut || '—')}</span></div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { aprobar(v); }}>Aprobar</button>
+                      <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { rechazar(v); }}>Rechazar</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead><tr><th style={th}>Nombre</th><th style={th}>Oficio</th><th style={th}>Rating</th><th style={th}>Trabajos</th><th style={th}>Cotiz.</th><th style={th}>Reservas</th><th style={th}>Estado</th><th style={th}>Acción</th></tr></thead>
@@ -662,6 +699,7 @@ export default function Admin() {
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     {reserva ? tag('AGENDADO', 'ok') : cots.length ? tag(cots.length + ' COTIZ', 'pend') : tag('ESPERANDO', 'pend')}
                     <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 4 }}>{abierto ? 'Cerrar' : 'Ver timeline'}</div>
+                    <button onClick={function (e) { e.stopPropagation(); eliminarPedido(p); }} style={{ marginTop: 6, background: '#b3261e', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F5D1} Eliminar'}</button>
                   </div>
                 </div>
                 {abierto && (
@@ -672,6 +710,21 @@ export default function Admin() {
                       {cots.map(function (c) { return <div key={c.id} style={{ marginLeft: 12, marginTop: 4 }}>{'• ' + nombreDe(c.maestro_id) + ' → ' + (c.monto ? plata(c.monto) : 's/monto') + (c.mensaje ? ' · ' + c.mensaje : '')}</div>; })}
                     </div>
                     <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}><b>3. Conversación</b> · {msgs.length + ' mensaje(s)'} {flagContacto(msgs.map(function (m) { return m.texto; }).join(' ')) ? <span style={{ color: '#b3261e', fontWeight: 800 }}>· {'\u{1F6A9}'} posible contacto fuera de la app</span> : null}</div>
+                    {msgs.length > 0 && (
+                      <div style={{ background: '#fafafc', borderRadius: 10, padding: 10, marginBottom: 10, maxHeight: 300, overflowY: 'auto' }}>
+                        {msgs.slice().sort(function (a, b) { return a.creado_en < b.creado_en ? -1 : 1; }).map(function (mm) {
+                          var cli = mm.autor_rol === 'cliente';
+                          return (
+                            <div key={mm.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 6 }}>
+                              <div style={{ maxWidth: '78%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 12, padding: '6px 10px', fontSize: 12.5, lineHeight: 1.4 }}>
+                                <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 800, marginBottom: 1 }}>{cli ? 'Cliente' : 'Maestro'}</div>
+                                {mm.texto || (mm.foto_url ? '\u{1F4F7} foto' : '')}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div style={{ fontSize: 12, color: '#5b6275' }}><b>4. Reserva</b> · {reserva ? (fecha(reserva.fecha_hora) + ' · ' + plata(reserva.precio_cotizado) + ' · ' + (reserva.estado || '')) : <span style={{ color: '#9aa1b5' }}>aún no agenda</span>}</div>
                   </div>
                 )}
@@ -680,6 +733,63 @@ export default function Admin() {
           })}
         </div>
       )}
+
+      {/* ---------------- MENSAJES (chat admin <-> maestro) ---------------- */}
+      {seccion === 'mensajes' && (function () {
+        var porMaestro = {};
+        msop.forEach(function (m) { (porMaestro[m.maestro_id] = porMaestro[m.maestro_id] || []).push(m); });
+        var ids = {};
+        maestros.forEach(function (m) { ids[m.id] = true; });
+        Object.keys(porMaestro).forEach(function (k) { ids[k] = true; });
+        var lista = Object.keys(ids);
+        var hilo = chatMaestro ? (porMaestro[chatMaestro] || []) : [];
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 12 }}>
+            <div style={{ ...card, padding: 0, overflow: 'hidden', margin: 0 }}>
+              {lista.length === 0 && <div style={{ padding: 14, fontSize: 12, color: '#9aa1b5' }}>Aún no hay maestros.</div>}
+              {lista.map(function (mid) {
+                var hs = porMaestro[mid] || [];
+                var ult = hs.length ? hs[hs.length - 1] : null;
+                var nl = hs.filter(function (x) { return x.autor === 'maestro' && !x.leido; }).length;
+                var on = chatMaestro === mid;
+                return (
+                  <div key={mid} onClick={function () { abrirChatMaestro(mid); }} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px 12px', borderBottom: '1px solid #f4f4f7', cursor: 'pointer', background: on ? '#fff4f1' : '#fff' }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#7F77DD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{nombreDe(mid).charAt(0).toUpperCase()}</div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{nombreDe(mid)}</div>
+                      <div style={{ fontSize: 11, color: '#9aa1b5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ult ? ult.texto : 'Sin mensajes'}</div>
+                    </div>
+                    {nl > 0 && <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: 999, padding: '0 6px' }}>{nl}</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ ...card, margin: 0, display: 'flex', flexDirection: 'column', minHeight: 420 }}>
+              {!chatMaestro && <div style={{ fontSize: 13, color: '#9aa1b5' }}>Elige un maestro para ver y responder su conversación.</div>}
+              {chatMaestro && (
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <b style={{ fontSize: 14, marginBottom: 8 }}>{nombreDe(chatMaestro)}</b>
+                  <div style={{ flex: 1, overflowY: 'auto', background: '#fafafc', borderRadius: 10, padding: 10, marginBottom: 10, maxHeight: 360 }}>
+                    {hilo.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Aún no hay mensajes con este maestro. Escríbele abajo.</div>}
+                    {hilo.map(function (m) {
+                      var out = m.autor === 'admin';
+                      return (
+                        <div key={m.id} style={{ display: 'flex', justifyContent: out ? 'flex-end' : 'flex-start', marginBottom: 7 }}>
+                          <div style={{ maxWidth: '78%', background: out ? '#ff5a3c' : '#fff', color: out ? '#fff' : '#1c1f2b', border: out ? 'none' : '1px solid #eee', borderRadius: 12, padding: '7px 10px', fontSize: 13, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={chatTxt} onChange={function (e) { setChatTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarSoporte(); }} placeholder="Escribe al maestro..." style={{ flex: 1, padding: 10, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13 }} />
+                    <button onClick={enviarSoporte} style={{ background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Enviar</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ---------------- CONVERSACIONES ---------------- */}
       {seccion === 'conversaciones' && (
