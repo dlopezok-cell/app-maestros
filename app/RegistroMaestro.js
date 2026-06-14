@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import CropFoto from './CropFoto';
 
 // Registro del maestro en 3 pasos (obligatorios en orden):
 //   1) Identidad  -> foto de perfil (con reencuadre), nombre, teléfono (+56 9 fijo),
@@ -29,9 +30,6 @@ const REGIONES = {
   'Magallanes': ['Punta Arenas','Puerto Natales','Porvenir','Cabo de Hornos','Torres del Paine','Natales']
 };
 const MAP_REGION = { 'metropolitana':'Región Metropolitana','valpara':'Valparaíso','arica':'Arica y Parinacota','tarapac':'Tarapacá','antofagasta':'Antofagasta','atacama':'Atacama','coquimbo':'Coquimbo',"o'higgins":"O'Higgins",'libertador':"O'Higgins",'maule':'Maule','nuble':'Ñuble','biob':'Biobío','araucan':'La Araucanía','los rios':'Los Ríos','los lagos':'Los Lagos','aysen':'Aysén','magallanes':'Magallanes' };
-
-const BD = 260; // tamaño del recuadro de recorte
-const OUT = 512; // tamaño de salida de la foto
 
 function norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
 function matchRegion(name) { var n = norm(name); for (var k in MAP_REGION) { if (n.indexOf(k) >= 0) return MAP_REGION[k]; } return ''; }
@@ -92,13 +90,9 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   const [err, setErr] = useState(null);
   const [msg, setMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  // recorte de foto
-  const [cropOpen, setCropOpen] = useState(false);
+  // recorte de foto (gestos, componente CropFoto)
   const [cropSrc, setCropSrc] = useState(null);
-  const [cropImg, setCropImg] = useState(null); // { w, h, base }
-  const [cropZoom, setCropZoom] = useState(1);
-  const [cropOff, setCropOff] = useState({ x: 0, y: 0 });
-  const dragRef = useRef(null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const dirRef = useRef(null);
 
   useEffect(function () {
@@ -172,59 +166,23 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   function espNombre(slug) { var e = cat.especialidad.filter(function (x) { return x.slug === slug; })[0]; return e ? e.valor : slug; }
   var oficiosTxt = oficios.map(espNombre).join(' · ');
 
-  // ---------- recorte de foto de perfil ----------
-  function elegirFoto(file) {
-    if (!file) return;
-    var url = URL.createObjectURL(file);
-    var img = new Image();
-    img.onload = function () {
-      var base = Math.max(BD / img.width, BD / img.height);
-      setCropImg({ w: img.width, h: img.height, base: base });
-      setCropZoom(1); setCropOff({ x: 0, y: 0 }); setCropSrc(url); setCropOpen(true);
-    };
-    img.src = url;
+  // ---------- foto de perfil (recorte por gestos en CropFoto) ----------
+  function elegirFoto(file) { if (!file) return; setCropSrc(URL.createObjectURL(file)); }
+  function onRecorte(blob) {
+    setSubiendoFoto(true);
+    subirAvatar(new File([blob], 'perfil.jpg', { type: 'image/jpeg' }), function () { setSubiendoFoto(false); setCropSrc(null); });
   }
-  function dimCrop(z) { return cropImg ? { w: cropImg.w * cropImg.base * z, h: cropImg.h * cropImg.base * z } : { w: 0, h: 0 }; }
-  function clampOff(nx, ny, z) {
-    var d = dimCrop(z);
-    var mx = Math.max(0, (d.w - BD) / 2), my = Math.max(0, (d.h - BD) / 2);
-    return { x: Math.min(mx, Math.max(-mx, nx)), y: Math.min(my, Math.max(-my, ny)) };
-  }
-  function dragStart(cx, cy) { dragRef.current = { sx: cx, sy: cy, ox: cropOff.x, oy: cropOff.y }; }
-  function dragMove(cx, cy) { if (!dragRef.current) return; setCropOff(clampOff(dragRef.current.ox + (cx - dragRef.current.sx), dragRef.current.oy + (cy - dragRef.current.sy), cropZoom)); }
-  function dragEnd() { dragRef.current = null; }
-  function onZoom(z) { setCropZoom(z); setCropOff(function (o) { return clampOff(o.x, o.y, z); }); }
-  function cerrarCrop() { if (cropSrc) URL.revokeObjectURL(cropSrc); setCropOpen(false); setCropSrc(null); setCropImg(null); }
-  function usarFoto() {
-    var img = new Image();
-    img.onload = function () {
-      var canvas = document.createElement('canvas'); canvas.width = OUT; canvas.height = OUT;
-      var ctx = canvas.getContext('2d');
-      var f = OUT / BD;
-      var d = dimCrop(cropZoom);
-      var l = (BD / 2 + cropOff.x - d.w / 2) * f;
-      var t = (BD / 2 + cropOff.y - d.h / 2) * f;
-      ctx.drawImage(img, l, t, d.w * f, d.h * f);
-      canvas.toBlob(function (blob) {
-        if (blob) subirAvatar(new File([blob], 'perfil.jpg', { type: 'image/jpeg' }));
-        cerrarCrop();
-      }, 'image/jpeg', 0.9);
-    };
-    img.src = cropSrc;
-  }
-
-  function subirAvatar(file) {
-    if (!file) return;
-    setMsg('Subiendo foto...');
+  function subirAvatar(file, done) {
+    if (!file) { if (done) done(); return; }
     var ruta = usuario.id + '/perfil_' + Date.now() + '.jpg';
     supabase.storage.from('avatares').upload(ruta, file, { upsert: true }).then(function (r) {
       if (r.error) throw new Error(r.error.message);
       var pub = supabase.storage.from('avatares').getPublicUrl(ruta);
       return supabase.from('perfiles').upsert({ id: usuario.id, avatar_url: pub.data.publicUrl, rol: 'maestro' }, { onConflict: 'id' }).then(function (r2) {
         if (r2.error) throw new Error(r2.error.message);
-        setAvatarUrl(pub.data.publicUrl); setMsg(null);
+        setAvatarUrl(pub.data.publicUrl); setMsg(null); if (done) done();
       });
-    }).catch(function (e) { setMsg('Error: ' + e.message); });
+    }).catch(function (e) { setMsg('Error: ' + e.message); if (done) done(); });
   }
 
   function pedirIA() {
@@ -348,43 +306,6 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   function chip(on) { return { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer', border: on ? '1px solid #7F77DD' : '1px solid #e0e0ec', background: on ? '#fff' : '#fafafc', color: on ? '#3C3489' : '#6b7184' }; }
   var inicial = (nombre || (usuario.email || '?')).trim().charAt(0).toUpperCase();
 
-  // ---------- modal de recorte ----------
-  function Cropper() {
-    var d = dimCrop(cropZoom);
-    var left = BD / 2 + cropOff.x - d.w / 2;
-    var top = BD / 2 + cropOff.y - d.h / 2;
-    return (
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(20,20,40,.7)', zIndex: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-        <div style={{ width: '100%', maxWidth: 320, background: '#1c2030', borderRadius: 20, padding: 18, textAlign: 'center' }}>
-          <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Ajusta tu foto</div>
-          <div
-            style={{ position: 'relative', width: BD, height: BD, margin: '0 auto', borderRadius: 12, overflow: 'hidden', background: '#000', touchAction: 'none', cursor: 'move' }}
-            onMouseDown={function (e) { dragStart(e.clientX, e.clientY); }}
-            onMouseMove={function (e) { dragMove(e.clientX, e.clientY); }}
-            onMouseUp={dragEnd}
-            onMouseLeave={dragEnd}
-            onTouchStart={function (e) { var t = e.touches[0]; dragStart(t.clientX, t.clientY); }}
-            onTouchMove={function (e) { var t = e.touches[0]; dragMove(t.clientX, t.clientY); }}
-            onTouchEnd={dragEnd}
-          >
-            {cropSrc && <img src={cropSrc} alt="" draggable={false} style={{ position: 'absolute', left: left, top: top, width: d.w, height: d.h, maxWidth: 'none', userSelect: 'none', pointerEvents: 'none' }} />}
-            <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.85)', borderRadius: '50%' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 4px 4px' }}>
-            <span style={{ color: '#b9c0d4', fontSize: 16 }}>{'\u{1F5BC}'}</span>
-            <input type="range" min={1} max={3} step={0.01} value={cropZoom} onChange={function (e) { onZoom(parseFloat(e.target.value)); }} style={{ flex: 1 }} />
-            <span style={{ color: '#b9c0d4', fontSize: 18, fontWeight: 800 }}>+</span>
-          </div>
-          <div style={{ fontSize: 11, color: '#9aa1b5', marginBottom: 14 }}>Arrastra para centrar · desliza para acercar</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={cerrarCrop} style={{ flex: 1, background: 'transparent', color: '#b9c0d4', border: '1px solid #3a3f52', borderRadius: 11, padding: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
-            <button onClick={usarFoto} style={{ flex: 1, background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 11, padding: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Usar foto</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   function verAnterior(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i <= 0 ? galeria.length - 1 : i - 1; }); }
   function verSiguiente(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i >= galeria.length - 1 ? 0 : i + 1; }); }
   function Preview() {
@@ -412,15 +333,16 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
             {galeria && galeria.length > 0 && (
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#1c1f2b', margin: '4px 0 10px' }}>{'\u{1F4F8} Trabajos realizados'} <span style={{ color: '#9aa1b5', fontWeight: 600 }}>({galeria.length})</span></div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
                   {galeria.map(function (u, i) {
                     return (
-                      <button key={i} type="button" onClick={function () { setTrabajoIdx(i); }} style={{ position: 'relative', paddingTop: '100%', padding: 0, border: 'none', borderRadius: 12, overflow: 'hidden', background: '#eef0f5', cursor: 'pointer' }}>
-                        <img src={u} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button key={i} type="button" onClick={function () { setTrabajoIdx(i); }} style={{ position: 'relative', flex: '0 0 auto', width: 150, height: 150, padding: 0, border: 'none', borderRadius: 12, overflow: 'hidden', background: '#eef0f5', cursor: 'pointer', scrollSnapAlign: 'start' }}>
+                        <img src={u} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </button>
                     );
                   })}
                 </div>
+                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 7 }}>{'\u{1F50D} Desliza para ver · toca una foto para ampliarla'}</div>
               </div>
             )}
             <button onClick={function () { setVerPerfil(false); }} style={{ width: '100%', marginTop: 16, background: '#26215C', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Cerrar vista previa</button>
@@ -471,7 +393,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   return (
     <div style={card}>
       {verPerfil && <Preview />}
-      {cropOpen && <Cropper />}
+      {cropSrc && <CropFoto src={cropSrc} subiendo={subiendoFoto} onCancel={function () { setCropSrc(null); }} onUse={onRecorte} />}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
         {pasoMeta.map(function (s, i) {
