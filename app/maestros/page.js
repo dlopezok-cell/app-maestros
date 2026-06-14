@@ -11,7 +11,7 @@ import GananciasMaestro from '../GananciasMaestro';
 import AccesoMaestro from '../AccesoMaestro';
 
 // App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
-// cuenta y arme su ficha. Navega por pestañas: Perfil · Solicitudes · Agenda · Ganancias.
+// cuenta y arme su ficha. Navega por pestañas: Perfil · Cotizaciones · Agenda · Ganancias.
 export default function Maestros() {
   const [usuario, setUsuario] = useState(null);
   const [cargado, setCargado] = useState(false);
@@ -62,7 +62,7 @@ export default function Maestros() {
           <div className="body" style={{ paddingTop: 16, paddingBottom: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 16 }}>{'\u{1F4CB}'}</span>
-              <b style={{ fontSize: 16 }}>Solicitudes de presupuesto</b>
+              <b style={{ fontSize: 16 }}>Cotizaciones</b>
             </div>
           </div>
           <PresupuestosMaestro usuario={usuario} />
@@ -75,7 +75,7 @@ export default function Maestros() {
 
       <div className="tabbar">
         <Tab id="perfil" icono={'\u{1F6E0}'} nombre="Perfil" />
-        <Tab id="solicitudes" icono={'\u{1F4CB}'} nombre="Solicitudes" />
+        <Tab id="solicitudes" icono={'\u{1F4CB}'} nombre="Cotizaciones" />
         <Tab id="agenda" icono={'\u{1F4C5}'} nombre="Agenda" />
         <Tab id="ganancias" icono={'\u{1F4B0}'} nombre="Ganancias" />
       </div>
