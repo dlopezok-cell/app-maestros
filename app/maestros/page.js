@@ -9,9 +9,10 @@ import PresupuestosMaestro from '../PresupuestosMaestro';
 import AgendaMaestro from '../AgendaMaestro';
 import GananciasMaestro from '../GananciasMaestro';
 import AccesoMaestro from '../AccesoMaestro';
+import ComunicadosBanner from '../ComunicadosBanner';
 
-// App de MAESTROS (ruta /maestros). Independiente: no enlaza a la app de clientes.
-// Navega por pestañas: Perfil · Cotizaciones · Agenda · Ganancias.
+// App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
+// cuenta y arme su ficha. Navega por pestañas: Perfil · Solicitudes · Agenda · Ganancias.
 export default function Maestros() {
   const [usuario, setUsuario] = useState(null);
   const [cargado, setCargado] = useState(false);
@@ -47,6 +48,7 @@ export default function Maestros() {
       {pestana === 'perfil' && (
         <div>
           <CabeceraMaestro usuario={usuario} />
+          <ComunicadosBanner segmento="maestros" />
           <Verificacion usuario={usuario} />
           <GaleriaMaestro usuario={usuario} />
           <RegistroMaestro usuario={usuario} />
