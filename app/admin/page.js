@@ -13,7 +13,6 @@ const SECCIONES = [
   { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
   { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
-  { id: 'verificaciones', icono: '\u{1F6E1}', nombre: 'Verificaciones' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
@@ -52,6 +51,7 @@ export default function Admin() {
   const [listaEspera, setListaEspera] = useState([]);
   const [hilo, setHilo] = useState(null);
   const [pedido, setPedido] = useState(null);
+  const [maestroDet, setMaestroDet] = useState(null);
   const [urls, setUrls] = useState({});
   const [busca, setBusca] = useState('');
   const [msg, setMsg] = useState(null);
@@ -155,6 +155,19 @@ export default function Admin() {
   function suspender(m, valor) {
     supabase.from('maestros').update({ suspendido: valor, disponible: !valor }).eq('id', m.id)
       .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
+  }
+  function aprobarMaestro(m) {
+    const v = verifs.find(function (x) { return x.user_id === m.id && x.estado === 'pendiente'; });
+    if (v) { aprobar(v); return; }
+    supabase.from('maestros').update({ verificado: true }).eq('id', m.id)
+      .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
+  }
+  function mensajeMaestro(m) {
+    const txt = window.prompt('Mensaje para ' + nombreDe(m.id) + ' (le llega por correo):', '');
+    if (txt === null || !txt.trim()) return;
+    fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'admin_mensaje', maestroId: m.id, mensaje: txt.trim() }) })
+      .then(function () { setMsg('Mensaje enviado a ' + nombreDe(m.id) + ' ✓'); })
+      .catch(function () { setMsg('No se pudo enviar el mensaje'); });
   }
   function eliminarMaestro(m) {
     if (!window.confirm('¿Eliminar definitivamente a este maestro? Se borra su ficha de la plataforma. Esta acción no se puede deshacer.')) return;
@@ -334,7 +347,7 @@ export default function Admin() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {SECCIONES.map(function (s) {
           const on = seccion === s.id;
-          const badge = s.id === 'verificaciones' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : 0;
+          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : 0;
           return (
             <button key={s.id} onClick={function () { setSeccion(s.id); }}
               style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
@@ -438,7 +451,10 @@ export default function Admin() {
                       <td style={td}>{reservasPorM[m.id] || 0}</td>
                       <td style={td}>{m.suspendido ? tag('SUSPENDIDO', 'mal') : m.verificado ? tag('VERIFICADO', 'ok') : tag('SIN VERIF', 'pend')}</td>
                       <td style={td}>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button style={btnS} onClick={function () { setMaestroDet(maestroDet === m.id ? null : m.id); }}>{maestroDet === m.id ? 'Cerrar' : 'Ver perfil'}</button>
+                          {!m.verificado && <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { aprobarMaestro(m); }}>Aprobar</button>}
+                          <button style={btnS} onClick={function () { mensajeMaestro(m); }}>Mensaje</button>
                           {m.suspendido
                             ? <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { suspender(m, false); }}>Reactivar</button>
                             : <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { suspender(m, true); }}>Suspender</button>}
@@ -451,6 +467,46 @@ export default function Admin() {
               </tbody>
             </table>
           </div>
+          {maestroDet && (function () {
+            const m = maestros.find(function (x) { return x.id === maestroDet; });
+            if (!m) return null;
+            const perf = perfiles.find(function (p) { return p.id === m.id; }) || {};
+            const vPend = verifs.find(function (x) { return x.user_id === m.id && x.estado === 'pendiente'; });
+            const u = vPend ? (urls[vPend.id] || {}) : {};
+            return (
+              <div style={{ marginTop: 14, borderTop: '1px solid #eee', paddingTop: 14 }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                  {(m.foto_url || perf.avatar_url) && <img src={m.foto_url || perf.avatar_url} alt="" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover' }} />}
+                  <div>
+                    <b style={{ fontSize: 15 }}>{nombreDe(m.id)}</b>
+                    <div style={{ fontSize: 12, color: '#7c8499' }}>{((m.oficios && m.oficios.length ? m.oficios.join(' · ') : (m.oficio || '')) + (perf.telefono ? ' · ' + perf.telefono : '')) || '—'}</div>
+                  </div>
+                </div>
+                {m.descripcion && <div style={{ fontSize: 13, color: '#444', marginBottom: 8 }}>{m.descripcion}</div>}
+                <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>{'Diagnóstico: ' + plata(m.precio_videollamada) + (m.precio_visita ? ' · Visita: ' + plata(m.precio_visita) : '') + (m.comuna ? ' · ' + m.comuna : '')}</div>
+                {m.galeria && m.galeria.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 8 }}>
+                    {m.galeria.map(function (g, i) { return <img key={i} src={g} alt="" style={{ height: 90, borderRadius: 8, flexShrink: 0 }} />; })}
+                  </div>
+                )}
+                {vPend ? (
+                  <div style={{ background: '#fff9f0', borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#b07a1e', marginBottom: 6 }}>{'Verificación pendiente · RUT ' + (vPend.rut || '—')}</div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      {u.carnet ? <a href={u.carnet} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.carnet} alt="carnet" style={{ width: '100%', borderRadius: 8, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando carnet...</div>}
+                      {u.selfie ? <a href={u.selfie} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.selfie} alt="selfie" style={{ width: '100%', borderRadius: 8, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando selfie...</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button style={{ ...btnS, background: '#0d9456', color: '#fff', border: 'none' }} onClick={function () { aprobar(vPend); }}>{'Aprobar ✓'}</button>
+                      <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { rechazar(vPend); }}>Rechazar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: '#9aa1b5' }}>{m.verificado ? 'Identidad verificada ✓' : 'Aún no envió documentos de verificación.'}</div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -664,45 +720,6 @@ export default function Admin() {
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <button style={btnS} onClick={function () { toggleComunicado(c); }}>{c.activo ? 'Ocultar' : 'Activar'}</button>
                   <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { borrarComunicado(c); }}>Borrar</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ---------------- VERIFICACIONES ---------------- */}
-      {seccion === 'verificaciones' && (
-        <div>
-          {pendientes.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin pendientes ✓</b></div>}
-          {pendientes.map(function (v) {
-            const u = urls[v.id] || {};
-            return (
-              <div key={v.id} style={card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <b style={{ fontSize: 14 }}>{v.email}</b>{tag('PENDIENTE', 'pend')}
-                </div>
-                <div style={{ fontSize: 13, color: '#444', marginBottom: 10 }}>
-                  {'RUT: ' + (v.rut || '—') + ' · N° doc: ' + (v.num_serie || '—')}<br />
-                  <span style={{ fontSize: 11, color: '#9aa1b5' }}>{'Enviado: ' + fecha(v.creado_at)}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                  {u.carnet ? <a href={u.carnet} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.carnet} alt="carnet" style={{ width: '100%', borderRadius: 12, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando carnet...</div>}
-                  {u.selfie ? <a href={u.selfie} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.selfie} alt="selfie" style={{ width: '100%', borderRadius: 12, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando selfie...</div>}
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button style={{ ...btnS, flex: 1, background: '#0d9456', color: '#fff', border: 'none', padding: '10px 14px' }} onClick={function () { aprobar(v); }}>{'Aprobar ✓'}</button>
-                  <button style={{ ...btnS, flex: 1, color: '#b3261e', borderColor: '#f5c2c2', padding: '10px 14px' }} onClick={function () { rechazar(v); }}>Rechazar</button>
-                </div>
-              </div>
-            );
-          })}
-          {verifs.filter(function (v) { return v.estado !== 'pendiente'; }).map(function (v) {
-            return (
-              <div key={v.id} style={{ ...card, padding: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><b style={{ fontSize: 13 }}>{v.email}</b><div style={{ fontSize: 11, color: '#9aa1b5' }}>{(v.rut || '') + (v.notas ? ' · ' + v.notas : '')}</div></div>
-                  {tag(v.estado.toUpperCase(), v.estado === 'aprobado' ? 'ok' : 'mal')}
                 </div>
               </div>
             );
