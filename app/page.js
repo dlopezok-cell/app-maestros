@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import PresupuestoCliente from './PresupuestoCliente';
 import PerfilCliente from './PerfilCliente';
+import CookieBanner from './CookieBanner';
 
 // App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
 // Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
@@ -24,6 +25,8 @@ export default function Home() {
   const [pass, setPass] = useState('');
   const [authMsg, setAuthMsg] = useState(null);
   const [pagoMsg, setPagoMsg] = useState(null);
+  const [q, setQ] = useState('');
+  const [resenas, setResenas] = useState([]);
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
@@ -35,7 +38,16 @@ export default function Home() {
       .then(function (r) { setCats(r.data || []); });
     supabase.from('maestros').select('id, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comuna, region, verificado, perfiles(nombre, avatar_url)')
       .then(function (r) { setMaestros(r.data || []); });
+    supabase.from('resenas').select('maestro_id, estrellas, comentario, creado_en')
+      .then(function (r) { setResenas(r.data || []); });
   }, []);
+
+  function ratingDe(id) {
+    var rs = resenas.filter(function (x) { return x.maestro_id === id; });
+    if (!rs.length) return { avg: null, n: 0 };
+    var s = rs.reduce(function (a, x) { return a + (x.estrellas || 0); }, 0);
+    return { avg: Math.round(s / rs.length * 10) / 10, n: rs.length };
+  }
 
   function entrar() {
     setAuthMsg('Procesando...');
@@ -67,7 +79,14 @@ export default function Home() {
   function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
 
   var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
-  var lista = maestros.filter(function (m) { return !oficio || oficiosM(m).indexOf(oficio) >= 0; });
+  var lista = maestros.filter(function (m) {
+    if (oficio && oficiosM(m).indexOf(oficio) < 0) return false;
+    if (q.trim()) {
+      var t = (nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + (m.comuna || '') + ' ' + (m.descripcion || '')).toLowerCase();
+      if (t.indexOf(q.toLowerCase()) < 0) return false;
+    }
+    return true;
+  });
 
   function Nav() {
     return (
@@ -141,6 +160,24 @@ export default function Home() {
               </div>
             </div>
           )}
+          {(function () {
+            var rs = resenas.filter(function (x) { return x.maestro_id === sel.id; });
+            var rt = ratingDe(sel.id);
+            return (
+              <div>
+                <div className="seehead"><h3>{'⭐ Reseñas' + (rt.avg ? ' · ' + rt.avg + ' (' + rt.n + ')' : '')}</h3></div>
+                {rs.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5' }}>Aún sin reseñas. Sé el primero en calificarlo después de tu trabajo.</p>}
+                {rs.map(function (re, i) {
+                  return (
+                    <div key={i} style={{ borderTop: i ? '1px solid #f1f1f1' : 'none', padding: '10px 0' }}>
+                      <div style={{ fontSize: 14, color: '#f5a623' }}>{'★'.repeat(re.estrellas || 0) + '☆'.repeat(Math.max(0, 5 - (re.estrellas || 0)))}</div>
+                      {re.comentario && <div style={{ fontSize: 13, color: '#444', marginTop: 2 }}>{re.comentario}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
           <div style={{ height: 90 }} />
         </div>
         <div className="stickycta">
@@ -200,7 +237,7 @@ export default function Home() {
       <div className="hero">
         <span className="locpill">{'\u{1F4CD} Maestros verificados'}</span>
         <h1>{'Hola \u{1F44B} ¿Qué arreglamos hoy?'}</h1>
-        <div className="searchfloat">{'\u{1F50D} Busca por especialidad'}</div>
+        <input value={q} onChange={function (e) { setQ(e.target.value); }} className="searchfloat" placeholder={'\u{1F50D} Busca por nombre, oficio o comuna'} style={{ border: 'none', outline: 'none', boxSizing: 'border-box' }} />
       </div>
       <div className="body">
         <div className="catscroll">
@@ -235,7 +272,7 @@ export default function Home() {
               <div key={m.id} className="mcard" onClick={function () { abrirFicha(m); }}>
                 <div className="photo" style={{ background: GRAD[i % 6], display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   {fotoM(m) ? <img src={fotoM(m)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 40, color: '#fff', fontWeight: 800 }}>{nombreM(m).charAt(0).toUpperCase()}</span>}
-                  <span className="ratepill">{'★ ' + (m.rating_promedio || '—') + ' · ' + (m.total_trabajos || 0)}</span>
+                  <span className="ratepill">{(function () { var rt = ratingDe(m.id); return rt.avg ? '★ ' + rt.avg + ' · ' + rt.n : 'Nuevo'; })()}</span>
                 </div>
                 <div className="minfo">
                   <div className="nm">{nombreM(m)}{sel ? '' : ''}{m.verificado ? ' \u{1F6E1}' : ''}</div>
@@ -246,7 +283,11 @@ export default function Home() {
             );
           })}
         </div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#b6bccb', padding: '22px 0 8px' }}>
+          <a href="/terminos" style={{ color: '#9aa1b5' }}>Términos</a> · <a href="/privacidad" style={{ color: '#9aa1b5' }}>Privacidad</a> · MaestrosEnLínea
+        </div>
       </div>
+      <CookieBanner />
       <Nav />
     </main>
   );

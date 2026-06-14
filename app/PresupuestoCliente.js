@@ -24,6 +24,10 @@ export default function PresupuestoCliente({ usuario, maestros }) {
   const [agendaKey, setAgendaKey] = useState(null);
   const [agendaFecha, setAgendaFecha] = useState('');
   const [pagando, setPagando] = useState(false);
+  const [reservas, setReservas] = useState([]);
+  const [resenas, setResenas] = useState([]);
+  const [revStars, setRevStars] = useState({});
+  const [revText, setRevText] = useState({});
   const fileRef = useRef(null);
 
   function cargarSolicitudes() {
@@ -47,8 +51,23 @@ export default function PresupuestoCliente({ usuario, maestros }) {
     if (!usuario) return;
     supabase.from('perfiles').select('*').eq('id', usuario.id).maybeSingle()
       .then(function (r) { setPerfil(r.data || null); });
+    supabase.from('reservas').select('id, maestro_id').eq('cliente_id', usuario.id)
+      .then(function (r) { setReservas(r.data || []); });
+    supabase.from('resenas').select('maestro_id').eq('cliente_id', usuario.id)
+      .then(function (r) { setResenas(r.data || []); });
     cargarSolicitudes();
   }, [usuario]);
+
+  function enviarResena(maestroId) {
+    var est = revStars[maestroId] || 0;
+    if (!est) { setMsg('Elige cuántas estrellas'); return; }
+    supabase.from('resenas').insert({ cliente_id: usuario.id, maestro_id: maestroId, estrellas: est, comentario: (revText[maestroId] || '').trim() || null })
+      .then(function (r) {
+        if (r.error) { setMsg('Error: ' + r.error.message); return; }
+        setResenas(function (p) { return p.concat([{ maestro_id: maestroId }]); });
+        setMsg('¡Gracias por tu reseña! ✓');
+      });
+  }
 
   function elegirArchivo(e) {
     var f = e.target.files && e.target.files[0];
@@ -139,6 +158,9 @@ export default function PresupuestoCliente({ usuario, maestros }) {
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#fff' };
   const card = { background: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
   const maestrosOficio = (maestros || []).filter(function (m) { return m.oficio === oficio; });
+  var yaResenados = {}; resenas.forEach(function (x) { yaResenados[x.maestro_id] = true; });
+  var porCalificar = [];
+  reservas.forEach(function (rv) { if (rv.maestro_id && !yaResenados[rv.maestro_id] && porCalificar.indexOf(rv.maestro_id) < 0) porCalificar.push(rv.maestro_id); });
 
   return (
     <div className="body" style={{ paddingTop: 18 }}>
@@ -174,6 +196,27 @@ export default function PresupuestoCliente({ usuario, maestros }) {
         {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('pesado') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
         <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Enviando...' : 'Enviar y pedir presupuesto'}</button>
       </div>
+
+      {porCalificar.length > 0 && (
+        <div style={card}>
+          <b style={{ fontSize: 15 }}>{'⭐ Califica a tus maestros'}</b>
+          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Tu opinión ayuda a otros clientes a elegir bien.</div>
+          {porCalificar.map(function (mid) {
+            return (
+              <div key={mid} style={{ borderTop: '1px solid #f1f1f1', padding: '10px 0' }}>
+                <b style={{ fontSize: 13 }}>{nombreMaestro(mid)}</b>
+                <div style={{ fontSize: 26, margin: '4px 0', letterSpacing: 3 }}>
+                  {[1, 2, 3, 4, 5].map(function (n) {
+                    return <span key={n} onClick={function () { setRevStars(function (p) { var o = Object.assign({}, p); o[mid] = n; return o; }); }} style={{ cursor: 'pointer', color: (revStars[mid] || 0) >= n ? '#f5a623' : '#ddd' }}>★</span>;
+                  })}
+                </div>
+                <textarea value={revText[mid] || ''} onChange={function (e) { var v = e.target.value; setRevText(function (p) { var o = Object.assign({}, p); o[mid] = v; return o; }); }} placeholder="¿Cómo fue el trabajo? (opcional)" rows={2} style={{ ...inp, resize: 'vertical' }} />
+                <button className="gbtn full" onClick={function () { enviarResena(mid); }}>Enviar reseña</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F4CB} Mis cotizaciones'}</b>
