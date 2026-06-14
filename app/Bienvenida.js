@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 // Para cambiar la imagen de heroe: pega aqui el link de una foto.
 // Si queda vacio ('') se muestra la ilustracion.
-const HERO_IMG = 'https://gasfiterensantiago.cl/wp-content/uploads/2026/02/hero-gasfiter-santiago.webp';
+const HERO_IMG = 'https://affordableremodelingatl.com/wp-content/uploads/2026/03/ffff.jpeg';
 
 // Pantalla "PRONTO" para el publico. El acceso del equipo esta oculto:
 // se abre tocando el logo (el icono de herramientas, arriba a la izquierda).
