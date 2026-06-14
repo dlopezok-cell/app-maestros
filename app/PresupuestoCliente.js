@@ -81,8 +81,14 @@ export default function PresupuestoCliente({ usuario, maestros }) {
           lng: perfil ? perfil.lng : null,
           estado: 'abierto',
         };
-        supabase.from('presupuestos').insert(fila).then(function (r) {
+        supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
           if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
+          // si fue dirigido a un maestro puntual, avisarle por correo
+          if (destino === 'uno' && maestroSel) {
+            try {
+              fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'presupuesto_maestro', maestroId: maestroSel, oficio: oficio }) });
+            } catch (e) {}
+          }
           setMsg('¡Listo! Tu video fue enviado ✓');
           setDescripcion(''); setArchivo(null); if (fileRef.current) fileRef.current.value = '';
           setSubiendo(false);
