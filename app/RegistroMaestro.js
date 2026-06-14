@@ -29,7 +29,6 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
   const [precioVisita, setPrecioVisita] = useState('');
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
-  const [ubicMsg, setUbicMsg] = useState('');
   const [msg, setMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [cargado, setCargado] = useState(false);
@@ -97,15 +96,6 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
     // eslint-disable-next-line
   }, [cargado, editado, oficios, anos, tipos, fds, urgencias, garantia, boleta, comunas, sello, nombre]);
 
-  function ubicar() {
-    if (!navigator.geolocation) { setUbicMsg('Tu navegador no soporta ubicación'); return; }
-    setUbicMsg('Obteniendo tu ubicación...');
-    navigator.geolocation.getCurrentPosition(
-      function (pos) { setLat(pos.coords.latitude); setLng(pos.coords.longitude); setUbicMsg('Ubicación lista ✓'); },
-      function () { setUbicMsg('No pudimos obtener tu ubicación. Revisa los permisos.'); }
-    );
-  }
-
   function guardar() {
     if (!nombre.trim()) { setMsg('Escribe tu nombre'); return; }
     if (!oficios.length) { setMsg('Elige al menos una especialidad'); return; }
@@ -146,7 +136,6 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
       </div>
     );
   }
-  function lbl(t) { return <div style={{ fontSize: 12, color: '#7c8499', margin: '0 0 8px' }}>{t}</div>; }
   // chip morado (moderno, liviano)
   function chip(on, small) {
     return {
@@ -223,27 +212,7 @@ export default function RegistroMaestro({ usuario, plano, onGuardado }) {
           placeholder="Aquí aparece tu descripción (se arma sola al responder arriba). También puedes escribirla tú."
           style={{ width: '100%', minHeight: 92, resize: 'vertical', border: 'none', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: '#1c1f2b', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
       </div>
-      {genMsg && <div style={{ fontSize: 11, color: genMsg.indexOf('Error') >= 0 ? '#b3261e' : '#9aa1b5', margin: '6px 0 0' }}>{genMsg}</div>}
-
-      <div style={divider} />
-
-      {/* Precios */}
-      {seccion('\u{1F4B5}', 'Precios')}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-        <div>
-          {lbl('Videollamada (CLP)')}
-          <input value={precioVideo} onChange={function (e) { setPrecioVideo(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="8000" style={inp} />
-        </div>
-        <div>
-          {lbl('Visita (CLP)')}
-          <input value={precioVisita} onChange={function (e) { setPrecioVisita(e.target.value.replace(/[^0-9]/g, '')); }} inputMode="numeric" placeholder="20000" style={inp} />
-        </div>
-      </div>
-
-      <button onClick={ubicar} style={{ width: '100%', padding: 12, border: '1px dashed #cdd0db', borderRadius: 12, fontSize: 13, marginBottom: 8, background: lat ? '#E1F5EE' : '#fafafc', color: lat ? '#0F6E56' : '#7c8499', fontWeight: 700, cursor: 'pointer' }}>
-        {lat ? '\u{1F4CD} Ubicación lista · tocar para actualizar' : '\u{1F4CD} Usar mi ubicación (para aparecer cerca de los clientes)'}
-      </button>
-      {ubicMsg && <div style={{ fontSize: 11, color: '#9aa1b5', marginBottom: 6 }}>{ubicMsg}</div>}
+      {genMsg && <div style={{ fontSize: 11, color: genMsg.indexOf('Error') >= 0 ? '#b3261e' : '#9aa1b5', margin: '6px 0 14px' }}>{genMsg}</div>}
 
       {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456' }}>{msg}</p>}
       <button className="gbtn full" style={{ marginTop: 6, opacity: guardando ? 0.6 : 1 }} disabled={guardando} onClick={guardar}>
