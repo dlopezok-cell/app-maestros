@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Flujo de verificacion de identidad del maestro:
-// RUT + foto del carnet + selfie -> bucket privado "verificaciones" -> estado pendiente
+// foto del carnet + selfie -> bucket privado "verificaciones" -> estado pendiente
 export default function Verificacion({ usuario }) {
   const [registro, setRegistro] = useState(null);
   const [abierto, setAbierto] = useState(false);
@@ -11,6 +11,8 @@ export default function Verificacion({ usuario }) {
   const [selfie, setSelfie] = useState(null);
   const [rut, setRut] = useState('');
   const [numSerie, setNumSerie] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
   const [msg, setMsg] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [cargado, setCargado] = useState(false);
@@ -18,7 +20,17 @@ export default function Verificacion({ usuario }) {
   useEffect(function () {
     if (!usuario) return;
     supabase.from('verificaciones').select('*').eq('user_id', usuario.id).maybeSingle()
-      .then(function (r) { setRegistro(r.data || null); setCargado(true); });
+      .then(function (r) {
+        var d = r.data || null;
+        setRegistro(d);
+        if (d) {
+          if (d.rut) setRut(d.rut);
+          if (d.num_serie) setNumSerie(d.num_serie);
+          if (d.telefono) setTelefono(d.telefono);
+          if (d.direccion) setDireccion(d.direccion);
+        }
+        setCargado(true);
+      });
   }, [usuario]);
 
   function rutValido(r) {
@@ -39,6 +51,8 @@ export default function Verificacion({ usuario }) {
   function enviar() {
     if (!rutValido(rut)) { setMsg('RUT invalido. Escribelo como 12.345.678-9'); return; }
     if (!numSerie || numSerie.length < 9) { setMsg('Ingresa el numero de documento del carnet (al frente, ej: 123456789)'); return; }
+    if (telefono.replace(/[^0-9]/g, '').length < 8) { setMsg('Ingresa un teléfono válido (ej: +56 9 1234 5678)'); return; }
+    if (!direccion || direccion.trim().length < 5) { setMsg('Ingresa tu dirección'); return; }
     if (!carnet || !selfie) { setMsg('Falta la foto del carnet o la selfie'); return; }
     setSubiendo(true);
     setMsg('Verificando sesión...');
@@ -64,6 +78,8 @@ export default function Verificacion({ usuario }) {
             email: sesion.user.email,
             rut: rut.trim().toUpperCase(),
             num_serie: numSerie.trim(),
+            telefono: telefono.trim(),
+            direccion: direccion.trim(),
             carnet_path: ruta('carnet.jpg'),
             selfie_path: ruta('selfie.jpg'),
             estado: 'pendiente',
@@ -123,8 +139,12 @@ export default function Verificacion({ usuario }) {
         </div>
       ) : (
         <div>
-          <b style={{ fontSize: 14 }}>Verificación de identidad</b>
-          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Necesitamos tu RUT, una foto de tu carnet (por delante) y una selfie. Solo los verá nuestro equipo y las fotos se eliminan al aprobarte.</div>
+          <b style={{ fontSize: 14 }}>Tus datos y verificación</b>
+          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Necesitamos tu teléfono, dirección, RUT, una foto de tu carnet (por delante) y una selfie. Solo los verá nuestro equipo y las fotos se eliminan al aprobarte.</div>
+          <input value={telefono} onChange={function (e) { setTelefono(e.target.value); }} inputMode="tel" placeholder="Teléfono (ej: +56 9 1234 5678)"
+            style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
+          <input value={direccion} onChange={function (e) { setDireccion(e.target.value); }} placeholder="Dirección (calle, número, comuna)"
+            style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
           <input value={rut} onChange={function (e) { setRut(e.target.value); }} placeholder="RUT (ej: 12.345.678-9)"
             style={{ width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10 }} />
           <input value={numSerie} onChange={function (e) { setNumSerie(e.target.value); }} placeholder="N° de documento del carnet (ej: 123456789)"
