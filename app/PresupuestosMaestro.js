@@ -29,7 +29,7 @@ export default function PresupuestosMaestro({ usuario }) {
       .then(function (r) {
         var data = r.data || [];
         var filt = data.filter(function (p) {
-          if (p.estado === 'agendado') return false; // ya tomado por otro
+          if (p.estado === 'agendado' || p.estado === 'cerrado') return false; // ya agendado por el cliente
           if (p.maestro_id === usuario.id) return true; // dirigido a mí
           return p.maestro_id == null && oficios.indexOf(p.oficio) >= 0; // abierto de mi especialidad
         });

@@ -5,7 +5,8 @@ import ChatCotizacion from './ChatCotizacion';
 
 // Presupuesto por video: el cliente graba o sube un video del problema y lo manda
 // a un maestro especifico o a todos los maestros del oficio. Recibe cotizaciones,
-// puede chatear con cada maestro y agendar (crea una reserva con fecha).
+// puede chatear con cada maestro y agendar. Al agendar se crea la reserva y se
+// redirige a Mercado Pago para pagar el monto cotizado (el webhook confirma).
 const OFICIOS = ['gasfiteria', 'electricidad', 'cerrajeria', 'pintura', 'calefont', 'limpieza'];
 
 export default function PresupuestoCliente({ usuario, maestros }) {
@@ -22,6 +23,7 @@ export default function PresupuestoCliente({ usuario, maestros }) {
   const [chatKey, setChatKey] = useState(null);
   const [agendaKey, setAgendaKey] = useState(null);
   const [agendaFecha, setAgendaFecha] = useState('');
+  const [pagando, setPagando] = useState(false);
   const fileRef = useRef(null);
 
   function cargarSolicitudes() {
@@ -83,7 +85,6 @@ export default function PresupuestoCliente({ usuario, maestros }) {
         };
         supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
           if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
-          // si fue dirigido a un maestro puntual, avisarle por correo
           if (destino === 'uno' && maestroSel) {
             try {
               fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'presupuesto_maestro', maestroId: maestroSel, oficio: oficio }) });
@@ -97,8 +98,12 @@ export default function PresupuestoCliente({ usuario, maestros }) {
       });
   }
 
+  // Agendar = crear la reserva y pasar a pagar el monto cotizado en Mercado Pago.
   function agendar(s, c) {
     if (!agendaFecha) { setMsg('Elige fecha y hora'); return; }
+    if (!c.monto) { setMsg('Este maestro aún no puso un precio. Pídele en el chat que cotice un monto antes de agendar.'); return; }
+    setPagando(true);
+    setMsg('Creando tu reserva...');
     var iso = new Date(agendaFecha).toISOString();
     supabase.from('reservas').insert({
       cliente_id: usuario.id,
@@ -106,15 +111,21 @@ export default function PresupuestoCliente({ usuario, maestros }) {
       descripcion_problema: s.descripcion,
       direccion: s.direccion,
       fecha_hora: iso,
-      estado: 'agendado',
+      estado: 'pendiente_pago',
       precio_cotizado: c.monto || null,
       link_video: s.video_url || null,
-    }).then(function (r) {
-      if (r.error) { setMsg('Error al agendar: ' + r.error.message); return; }
+    }).select().single().then(function (r) {
+      if (r.error) { setMsg('Error al agendar: ' + r.error.message); setPagando(false); return; }
+      var reservaId = r.data.id;
       supabase.from('presupuestos').update({ estado: 'cerrado' }).eq('id', s.id).then(function () {});
-      setAgendaKey(null); setAgendaFecha('');
-      setMsg('¡Agendado! El maestro lo verá en su agenda ✓');
-      cargarSolicitudes();
+      setMsg('Redirigiendo al pago seguro...');
+      fetch('/api/pagar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monto: c.monto, tipo: 'trabajo', descripcion: (s.oficio || 'servicio') + ' con ' + nombreMaestro(c.maestro_id), reservaId: reservaId, maestroId: c.maestro_id, email: usuario.email })
+      }).then(function (rp) { return rp.json(); }).then(function (d) {
+        if (d && d.init_point) { window.location.href = d.init_point; }
+        else { setPagando(false); setMsg('No se pudo iniciar el pago: ' + ((d && d.error) || 'intenta de nuevo') + '. Tu reserva quedó como pendiente de pago.'); cargarSolicitudes(); }
+      }).catch(function () { setPagando(false); setMsg('No se pudo conectar con el pago. Tu reserva quedó pendiente.'); cargarSolicitudes(); });
     });
   }
 
@@ -160,7 +171,7 @@ export default function PresupuestoCliente({ usuario, maestros }) {
         )}
         {destino === 'uno' && maestrosOficio.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5', marginBottom: 10 }}>No hay maestros de este oficio cerca todavía. Puedes mandarlo a "todos".</div>}
 
-        {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('pesado') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
+        {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('pesado') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
         <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Enviando...' : 'Enviar y pedir presupuesto'}</button>
       </div>
 
@@ -173,11 +184,12 @@ export default function PresupuestoCliente({ usuario, maestros }) {
           var maestroIds = [];
           cots.forEach(function (c) { if (maestroIds.indexOf(c.maestro_id) < 0) maestroIds.push(c.maestro_id); });
           msgs.forEach(function (m) { if (maestroIds.indexOf(m.maestro_id) < 0) maestroIds.push(m.maestro_id); });
+          var cerrado = s.estado === 'cerrado';
           return (
             <div key={s.id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontSize: 13 }}>{(s.oficio || 'servicio').charAt(0).toUpperCase() + (s.oficio || '').slice(1)}</b>
-                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: cots.length ? '#f2fbf6' : '#fff9f0', color: cots.length ? '#0d9456' : '#b07a1e', fontWeight: 800 }}>{s.estado === 'cerrado' ? 'AGENDADO' : (cots.length ? cots.length + ' COTIZACIÓN' + (cots.length > 1 ? 'ES' : '') : 'ESPERANDO')}</span>
+                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: cots.length ? '#f2fbf6' : '#fff9f0', color: cots.length ? '#0d9456' : '#b07a1e', fontWeight: 800 }}>{cerrado ? 'AGENDADO' : (cots.length ? cots.length + ' COTIZACIÓN' + (cots.length > 1 ? 'ES' : '') : 'ESPERANDO')}</span>
               </div>
               <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{s.descripcion}</div>
               <div style={{ fontSize: 11, color: '#9aa1b5' }}>{(s.maestro_id ? 'A ' + nombreMaestro(s.maestro_id) : 'Abierto a todos') + ' · ' + fecha(s.creado_en)}</div>
@@ -196,14 +208,15 @@ export default function PresupuestoCliente({ usuario, maestros }) {
                     {c && c.mensaje && <div style={{ fontSize: 12, color: '#5b6275', marginTop: 2 }}>{c.mensaje}</div>}
                     <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                       <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: chatKey === ck ? '#fff5f2' : '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversación' + (unread > 0 ? ' · ' + unread : '')}</button>
-                      {c && s.estado !== 'cerrado' && <button onClick={function () { setAgendaKey(agendaKey === ck ? null : ck); setMsg(null); }} style={{ flex: 1, background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4C5} Agendar'}</button>}
+                      {c && !cerrado && <button onClick={function () { setAgendaKey(agendaKey === ck ? null : ck); setMsg(null); }} style={{ flex: 1, background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4C5} Agendar y pagar'}</button>}
                     </div>
                     {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" />}
                     {agendaKey === ck && c && (
                       <div style={{ marginTop: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: 12 }}>
                         <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Elige cuándo quieres que vaya {nombreMaestro(mid)}{c.monto ? ' (' + plata(c.monto) + ')' : ''}:</div>
                         <input type="datetime-local" value={agendaFecha} onChange={function (e) { setAgendaFecha(e.target.value); }} style={{ ...inp, marginBottom: 8 }} />
-                        <button className="gbtn full" onClick={function () { agendar(s, c); }}>Confirmar agenda</button>
+                        <button className="gbtn full" style={{ opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { agendar(s, c); }}>{pagando ? 'Procesando...' : (c.monto ? 'Agendar y pagar ' + plata(c.monto) : 'Agendar')}</button>
+                        <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 6, textAlign: 'center' }}>Pago seguro con Mercado Pago. Tu dinero queda protegido hasta confirmar el trabajo.</div>
                       </div>
                     )}
                   </div>
