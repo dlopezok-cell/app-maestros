@@ -1,0 +1,13 @@
+{
+  "appId": "cl.maestrosenlinea.app",
+  "appName": "MaestrosEnLínea",
+  "webDir": "www",
+  "server": {
+    "url": "https://www.maestrosenlinea.cl",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#ffffff"
+  }
+}
