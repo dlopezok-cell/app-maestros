@@ -38,7 +38,7 @@ export default function Home() {
     supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
     if (typeof window !== 'undefined') {
       var pg = new URLSearchParams(window.location.search).get('pago');
-      if (pg) { setPagoMsg(pg); setVista('cotizar'); window.history.replaceState({}, '', '/'); }
+      if (pg) { setPagoMsg(pg); setVista('mias'); window.history.replaceState({}, '', '/'); }
     }
     supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
       .then(function (r) { setCats(r.data || []); });
@@ -79,7 +79,7 @@ export default function Home() {
 
   function abrirFicha(m) { setSel(m); setGIdx(-1); setVista('ficha'); window.scrollTo(0, 0); }
   function irTab(v) {
-    if ((v === 'cotizar' || v === 'cuenta') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
+    if ((v === 'cotizar' || v === 'cuenta' || v === 'mias') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
     setVista(v); window.scrollTo(0, 0);
   }
   function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
@@ -98,7 +98,8 @@ export default function Home() {
     return (
       <div className="tabbar">
         <div className={'tab' + (vista === 'inicio' || vista === 'ficha' ? ' on' : '')} onClick={function () { irTab('inicio'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-        <div className={'tab' + (vista === 'cotizar' ? ' on' : '')} onClick={function () { irTab('cotizar'); }}><span className="ti">{'\u{1F3A5}'}</span>Cotizar</div>
+        <div className={'tab' + (vista === 'cotizar' ? ' on' : '')} onClick={function () { irTab('cotizar'); }}><span className="ti">{'➕'}</span>Cotizar</div>
+        <div className={'tab' + (vista === 'mias' ? ' on' : '')} onClick={function () { irTab('mias'); }}><span className="ti">{'\u{1F4CB}'}</span>Mis cotizaciones</div>
         <div className={'tab' + (vista === 'cuenta' ? ' on' : '')} onClick={function () { irTab('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
       </div>
     );
@@ -207,10 +208,21 @@ export default function Home() {
     );
   }
 
-  // ---- COTIZAR ----
+  // ---- COTIZAR (solo crear una cotización nueva) ----
   if (vista === 'cotizar') return (
     <main>
-      <div className="darkhead"><div className="dh1">{'\u{1F3A5} Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
+      <div className="darkhead"><div className="dh1">{'➕ Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
+      <div style={{ paddingBottom: 90 }}>
+        <PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="crear" />
+      </div>
+      <Nav />
+    </main>
+  );
+
+  // ---- MIS COTIZACIONES (seguimiento de lo enviado) ----
+  if (vista === 'mias') return (
+    <main>
+      <div className="darkhead"><div className="dh1">{'\u{1F4CB} Mis cotizaciones'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus solicitudes enviadas</h2><div className="dh2">Sigue el estado, chatea y agenda con los maestros</div></div>
       {pagoMsg && (
         <div className="body" style={{ paddingTop: 14, paddingBottom: 0 }}>
           <div style={{ background: pagoMsg === 'ok' ? '#f2fbf6' : '#fff9f0', border: '1px solid ' + (pagoMsg === 'ok' ? '#bce5cf' : '#ffe2b8'), borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -221,7 +233,7 @@ export default function Home() {
         </div>
       )}
       <div style={{ paddingBottom: 90 }}>
-        <PresupuestoCliente usuario={usuario} maestros={maestrosFlat} />
+        <PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="lista" />
       </div>
       <Nav />
     </main>

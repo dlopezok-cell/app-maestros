@@ -9,7 +9,9 @@ import ChatCotizacion from './ChatCotizacion';
 // redirige a Mercado Pago para pagar el monto cotizado (el webhook confirma).
 const OFICIOS = ['gasfiteria', 'electricidad', 'cerrajeria', 'pintura', 'calefont', 'limpieza'];
 
-export default function PresupuestoCliente({ usuario, maestros }) {
+export default function PresupuestoCliente({ usuario, maestros, modo }) {
+  var soloCrear = modo !== 'lista';
+  var soloLista = modo === 'lista';
   const [oficio, setOficio] = useState('gasfiteria');
   const [descripcion, setDescripcion] = useState('');
   const [destino, setDestino] = useState('todos'); // 'todos' | 'uno'
@@ -180,9 +182,11 @@ export default function PresupuestoCliente({ usuario, maestros }) {
 
   return (
     <div className="body" style={{ paddingTop: 18 }}>
+      {soloCrear && (
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F3A5} Pide un presupuesto por video'}</b>
         <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Graba un video corto mostrando el problema. Un maestro lo revisa, te puede escribir para aclarar dudas y te manda un presupuesto.</div>
+        <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.45, marginBottom: 12 }}>{'\u{1F4A1}'} Aquí <b>creas</b> una cotización nueva. Para ver las que ya enviaste y chatear con los maestros, entra a <b>Mis cotizaciones</b>.</div>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Tipo de servicio</label>
         <select value={oficio} onChange={function (e) { setOficio(e.target.value); setMaestroSel(''); }} style={{ ...inp, marginTop: 4 }}>
@@ -212,8 +216,9 @@ export default function PresupuestoCliente({ usuario, maestros }) {
         {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('pesado') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
         <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Enviando...' : 'Enviar y pedir presupuesto'}</button>
       </div>
+      )}
 
-      {porCalificar.length > 0 && (
+      {soloLista && porCalificar.length > 0 && (
         <div style={card}>
           <b style={{ fontSize: 15 }}>{'⭐ Califica a tus maestros'}</b>
           <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Tu opinión ayuda a otros clientes a elegir bien.</div>
@@ -234,7 +239,7 @@ export default function PresupuestoCliente({ usuario, maestros }) {
         </div>
       )}
 
-      {agendados.length > 0 && (
+      {soloLista && agendados.length > 0 && (
         <div style={card}>
           <b style={{ fontSize: 15 }}>{'\u{1F6E0}️ Mis trabajos agendados'}</b>
           <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Cuando el maestro termine, confirma para liberar el pago.</div>
@@ -267,9 +272,10 @@ export default function PresupuestoCliente({ usuario, maestros }) {
         </div>
       )}
 
+      {soloLista && (
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F4CB} Mis cotizaciones'}</b>
-        {solicitudes.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no has pedido presupuestos. Graba un video arriba y empieza.</p>}
+        {solicitudes.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no has enviado cotizaciones. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
         {solicitudes.map(function (s) {
           var cots = s.cotizaciones || [];
           var msgs = mensajesPorPres[s.id] || [];
@@ -318,6 +324,7 @@ export default function PresupuestoCliente({ usuario, maestros }) {
           );
         })}
       </div>
+      )}
     </div>
   );
 }
