@@ -351,7 +351,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
                       <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: chatKey === ck ? '#fff5f2' : '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversación' + (unread > 0 ? ' · ' + unread : '')}</button>
                       {c && !cerrado && <button onClick={function () { setAgendaKey(agendaKey === ck ? null : ck); setMsg(null); }} style={{ flex: 1, background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4C5} Agendar y pagar'}</button>}
                     </div>
-                    {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" titulo={nombreMaestro(mid)} />}
+                    {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" titulo={nombreMaestro(mid)} onClose={function () { setChatKey(null); }} />}
                     {agendaKey === ck && c && (
                       <div style={{ marginTop: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: 12 }}>
                         <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Elige cuándo quieres que vaya {nombreMaestro(mid)}{c.monto ? ' (' + plata(c.monto) + ')' : ''}:</div>

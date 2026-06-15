@@ -137,7 +137,7 @@ export default function PresupuestosMaestro({ usuario }) {
             <button onClick={function () { abrirChat(p); }} style={{ width: '100%', marginTop: 10, background: chatId === p.id ? '#fff5f2' : '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
               {'\u{1F4AC} Conversación' + (nl > 0 ? ' · ' + nl + ' nuevo' + (nl > 1 ? 's' : '') : '')}
             </button>
-            {chatId === p.id && <ChatCotizacion usuario={usuario} presupuestoId={p.id} maestroId={usuario.id} miRol="maestro" />}
+            {chatId === p.id && <ChatCotizacion usuario={usuario} presupuestoId={p.id} maestroId={usuario.id} miRol="maestro" titulo={p.cliente_nombre || 'Cliente'} onClose={function () { setChatId(null); }} />}
           </div>
         );
       })}
