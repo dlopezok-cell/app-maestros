@@ -101,6 +101,18 @@ export default function Admin() {
       .then(function () { cargarInteresados(); });
   }
 
+  function cancelarReservaAdmin(r) {
+    var pagada = ['pagado', 'retenido', 'completado'].indexOf((r.estado || '').toLowerCase()) >= 0;
+    var aviso = pagada
+      ? '¿Cancelar esta reserva PAGADA? Recuerda hacer el reembolso de ' + plata(r.precio_cotizado) + ' al cliente en MercadoPago.'
+      : '¿Cancelar esta reserva? (no había pago)';
+    if (typeof window !== 'undefined' && !window.confirm(aviso)) return;
+    supabase.rpc('cancelar_reserva', { p_reserva_id: r.id }).then(function (res) {
+      if (res.error) { setMsg('Error al cancelar: ' + res.error.message); return; }
+      cargarTodo();
+    });
+  }
+
   function guardarPortada(extra) {
     var fila = Object.assign({ id: 1 }, portada, extra || {});
     fila.actualizado_en = new Date().toISOString();
@@ -1049,9 +1061,10 @@ export default function Admin() {
           <b style={{ fontSize: 14 }}>Últimas reservas</b>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, minWidth: 600 }}>
-              <thead><tr><th style={th}>Problema</th><th style={th}>Cliente</th><th style={th}>Maestro</th><th style={th}>Estado</th><th style={th}>Cotizado</th></tr></thead>
+              <thead><tr><th style={th}>Problema</th><th style={th}>Cliente</th><th style={th}>Maestro</th><th style={th}>Estado</th><th style={th}>Cotizado</th><th style={th}>Acción</th></tr></thead>
               <tbody>
                 {reservas.map(function (r) {
+                  var cancelada = (r.estado || '').toLowerCase() === 'cancelado';
                   return (
                     <tr key={r.id}>
                       <td style={td}>{r.descripcion_problema || r.tipo || '—'}</td>
@@ -1059,6 +1072,7 @@ export default function Admin() {
                       <td style={{ ...td, color: '#7c8499' }}>{nombreDe(r.maestro_id)}</td>
                       <td style={td}>{tag((r.estado || '—').toUpperCase(), 'pend')}</td>
                       <td style={td}>{plata(r.precio_cotizado)}</td>
+                      <td style={td}>{cancelada ? <span style={{ fontSize: 11, color: '#9aa1b5' }}>—</span> : <button onClick={function () { cancelarReservaAdmin(r); }} style={{ background: 'none', border: '1px solid #f0c8c2', color: '#b3261e', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>}</td>
                     </tr>
                   );
                 })}
