@@ -17,10 +17,8 @@ export default function PerfilCliente({ usuario }) {
   const [cargado, setCargado] = useState(false);
   const [editando, setEditando] = useState(true);
 
-  // Autocompletado de direcciones
-  const [sugs, setSugs] = useState([]);
-  const [buscando, setBuscando] = useState(false);
-  const debRef = useRef(null);
+  // Autocompletado de direcciones (Google Places)
+  const dirRef = useRef(null);
 
   // Mapa Leaflet (OpenStreetMap)
   const [leafletReady, setLeafletReady] = useState(false);
@@ -86,6 +84,38 @@ export default function PerfilCliente({ usuario }) {
     }
   }, [leafletReady, lat, lng]);
 
+  // Google Places: autocompletado de dirección (mismo método que el registro del maestro)
+  useEffect(function () {
+    if (!editando) return;
+    var key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    function attach() {
+      if (!dirRef.current || dirRef.current._ac || !(window.google && window.google.maps && window.google.maps.places)) return;
+      var ac = new window.google.maps.places.Autocomplete(dirRef.current, { componentRestrictions: { country: 'cl' }, fields: ['formatted_address', 'address_components', 'geometry'] });
+      dirRef.current._ac = ac;
+      ac.addListener('place_changed', function () {
+        var pl = ac.getPlace();
+        if (pl.formatted_address) setDireccion(pl.formatted_address);
+        if (pl.geometry && pl.geometry.location) { setLat(pl.geometry.location.lat()); setLng(pl.geometry.location.lng()); }
+        var comps = pl.address_components || [], com = '';
+        comps.forEach(function (cc) {
+          if (cc.types.indexOf('administrative_area_level_3') >= 0 && !com) com = cc.long_name;
+          if (cc.types.indexOf('locality') >= 0 && !com) com = cc.long_name;
+        });
+        if (com) setComuna(com);
+        setMsg('Dirección seleccionada ✓ revisa el pin');
+      });
+    }
+    if (window.google && window.google.maps && window.google.maps.places) { attach(); return; }
+    if (!key) return;
+    var existing = document.getElementById('gmaps-sdk');
+    if (existing) { var iv = setInterval(function () { if (window.google && window.google.maps && window.google.maps.places) { clearInterval(iv); attach(); } }, 250); return function () { clearInterval(iv); }; }
+    var s = document.createElement('script');
+    s.id = 'gmaps-sdk';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&libraries=places&language=es&region=CL';
+    s.async = true; s.onload = attach;
+    document.head.appendChild(s);
+  }, [editando, cargado]);
+
   function ubicar() {
     if (!navigator.geolocation) { setMsg('Tu navegador no soporta ubicación'); return; }
     setMsg('Obteniendo tu ubicación...');
@@ -93,51 +123,10 @@ export default function PerfilCliente({ usuario }) {
       function (pos) {
         var la = pos.coords.latitude, lo = pos.coords.longitude;
         setLat(la); setLng(lo);
-        setMsg('Ubicación capturada ✓');
-        fetch('https://photon.komoot.io/reverse?lat=' + la + '&lon=' + lo)
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            var f = j && j.features && j.features[0];
-            if (!f) return;
-            var p = f.properties || {};
-            var calle = [p.name || p.street, p.housenumber].filter(Boolean).join(' ');
-            if (calle && !direccion) setDireccion(calle);
-            if ((p.city || p.district) && !comuna) setComuna(p.city || p.district);
-          })
-          .catch(function () {});
+        setMsg('Ubicación capturada ✓ ajusta el pin y escribe tu dirección');
       },
       function () { setMsg('No pudimos obtener tu ubicación. Revisa los permisos.'); }
     );
-  }
-
-  function onDireccion(v) {
-    setDireccion(v);
-    if (debRef.current) clearTimeout(debRef.current);
-    if (!v || v.trim().length < 4) { setSugs([]); return; }
-    debRef.current = setTimeout(function () {
-      setBuscando(true);
-      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(v) + '&limit=8&lat=-33.45&lon=-70.66')
-        .then(function (r) { return r.json(); })
-        .then(function (j) {
-          var feats = (j.features || []).filter(function (f) {
-            return f.properties && f.properties.countrycode === 'CL';
-          });
-          setSugs(feats);
-          setBuscando(false);
-        })
-        .catch(function () { setBuscando(false); });
-    }, 350);
-  }
-
-  function elegirSug(f) {
-    var c = f.geometry.coordinates;
-    var p = f.properties || {};
-    setLng(c[0]); setLat(c[1]);
-    var calle = [p.name || p.street, p.housenumber].filter(Boolean).join(' ');
-    setDireccion(calle || p.name || '');
-    if (p.city || p.district || p.county) setComuna(p.city || p.district || p.county);
-    setSugs([]);
-    setMsg('Dirección seleccionada ✓ revisa el pin');
   }
 
   function guardar() {
@@ -175,24 +164,9 @@ export default function PerfilCliente({ usuario }) {
         <input value={nombre} disabled={dis} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre" style={inp} />
         <input value={telefono} disabled={dis} onChange={function (e) { setTelefono(e.target.value); }} placeholder="Teléfono (ej: +56 9 1234 5678)" style={inp} />
 
-        <div style={{ position: 'relative', marginBottom: 10 }}>
-          <input value={direccion} disabled={dis} onChange={function (e) { onDireccion(e.target.value); }} placeholder="Dirección (escribe calle y número)" style={{ ...inp, marginBottom: 0 }} autoComplete="off" />
-          {buscando && <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 4 }}>Buscando direcciones...</div>}
-          {editando && sugs.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: '#fff', border: '1.5px solid #eee', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,.10)', overflow: 'hidden', marginTop: 4 }}>
-              {sugs.map(function (f, i) {
-                var p = f.properties || {};
-                var linea = [p.name || p.street, p.housenumber].filter(Boolean).join(' ');
-                var sub = [p.city || p.district, p.state].filter(Boolean).join(', ');
-                return (
-                  <div key={i} onClick={function () { elegirSug(f); }} style={{ padding: '10px 12px', borderBottom: i < sugs.length - 1 ? '1px solid #f3f3f3' : 'none', cursor: 'pointer', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700 }}>{linea || p.name || 'Dirección'}</div>
-                    {sub && <div style={{ fontSize: 11, color: '#9aa1b5' }}>{sub}</div>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        <div style={{ marginBottom: 10 }}>
+          <input ref={dirRef} value={direccion} disabled={dis} onChange={function (e) { setDireccion(e.target.value); }} placeholder="Dirección (escribe y elige de la lista)" style={{ ...inp, marginBottom: 0 }} autoComplete="off" />
+          {editando && <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 4 }}>Empieza a escribir y selecciona tu dirección de las sugerencias.</div>}
         </div>
 
         <input value={comuna} disabled={dis} onChange={function (e) { setComuna(e.target.value); }} placeholder="Comuna" style={inp} />
