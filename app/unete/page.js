@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 // Landing de reclutamiento de maestros (pre-lanzamiento). Captura interés en
 // maestros_interesados. Incluye oferta "Maestro Fundador" y referidos.
