@@ -22,9 +22,9 @@ export default function Privacidad() {
 
         <h3 style={h3}>1. Responsable del tratamiento</h3>
         <div style={box}>
-          <div><b>Razón social:</b> <span style={ph}>[RAZÓN SOCIAL]</span></div>
-          <div><b>RUT:</b> <span style={ph}>[RUT EMPRESA]</span></div>
-          <div><b>Domicilio:</b> <span style={ph}>[DOMICILIO]</span>, Chile</div>
+          <div><b>Razón social:</b> Simple y Puro SpA</div>
+          <div><b>RUT:</b> 77.017.256-K</div>
+          <div><b>Domicilio:</b> La Vega de Pupuya 52, Chile</div>
           <div><b>Correo de contacto / privacidad:</b> hola@maestrosenlinea.cl</div>
         </div>
 
@@ -77,7 +77,7 @@ export default function Privacidad() {
         <h3 style={h3}>14. Contacto</h3>
         <p>Para cualquier consulta sobre privacidad o para ejercer tus derechos: <b>hola@maestrosenlinea.cl</b>.</p>
 
-        <p style={nota}>Texto base referencial; no constituye asesoría legal. Completa los campos marcados en <span style={ph}>[corchetes]</span> y revísalo con un abogado antes del lanzamiento.</p>
+        <p style={nota}>Texto base referencial; no constituye asesoría legal. Recomendamos revisarlo con un abogado antes del lanzamiento.</p>
       </div>
     </main>
   );
