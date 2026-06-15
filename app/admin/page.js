@@ -10,6 +10,7 @@ const SECCIONES = [
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads' },
+  { id: 'interesados', icono: '\u{1F9F0}', nombre: 'Maestros interesados' },
   { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
   { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes' },
@@ -49,6 +50,7 @@ export default function Admin() {
   const [liberandoId, setLiberandoId] = useState(null);
   const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO' });
   const [portadaMsg, setPortadaMsg] = useState(null);
+  const [interesados, setInteresados] = useState([]);
   const [resenas, setResenas] = useState([]);
   const [mensajes, setMensajes] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
@@ -89,6 +91,16 @@ export default function Admin() {
       .then(function (r) { if (r.data) setPortada(r.data); });
   }
 
+  function cargarInteresados() {
+    supabase.from('maestros_interesados').select('*').order('creado_en', { ascending: false })
+      .then(function (r) { setInteresados(r.error ? [] : (r.data || [])); });
+  }
+
+  function marcarContactado(it) {
+    supabase.from('maestros_interesados').update({ contactado: !it.contactado }).eq('id', it.id)
+      .then(function () { cargarInteresados(); });
+  }
+
   function guardarPortada(extra) {
     var fila = Object.assign({ id: 1 }, portada, extra || {});
     fila.actualizado_en = new Date().toISOString();
@@ -119,6 +131,7 @@ export default function Admin() {
   function cargarTodo() {
     cargarPorLiberar();
     cargarPortada();
+    cargarInteresados();
     Promise.all([
       supabase.from('verificaciones').select('*').order('creado_at', { ascending: false }),
       supabase.from('maestros').select('*'),
@@ -455,6 +468,33 @@ export default function Admin() {
       </div>
 
       {msg && <p style={{ color: '#b3261e', fontSize: 13 }}>{msg}</p>}
+
+      {/* ---------------- MAESTROS INTERESADOS ---------------- */}
+      {seccion === 'interesados' && (
+        <div style={card}>
+          <b style={{ fontSize: 14 }}>{'\u{1F9F0} Maestros interesados (' + interesados.length + ')'}</b>
+          <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 8px' }}>Inscritos desde la portada (antes del lanzamiento). Contáctalos por WhatsApp para activarlos.</div>
+          {interesados.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no hay maestros inscritos.</p>}
+          {interesados.map(function (it) {
+            var wnum = (it.whatsapp || '').replace(/\D/g, '');
+            if (wnum.length === 8) wnum = '569' + wnum; else if (wnum.length === 9) wnum = '56' + wnum;
+            return (
+              <div key={it.id} style={{ borderTop: '1px solid #f1f1f5', padding: '11px 0', opacity: it.contactado ? 0.55 : 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <b style={{ fontSize: 13.5 }}>{it.nombre}</b>
+                  <span style={{ fontSize: 10.5, color: '#9aa1b5' }}>{fecha(it.creado_en)}</span>
+                </div>
+                <div style={{ fontSize: 12, color: '#5b6275', margin: '2px 0' }}>{[it.oficio, it.comuna].filter(Boolean).join(' · ') || 'Sin oficio/comuna'}</div>
+                {it.referido_por && <div style={{ fontSize: 11, color: '#b07a1e' }}>{'Invitado por: ' + it.referido_por}</div>}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  {wnum && <a href={'https://wa.me/' + wnum} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#e8f7ef', border: '1px solid #bfe6cf', color: '#0d9456', borderRadius: 9, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>{'\u{1F4AC} ' + (it.whatsapp || 'WhatsApp')}</a>}
+                  <button onClick={function () { marcarContactado(it); }} style={{ border: '1px solid #e4e4ef', background: it.contactado ? '#eef0f5' : '#fff', color: '#5b6275', borderRadius: 9, padding: '6px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{it.contactado ? '✓ Contactado' : 'Marcar contactado'}</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ---------------- PORTADA (home on/off) ---------------- */}
       {seccion === 'portada' && (
