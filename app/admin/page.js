@@ -15,6 +15,7 @@ const SECCIONES = [
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
   { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
+  { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
 ];
@@ -43,6 +44,8 @@ export default function Admin() {
   const [perfiles, setPerfiles] = useState([]);
   const [reservas, setReservas] = useState([]);
   const [pagos, setPagos] = useState([]);
+  const [porLiberar, setPorLiberar] = useState([]);
+  const [liberandoId, setLiberandoId] = useState(null);
   const [resenas, setResenas] = useState([]);
   const [mensajes, setMensajes] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
@@ -74,7 +77,21 @@ export default function Admin() {
     });
   }, []);
 
+  function cargarPorLiberar() {
+    supabase.rpc('pagos_por_liberar').then(function (r) { setPorLiberar(r.error ? [] : (r.data || [])); });
+  }
+
+  function liberarPago(reservaId) {
+    setLiberandoId(reservaId);
+    supabase.rpc('liberar_pago', { p_reserva_id: reservaId }).then(function (r) {
+      setLiberandoId(null);
+      if (r.error) { setMsg('Error al liberar: ' + r.error.message); return; }
+      cargarPorLiberar();
+    });
+  }
+
   function cargarTodo() {
+    cargarPorLiberar();
     Promise.all([
       supabase.from('verificaciones').select('*').order('creado_at', { ascending: false }),
       supabase.from('maestros').select('*'),
@@ -384,6 +401,7 @@ export default function Admin() {
     return la < lb ? 1 : -1;
   });
   const hilosFlag = hilos.filter(function (h) { return h.flag; }).length;
+  const porLiberarCount = porLiberar.filter(function (x) { return x.trabajo_confirmado && !x.liberado; }).length;
 
   return (
     <main style={wrap}>
@@ -398,7 +416,7 @@ export default function Admin() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {SECCIONES.map(function (s) {
           const on = seccion === s.id;
-          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : 0;
+          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'liberar' ? porLiberarCount : 0;
           return (
             <button key={s.id} onClick={function () { setSeccion(s.id); }}
               style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
@@ -924,6 +942,57 @@ export default function Admin() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ---------------- POR LIBERAR (escrow) ---------------- */}
+      {seccion === 'liberar' && (
+        <div style={card}>
+          <b style={{ fontSize: 14 }}>{'\u{1F513} Pagos retenidos por liberar'}</b>
+          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>El dinero del cliente está retenido. Cuando el trabajo termine (idealmente con la confirmación del cliente), libera el neto al maestro.</div>
+          {porLiberar.filter(function (x) { return !x.liberado; }).length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>No hay pagos pendientes de liberar.</p>}
+          {porLiberar.filter(function (x) { return !x.liberado; }).map(function (x) {
+            return (
+              <div key={x.reserva_id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <b style={{ fontSize: 13 }}>{(x.maestro_nombre || 'Maestro') + '  ←  ' + (x.cliente_nombre || 'Cliente')}</b>
+                    <div style={{ fontSize: 12, color: '#7c8499', margin: '2px 0' }}>{x.descripcion || 'Trabajo'}</div>
+                    <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(x.fecha_hora)}</div>
+                    <div style={{ marginTop: 6 }}>
+                      {x.trabajo_confirmado
+                        ? tag('CLIENTE CONFIRMÓ', 'ok')
+                        : tag('EN GARANTÍA · sin confirmar', 'pend')}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 11, color: '#9aa1b5' }}>{'Cobrado: ' + plata(x.precio)}</div>
+                    <div style={{ fontSize: 11, color: '#0d9456' }}>{'Comisión: ' + plata(x.comision)}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1c1f2b', marginTop: 2 }}>{plata(x.liquido_maestro)}</div>
+                    <div style={{ fontSize: 10, color: '#9aa1b5' }}>al maestro</div>
+                  </div>
+                </div>
+                <button onClick={function () { if (window.confirm('¿Liberar ' + plata(x.liquido_maestro) + ' a ' + (x.maestro_nombre || 'el maestro') + '? Esto marca el pago como liberado.')) liberarPago(x.reserva_id); }}
+                  disabled={liberandoId === x.reserva_id}
+                  style={{ marginTop: 10, width: '100%', background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: liberandoId === x.reserva_id ? 0.6 : 1 }}>
+                  {liberandoId === x.reserva_id ? 'Liberando...' : '\u{1F513} Liberar pago al maestro'}
+                </button>
+              </div>
+            );
+          })}
+          {porLiberar.filter(function (x) { return x.liberado; }).length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <b style={{ fontSize: 13, color: '#7c8499' }}>Ya liberados</b>
+              {porLiberar.filter(function (x) { return x.liberado; }).map(function (x) {
+                return (
+                  <div key={x.reserva_id} style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f6f6f6', padding: '8px 0', fontSize: 12 }}>
+                    <span style={{ color: '#5b6275' }}>{(x.maestro_nombre || 'Maestro') + ' · ' + (x.descripcion || '')}</span>
+                    <span style={{ color: '#0d9456', fontWeight: 700 }}>{plata(x.liquido_maestro) + ' ✓'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
