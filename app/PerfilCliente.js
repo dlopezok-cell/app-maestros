@@ -20,12 +20,6 @@ export default function PerfilCliente({ usuario }) {
   // Autocompletado de direcciones (Google Places)
   const dirRef = useRef(null);
 
-  // Mapa Leaflet (OpenStreetMap)
-  const [leafletReady, setLeafletReady] = useState(false);
-  const mapDivRef = useRef(null);
-  const mapRef = useRef(null);
-  const markerRef = useRef(null);
-
   useEffect(function () {
     if (!usuario) return;
     supabase.from('perfiles').select('*').eq('id', usuario.id).maybeSingle()
@@ -42,47 +36,6 @@ export default function PerfilCliente({ usuario }) {
         setCargado(true);
       });
   }, [usuario]);
-
-  useEffect(function () {
-    if (typeof window === 'undefined') return;
-    if (window.L) { setLeafletReady(true); return; }
-    var link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-    var script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = function () { setLeafletReady(true); };
-    document.body.appendChild(script);
-  }, []);
-
-  useEffect(function () {
-    if (!leafletReady || lat == null || lng == null || !mapDivRef.current) return;
-    var L = window.L;
-    if (!mapRef.current) {
-      mapRef.current = L.map(mapDivRef.current).setView([lat, lng], 16);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19,
-      }).addTo(mapRef.current);
-      var icon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41], iconAnchor: [12, 41],
-      });
-      markerRef.current = L.marker([lat, lng], { draggable: true, icon: icon }).addTo(mapRef.current);
-      markerRef.current.on('dragend', function (e) {
-        if (!editando) return;
-        var p = e.target.getLatLng();
-        setLat(p.lat); setLng(p.lng);
-        setMsg('Pin movido ✓ ajusta si es necesario');
-      });
-      setTimeout(function () { if (mapRef.current) mapRef.current.invalidateSize(); }, 200);
-    } else {
-      mapRef.current.setView([lat, lng], 16);
-      markerRef.current.setLatLng([lat, lng]);
-    }
-  }, [leafletReady, lat, lng]);
 
   // Google Places: autocompletado de dirección (mismo método que el registro del maestro)
   useEffect(function () {
@@ -175,13 +128,6 @@ export default function PerfilCliente({ usuario }) {
           <button onClick={ubicar} style={{ width: '100%', padding: 12, border: '1.5px dashed #ccc', borderRadius: 12, fontSize: 13, marginBottom: 10, background: lat ? '#f2fbf6' : '#fafafa', color: lat ? '#0d9456' : '#7c8499', fontWeight: 700, cursor: 'pointer' }}>
             {lat ? '\u{1F4CD} Ubicación guardada · tocar para actualizar' : '\u{1F4CD} Usar mi ubicación actual'}
           </button>
-        )}
-
-        {lat != null && lng != null && (
-          <div style={{ marginBottom: 10 }}>
-            <div ref={mapDivRef} style={{ width: '100%', height: 200, borderRadius: 14, overflow: 'hidden', border: '1.5px solid #eee' }} />
-            {editando && <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 4 }}>Arrastra el pin para ajustar la ubicación exacta.</div>}
-          </div>
         )}
 
         {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}

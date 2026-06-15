@@ -7,12 +7,11 @@ import ChatCotizacion from './ChatCotizacion';
 // a un maestro especifico o a todos los maestros del oficio. Recibe cotizaciones,
 // puede chatear con cada maestro y agendar. Al agendar se crea la reserva y se
 // redirige a Mercado Pago para pagar el monto cotizado (el webhook confirma).
-const OFICIOS = ['gasfiteria', 'electricidad', 'cerrajeria', 'pintura', 'calefont', 'limpieza'];
-
 export default function PresupuestoCliente({ usuario, maestros, modo }) {
   var soloCrear = modo !== 'lista';
   var soloLista = modo === 'lista';
-  const [oficio, setOficio] = useState('gasfiteria');
+  const [cats, setCats] = useState([]); // especialidades del catálogo (admin)
+  const [oficio, setOficio] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [destino, setDestino] = useState('todos'); // 'todos' | 'uno'
   const [maestroSel, setMaestroSel] = useState('');
@@ -47,6 +46,15 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
       cargarReservas();
     });
   }
+
+  useEffect(function () {
+    supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
+      .then(function (r) {
+        var data = r.data || [];
+        setCats(data);
+        if (data.length) setOficio(function (prev) { return prev || data[0].slug; });
+      });
+  }, []);
 
   function cargarSolicitudes() {
     if (!usuario) return;
@@ -188,9 +196,9 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
         <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Graba un video corto mostrando el problema. Un maestro lo revisa, te puede escribir para aclarar dudas y te manda un presupuesto.</div>
         <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.45, marginBottom: 12 }}>{'\u{1F4A1}'} Aquí <b>creas</b> una cotización nueva. Para ver las que ya enviaste y chatear con los maestros, entra a <b>Mis cotizaciones</b>.</div>
 
-        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Tipo de servicio</label>
+        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Especialidad</label>
         <select value={oficio} onChange={function (e) { setOficio(e.target.value); setMaestroSel(''); }} style={{ ...inp, marginTop: 4 }}>
-          {OFICIOS.map(function (o) { return <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>; })}
+          {cats.map(function (c) { return <option key={c.slug} value={c.slug}>{c.valor}</option>; })}
         </select>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿Qué necesitas?</label>
@@ -308,7 +316,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
                       <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: chatKey === ck ? '#fff5f2' : '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversación' + (unread > 0 ? ' · ' + unread : '')}</button>
                       {c && !cerrado && <button onClick={function () { setAgendaKey(agendaKey === ck ? null : ck); setMsg(null); }} style={{ flex: 1, background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4C5} Agendar y pagar'}</button>}
                     </div>
-                    {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" />}
+                    {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" titulo={nombreMaestro(mid)} />}
                     {agendaKey === ck && c && (
                       <div style={{ marginTop: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: 12 }}>
                         <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Elige cuándo quieres que vaya {nombreMaestro(mid)}{c.monto ? ' (' + plata(c.monto) + ')' : ''}:</div>
