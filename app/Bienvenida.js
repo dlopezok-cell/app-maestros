@@ -130,12 +130,12 @@ export default function Bienvenida({ config }) {
             </div>
           </div>
 
-          <a href="/maestros" style={{ textDecoration: 'none' }}>
+          <a href="/unete" style={{ textDecoration: 'none' }}>
             <div style={{ marginTop: 18, background: '#16181f', borderRadius: 14, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 11 }}>
               <span style={{ fontSize: 20 }}>{'\u{1F9F0}'}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, color: '#fff', fontWeight: 800 }}>¿Eres maestro?</div>
-                <div style={{ fontSize: 11, color: '#a9adb8' }}>Súmate gratis y recibe trabajos.</div>
+                <div style={{ fontSize: 11, color: '#a9adb8' }}>Súmate gratis · 0% comisión de Fundador.</div>
               </div>
               <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 12, fontWeight: 800, borderRadius: 10, padding: '8px 12px' }}>Quiero unirme</span>
             </div>
