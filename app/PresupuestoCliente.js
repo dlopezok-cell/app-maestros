@@ -28,7 +28,23 @@ export default function PresupuestoCliente({ usuario, maestros }) {
   const [resenas, setResenas] = useState([]);
   const [revStars, setRevStars] = useState({});
   const [revText, setRevText] = useState({});
+  const [confirmando, setConfirmando] = useState(null);
   const fileRef = useRef(null);
+
+  function cargarReservas() {
+    if (!usuario) return;
+    supabase.rpc('mis_reservas').then(function (r) { setReservas(r.error ? [] : (r.data || [])); });
+  }
+
+  function confirmarTrabajo(reservaId) {
+    setConfirmando(reservaId);
+    supabase.rpc('confirmar_trabajo', { p_reserva_id: reservaId }).then(function (r) {
+      setConfirmando(null);
+      if (r.error) { setMsg('Error al confirmar: ' + r.error.message); return; }
+      setMsg('¡Gracias! Confirmaste el trabajo. Liberaremos el pago al maestro. ✓');
+      cargarReservas();
+    });
+  }
 
   function cargarSolicitudes() {
     if (!usuario) return;
@@ -51,8 +67,7 @@ export default function PresupuestoCliente({ usuario, maestros }) {
     if (!usuario) return;
     supabase.from('perfiles').select('*').eq('id', usuario.id).maybeSingle()
       .then(function (r) { setPerfil(r.data || null); });
-    supabase.from('reservas').select('id, maestro_id').eq('cliente_id', usuario.id)
-      .then(function (r) { setReservas(r.data || []); });
+    cargarReservas();
     supabase.from('resenas').select('maestro_id').eq('cliente_id', usuario.id)
       .then(function (r) { setResenas(r.data || []); });
     cargarSolicitudes();
@@ -160,7 +175,8 @@ export default function PresupuestoCliente({ usuario, maestros }) {
   const maestrosOficio = (maestros || []).filter(function (m) { return m.oficio === oficio; });
   var yaResenados = {}; resenas.forEach(function (x) { yaResenados[x.maestro_id] = true; });
   var porCalificar = [];
-  reservas.forEach(function (rv) { if (rv.maestro_id && !yaResenados[rv.maestro_id] && porCalificar.indexOf(rv.maestro_id) < 0) porCalificar.push(rv.maestro_id); });
+  reservas.forEach(function (rv) { if (rv.maestro_id && (rv.trabajo_confirmado || rv.liberado) && !yaResenados[rv.maestro_id] && porCalificar.indexOf(rv.maestro_id) < 0) porCalificar.push(rv.maestro_id); });
+  var agendados = reservas.filter(function (rv) { var s = (rv.estado || '').toLowerCase(); return s !== 'pendiente_pago'; });
 
   return (
     <div className="body" style={{ paddingTop: 18 }}>
@@ -212,6 +228,39 @@ export default function PresupuestoCliente({ usuario, maestros }) {
                 </div>
                 <textarea value={revText[mid] || ''} onChange={function (e) { var v = e.target.value; setRevText(function (p) { var o = Object.assign({}, p); o[mid] = v; return o; }); }} placeholder="¿Cómo fue el trabajo? (opcional)" rows={2} style={{ ...inp, resize: 'vertical' }} />
                 <button className="gbtn full" onClick={function () { enviarResena(mid); }}>Enviar reseña</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {agendados.length > 0 && (
+        <div style={card}>
+          <b style={{ fontSize: 15 }}>{'\u{1F6E0}️ Mis trabajos agendados'}</b>
+          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Cuando el maestro termine, confirma para liberar el pago.</div>
+          {agendados.map(function (rv) {
+            var s = (rv.estado || '').toLowerCase();
+            var pagado = s === 'pagado' || s === 'retenido';
+            var puedeConfirmar = pagado && !rv.trabajo_confirmado && !rv.liberado;
+            var enRevision = rv.trabajo_confirmado && !rv.liberado;
+            var completo = rv.liberado || s === 'completado';
+            return (
+              <div key={rv.id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <b style={{ fontSize: 13 }}>{rv.maestro_nombre || nombreMaestro(rv.maestro_id)}</b>
+                  <b style={{ fontSize: 14, color: '#1c1f2b' }}>{plata(rv.precio)}</b>
+                </div>
+                <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{rv.descripcion}</div>
+                <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(rv.fecha_hora)}</div>
+                {s === 'pendiente_pago' && <div style={{ fontSize: 11.5, color: '#b07a1e', fontWeight: 700, marginTop: 6 }}>Pendiente de pago</div>}
+                {puedeConfirmar && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 11.5, color: '#2b4a86', background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 10, padding: '8px 10px', marginBottom: 8 }}>{'\u{1F512}'} Tu pago de {plata(rv.precio)} está protegido. Se libera al maestro solo cuando confirmes que el trabajo quedó listo.</div>
+                    <button className="gbtn full" style={{ opacity: confirmando === rv.id ? 0.6 : 1 }} disabled={confirmando === rv.id} onClick={function () { confirmarTrabajo(rv.id); }}>{confirmando === rv.id ? 'Confirmando...' : '✓ Confirmar trabajo terminado'}</button>
+                  </div>
+                )}
+                {enRevision && <div style={{ fontSize: 11.5, color: '#0d9456', fontWeight: 700, marginTop: 6 }}>{'✓'} Confirmado. Liberando el pago al maestro.</div>}
+                {completo && <div style={{ fontSize: 11.5, color: '#0d9456', fontWeight: 700, marginTop: 6 }}>{'✓'} Trabajo completado</div>}
               </div>
             );
           })}

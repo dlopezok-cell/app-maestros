@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Ganancias del maestro: resumen de lo ganado (trabajos pagados/completados),
-// lo pendiente por cobrar y el conteo de trabajos.
-function esPagado(e) { var s = (e || '').toLowerCase(); return s === 'completado' || s === 'pagado'; }
+// Ganancias del maestro. Con retención (modelo Airbnb): cuando el cliente paga,
+// el dinero queda "en garantía" y solo cuenta como ganado cuando la plataforma lo libera.
+function esLiberado(t) { var s = (t.estado || '').toLowerCase(); return t.liberado === true || s === 'completado'; }
+function esGarantia(t) { var s = (t.estado || '').toLowerCase(); return !esLiberado(t) && (s === 'pagado' || s === 'retenido'); }
 function esCancelado(e) { var s = (e || '').toLowerCase(); return s === 'cancelado' || s === 'rechazado'; }
 
 export default function GananciasMaestro({ usuario }) {
@@ -25,18 +26,23 @@ export default function GananciasMaestro({ usuario }) {
   var ahora = new Date();
   var inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
-  var pagados = trabajos.filter(function (t) { return esPagado(t.estado); });
-  var pendientes = trabajos.filter(function (t) { return !esPagado(t.estado) && !esCancelado(t.estado); });
-  var totalGanado = pagados.reduce(function (s, t) { return s + (t.precio_cotizado || 0); }, 0);
+  var liberados = trabajos.filter(function (t) { return esLiberado(t); });
+  var garantia = trabajos.filter(function (t) { return esGarantia(t); });
+  var pendientes = trabajos.filter(function (t) { return !esLiberado(t) && !esGarantia(t) && !esCancelado(t.estado); });
+  var totalGanado = liberados.reduce(function (s, t) { return s + (t.precio_cotizado || 0); }, 0);
+  var totalGarantia = garantia.reduce(function (s, t) { return s + (t.precio_cotizado || 0); }, 0);
   var totalPend = pendientes.reduce(function (s, t) { return s + (t.precio_cotizado || 0); }, 0);
-  var ganadoMes = pagados.filter(function (t) { return fechaDe(t) >= inicioMes; }).reduce(function (s, t) { return s + (t.precio_cotizado || 0); }, 0);
+  var ganadoMes = liberados.filter(function (t) { return fechaDe(t) >= inicioMes; }).reduce(function (s, t) { return s + (t.precio_cotizado || 0); }, 0);
 
   const card = { background: '#fff', borderRadius: 16, padding: 16, margin: '0 0 12px', border: '1px solid #eef0f5' };
   const metric = { background: '#f7f6fc', borderRadius: 14, padding: '14px 16px' };
 
   function fila(t) {
     var d = fechaDe(t);
-    var pagado = esPagado(t.estado);
+    var estadoTxt, color;
+    if (esLiberado(t)) { estadoTxt = 'Liberado'; color = '#0d9456'; }
+    else if (esGarantia(t)) { estadoTxt = t.trabajo_confirmado ? 'Por liberar' : 'En garantía'; color = '#2563c9'; }
+    else { estadoTxt = 'Pendiente'; color = '#b07a1e'; }
     return (
       <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f1f5', padding: '10px 0' }}>
         <div style={{ minWidth: 0 }}>
@@ -44,8 +50,8 @@ export default function GananciasMaestro({ usuario }) {
           <div style={{ fontSize: 11.5, color: '#9aa1b5' }}>{(t.cliente_nombre || 'Cliente') + ' · ' + d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}</div>
         </div>
         <div style={{ textAlign: 'right', marginLeft: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: pagado ? '#0d9456' : '#b07a1e' }}>{plata(t.precio_cotizado)}</div>
-          <div style={{ fontSize: 10.5, fontWeight: 800, color: pagado ? '#0d9456' : '#b07a1e' }}>{pagado ? 'Pagado' : 'Pendiente'}</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: color }}>{plata(t.precio_cotizado)}</div>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: color }}>{estadoTxt}</div>
         </div>
       </div>
     );
@@ -68,14 +74,20 @@ export default function GananciasMaestro({ usuario }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
         <div style={metric}>
+          <div style={{ fontSize: 11.5, color: '#7c8499' }}>En garantía</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#2563c9' }}>{plata(totalGarantia)}</div>
+        </div>
+        <div style={metric}>
           <div style={{ fontSize: 11.5, color: '#7c8499' }}>Por cobrar</div>
           <div style={{ fontSize: 20, fontWeight: 800, color: '#b07a1e' }}>{plata(totalPend)}</div>
         </div>
-        <div style={metric}>
-          <div style={{ fontSize: 11.5, color: '#7c8499' }}>Trabajos pagados</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: '#1c1f2b' }}>{pagados.length}</div>
-        </div>
       </div>
+
+      {totalGarantia > 0 && (
+        <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: '#2b4a86', lineHeight: 1.45 }}>
+          {'\u{1F512}'} Tienes {plata(totalGarantia)} <b>en garantía</b>. El pago del cliente queda retenido y se libera a tu cuenta cuando confirma que el trabajo quedó terminado.
+        </div>
+      )}
 
       <div style={card}>
         <b style={{ fontSize: 14 }}>Detalle</b>
