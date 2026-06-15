@@ -40,6 +40,14 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
     supabase.rpc('mis_reservas').then(function (r) { setReservas(r.error ? [] : (r.data || [])); });
   }
 
+  function cancelarReserva(reservaId) {
+    if (typeof window !== 'undefined' && !window.confirm('¿Cancelar esta solicitud? Solo puedes hacerlo antes de pagar.')) return;
+    supabase.rpc('cancelar_reserva', { p_reserva_id: reservaId }).then(function (r) {
+      if (r.error) { setMsg('No se pudo cancelar: ' + r.error.message); return; }
+      cargarReservas();
+    });
+  }
+
   function confirmarTrabajo(reservaId) {
     setConfirmando(reservaId);
     supabase.rpc('confirmar_trabajo', { p_reserva_id: reservaId }).then(function (r) {
@@ -300,7 +308,13 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
                     <a href={'tel:' + (rv.maestro_telefono || '').replace(/[^0-9+]/g, '')} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>Llamar</a>
                   </div>
                 )}
-                {s === 'pendiente_pago' && <div style={{ fontSize: 11.5, color: '#b07a1e', fontWeight: 700, marginTop: 6 }}>Pendiente de pago</div>}
+                {s === 'pendiente_pago' && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, gap: 8 }}>
+                    <span style={{ fontSize: 11.5, color: '#b07a1e', fontWeight: 700 }}>Pendiente de pago</span>
+                    <button onClick={function () { cancelarReserva(rv.id); }} style={{ background: 'none', border: '1px solid #f0c8c2', color: '#b3261e', borderRadius: 9, padding: '5px 11px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
+                  </div>
+                )}
+                {s === 'cancelado' && <div style={{ fontSize: 11.5, color: '#9aa1b5', fontWeight: 700, marginTop: 6 }}>Cancelada</div>}
                 {puedeConfirmar && (
                   <div style={{ marginTop: 8 }}>
                     <div style={{ fontSize: 11.5, color: '#2b4a86', background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 10, padding: '8px 10px', marginBottom: 8 }}>{'\u{1F512}'} Tu pago de {plata(rv.precio)} está protegido. Se libera al maestro solo cuando confirmes que el trabajo quedó listo.</div>
