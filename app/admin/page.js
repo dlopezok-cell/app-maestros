@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen' },
+  { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada' },
   { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
@@ -46,6 +47,8 @@ export default function Admin() {
   const [pagos, setPagos] = useState([]);
   const [porLiberar, setPorLiberar] = useState([]);
   const [liberandoId, setLiberandoId] = useState(null);
+  const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO' });
+  const [portadaMsg, setPortadaMsg] = useState(null);
   const [resenas, setResenas] = useState([]);
   const [mensajes, setMensajes] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
@@ -81,6 +84,29 @@ export default function Admin() {
     supabase.rpc('pagos_por_liberar').then(function (r) { setPorLiberar(r.error ? [] : (r.data || [])); });
   }
 
+  function cargarPortada() {
+    supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
+      .then(function (r) { if (r.data) setPortada(r.data); });
+  }
+
+  function guardarPortada(extra) {
+    var fila = Object.assign({ id: 1 }, portada, extra || {});
+    fila.actualizado_en = new Date().toISOString();
+    setPortadaMsg('Guardando...');
+    supabase.from('home_config').upsert(fila, { onConflict: 'id' }).select().single()
+      .then(function (r) {
+        if (r.error) { setPortadaMsg('Error: ' + r.error.message); return; }
+        setPortada(r.data); setPortadaMsg('Guardado ✓');
+        setTimeout(function () { setPortadaMsg(null); }, 2500);
+      });
+  }
+
+  function togglePortada() {
+    var nuevo = !portada.portada_activa;
+    setPortada(function (p) { return Object.assign({}, p, { portada_activa: nuevo }); });
+    guardarPortada({ portada_activa: nuevo });
+  }
+
   function liberarPago(reservaId) {
     setLiberandoId(reservaId);
     supabase.rpc('liberar_pago', { p_reserva_id: reservaId }).then(function (r) {
@@ -92,6 +118,7 @@ export default function Admin() {
 
   function cargarTodo() {
     cargarPorLiberar();
+    cargarPortada();
     Promise.all([
       supabase.from('verificaciones').select('*').order('creado_at', { ascending: false }),
       supabase.from('maestros').select('*'),
@@ -428,6 +455,63 @@ export default function Admin() {
       </div>
 
       {msg && <p style={{ color: '#b3261e', fontSize: 13 }}>{msg}</p>}
+
+      {/* ---------------- PORTADA (home on/off) ---------------- */}
+      {seccion === 'portada' && (
+        <div>
+          <div style={{ ...card, background: portada.portada_activa ? 'linear-gradient(160deg,#16181f,#2a2d3a)' : '#fff', color: portada.portada_activa ? '#fff' : '#1c1f2b', border: portada.portada_activa ? 'none' : '1px solid #eef0f5' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <b style={{ fontSize: 15 }}>{'\u{1FAA7} Portada de lanzamiento'}</b>
+                <div style={{ fontSize: 12.5, color: portada.portada_activa ? 'rgba(255,255,255,.8)' : '#7c8499', marginTop: 4, lineHeight: 1.45 }}>
+                  {portada.portada_activa
+                    ? 'ENCENDIDA: los clientes ven la portada "PRONTO". Tú (admin) sigues viendo la app real.'
+                    : 'APAGADA: los clientes ven el home real con los maestros.'}
+                </div>
+              </div>
+              <button onClick={togglePortada} style={{ flexShrink: 0, position: 'relative', width: 64, height: 34, borderRadius: 20, border: 'none', cursor: 'pointer', background: portada.portada_activa ? '#25c26e' : '#cfd3df' }}>
+                <span style={{ position: 'absolute', top: 4, left: portada.portada_activa ? 34 : 4, width: 26, height: 26, borderRadius: '50%', background: '#fff', transition: '.15s' }} />
+              </button>
+            </div>
+          </div>
+
+          <div style={card}>
+            <b style={{ fontSize: 14 }}>Contenido de la portada</b>
+            <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Edita lo que se muestra y guarda. Cambia al instante en la portada pública.</div>
+
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Título</label>
+            <input style={inp} value={portada.titulo || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { titulo: v }); }); }} />
+
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Subtítulo</label>
+            <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={portada.subtitulo || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { subtitulo: v }); }); }} />
+
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Etiqueta (badge)</label>
+            <input style={inp} value={portada.badge || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { badge: v }); }); }} />
+
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>URL de la foto</label>
+            <input style={inp} placeholder="https://..." value={portada.foto_url || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { foto_url: v }); }); }} />
+            {portada.foto_url
+              ? <img src={portada.foto_url} alt="" style={{ width: '100%', borderRadius: 12, marginTop: 6, maxHeight: 200, objectFit: 'cover' }} />
+              : <div style={{ fontSize: 11.5, color: '#9aa1b5', marginTop: 4 }}>Sin foto: se muestra una ilustración por defecto.</div>}
+
+            <button onClick={function () { guardarPortada(); }} style={{ marginTop: 12, width: '100%', background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar portada</button>
+            {portadaMsg && <p style={{ fontSize: 12.5, textAlign: 'center', color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', marginTop: 8 }}>{portadaMsg}</p>}
+          </div>
+
+          <div style={card}>
+            <b style={{ fontSize: 14 }}>{'\u{1F4E5} Inscritos en lista de espera (' + listaEspera.length + ')'}</b>
+            {listaEspera.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Todavía nadie se ha inscrito desde la portada.</p>}
+            {listaEspera.slice(0, 50).map(function (l) {
+              return (
+                <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f4f4f7', padding: '8px 0', fontSize: 12.5 }}>
+                  <span>{l.email}</span>
+                  <span style={{ color: '#9aa1b5' }}>{fecha(l.creado_en)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ---------------- RESUMEN ---------------- */}
       {seccion === 'resumen' && (
