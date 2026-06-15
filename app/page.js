@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import PresupuestoCliente from './PresupuestoCliente';
 import PerfilCliente from './PerfilCliente';
 import CookieBanner from './CookieBanner';
+import Bienvenida from './Bienvenida';
+
+const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
 // App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
 // Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
@@ -27,8 +30,11 @@ export default function Home() {
   const [pagoMsg, setPagoMsg] = useState(null);
   const [q, setQ] = useState('');
   const [resenas, setResenas] = useState([]);
+  const [portada, setPortada] = useState(undefined); // undefined = cargando
 
   useEffect(function () {
+    supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
+      .then(function (r) { setPortada(r.data || null); });
     supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
     if (typeof window !== 'undefined') {
       var pg = new URLSearchParams(window.location.search).get('pago');
@@ -106,7 +112,11 @@ export default function Home() {
       : <div style={{ width: sz, height: sz, borderRadius: '50%', background: GRAD[(nombreM(m).charCodeAt(0) || 0) % 6], display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: sz * 0.4 }}>{nombreM(m).charAt(0).toUpperCase()}</div>;
   }
 
-  if (!cargado) return <main><div className="body" style={{ paddingTop: 30 }}><p>Cargando...</p></div></main>;
+  if (!cargado || portada === undefined) return <main><div className="body" style={{ paddingTop: 30 }}><p>Cargando...</p></div></main>;
+
+  // Portada "PRONTO": si está activa y quien mira no es el admin, mostramos la portada de lanzamiento.
+  var esAdmin = usuario && usuario.email === ADMIN_EMAIL;
+  if (portada && portada.portada_activa && !esAdmin) return <Bienvenida config={portada} />;
 
   // ---- ACCESO (login del cliente) ----
   if (vista === 'acceso') return (
