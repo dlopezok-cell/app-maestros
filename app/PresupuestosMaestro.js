@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
+import MediaCarrusel from './MediaCarrusel';
 
 // Vista del maestro: solicitudes de presupuesto (videos) abiertas de su(s)
 // especialidad(es) y las dirigidas a él. Responde con monto + mensaje y chatea.
@@ -113,7 +114,7 @@ export default function PresupuestosMaestro({ usuario }) {
             <div style={{ fontSize: 13, color: '#5b6275', margin: '4px 0' }}>{p.descripcion}</div>
             <div style={{ fontSize: 11, color: '#9aa1b5' }}>{['\u{1F4CD} ' + (p.comuna || 'comuna no indicada'), fecha(p.creado_en)].filter(Boolean).join(' · ')}</div>
             <div style={{ fontSize: 10.5, color: '#b6bccb', marginTop: 2 }}>La dirección exacta y el teléfono aparecen en tu Agenda cuando el cliente agenda.</div>
-            {p.video_url && <video src={p.video_url} controls style={{ width: '100%', borderRadius: 12, marginTop: 8, background: '#000', maxHeight: 240 }} />}
+            <MediaCarrusel items={(p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : [])} alto={240} />
 
             {yaRespondi && <div style={{ fontSize: 12, color: '#0d9456', fontWeight: 700, marginTop: 8 }}>{'✓ Ya enviaste tu presupuesto'}</div>}
 

@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
+import MediaCarrusel from './MediaCarrusel';
+
+var MAX_ARCHIVOS = 6;
 
 // Presupuesto por video: el cliente graba o sube un video del problema y lo manda
 // a un maestro especifico o a todos los maestros del oficio. Recibe cotizaciones,
@@ -15,7 +18,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
   const [descripcion, setDescripcion] = useState('');
   const [destino, setDestino] = useState('todos'); // 'todos' | 'uno'
   const [maestroSel, setMaestroSel] = useState('');
-  const [archivo, setArchivo] = useState(null);
+  const [archivos, setArchivos] = useState([]); // { file, tipo:'video'|'foto', url(preview) }
   const [subiendo, setSubiendo] = useState(false);
   const [msg, setMsg] = useState(null);
   const [solicitudes, setSolicitudes] = useState([]);
@@ -30,7 +33,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
   const [revStars, setRevStars] = useState({});
   const [revText, setRevText] = useState({});
   const [confirmando, setConfirmando] = useState(null);
-  const fileRef = useRef(null);
+  const grabarRef = useRef(null);
+  const subirRef = useRef(null);
 
   function cargarReservas() {
     if (!usuario) return;
@@ -94,52 +98,75 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
       });
   }
 
-  function elegirArchivo(e) {
-    var f = e.target.files && e.target.files[0];
-    if (!f) return;
-    if (f.size > 50 * 1024 * 1024) { setMsg('El video es muy pesado (máx 50MB). Graba uno más corto.'); return; }
-    setArchivo(f);
-    setMsg(null);
+  function agregarArchivos(e) {
+    var fl = e.target.files ? Array.prototype.slice.call(e.target.files) : [];
+    e.target.value = '';
+    if (!fl.length) return;
+    var nuevos = [];
+    var actual = archivos.length;
+    for (var k = 0; k < fl.length; k++) {
+      var f = fl[k];
+      var esVideo = (f.type || '').indexOf('video') === 0;
+      if (esVideo && f.size > 50 * 1024 * 1024) { setMsg('Un video supera los 50MB. Graba o elige uno más corto.'); continue; }
+      if (actual + nuevos.length >= MAX_ARCHIVOS) { setMsg('Máximo ' + MAX_ARCHIVOS + ' archivos.'); break; }
+      nuevos.push({ file: f, tipo: esVideo ? 'video' : 'foto', url: URL.createObjectURL(f) });
+    }
+    if (nuevos.length) { setArchivos(function (p) { return p.concat(nuevos); }); setMsg(null); }
+  }
+
+  function quitarArchivo(i) {
+    setArchivos(function (p) { return p.filter(function (x, k) { return k !== i; }); });
   }
 
   function enviar() {
     if (!usuario) { setMsg('Inicia sesión para pedir un presupuesto'); return; }
-    if (!archivo) { setMsg('Graba o sube un video del problema'); return; }
+    if (!archivos.length) { setMsg('Agrega al menos un video o foto del problema'); return; }
     if (!descripcion.trim()) { setMsg('Cuéntanos brevemente qué necesitas'); return; }
     if (destino === 'uno' && !maestroSel) { setMsg('Elige un maestro'); return; }
     setSubiendo(true);
-    setMsg('Subiendo video...');
-    var ext = (archivo.name.split('.').pop() || 'mp4').toLowerCase();
-    var path = usuario.id + '/' + Date.now() + '.' + ext;
-    supabase.storage.from('presupuestos').upload(path, archivo, { contentType: archivo.type || 'video/mp4' })
-      .then(function (up) {
-        if (up.error) { setMsg('Error subiendo el video: ' + up.error.message); setSubiendo(false); return; }
-        var url = supabase.storage.from('presupuestos').getPublicUrl(path).data.publicUrl;
-        var fila = {
-          cliente_id: usuario.id,
-          oficio: oficio,
-          descripcion: descripcion.trim(),
-          video_url: url,
-          maestro_id: destino === 'uno' ? maestroSel : null,
-          comuna: perfil ? perfil.comuna : null,
-          direccion: perfil ? perfil.direccion : null,
-          lat: perfil ? perfil.lat : null,
-          lng: perfil ? perfil.lng : null,
-          estado: 'abierto',
-        };
-        supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
-          if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
-          if (destino === 'uno' && maestroSel) {
-            try {
-              fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'presupuesto_maestro', maestroId: maestroSel, oficio: oficio }) });
-            } catch (e) {}
-          }
-          setMsg('¡Listo! Tu video fue enviado ✓');
-          setDescripcion(''); setArchivo(null); if (fileRef.current) fileRef.current.value = '';
-          setSubiendo(false);
-          cargarSolicitudes();
+    setMsg('Subiendo archivos...');
+
+    var subidas = archivos.map(function (a, i) {
+      var ext = (a.file.name.split('.').pop() || (a.tipo === 'video' ? 'mp4' : 'jpg')).toLowerCase();
+      var path = usuario.id + '/' + Date.now() + '_' + i + '.' + ext;
+      return supabase.storage.from('presupuestos').upload(path, a.file, { contentType: a.file.type || (a.tipo === 'video' ? 'video/mp4' : 'image/jpeg') })
+        .then(function (up) {
+          if (up.error) return null;
+          var url = supabase.storage.from('presupuestos').getPublicUrl(path).data.publicUrl;
+          return { url: url, tipo: a.tipo };
         });
+    });
+
+    Promise.all(subidas).then(function (res) {
+      var media = res.filter(function (x) { return x; });
+      if (!media.length) { setMsg('No se pudieron subir los archivos. Intenta de nuevo.'); setSubiendo(false); return; }
+      var primerVideo = media.filter(function (x) { return x.tipo === 'video'; })[0];
+      var fila = {
+        cliente_id: usuario.id,
+        oficio: oficio,
+        descripcion: descripcion.trim(),
+        video_url: primerVideo ? primerVideo.url : (media[0] ? media[0].url : null),
+        archivos: media,
+        maestro_id: destino === 'uno' ? maestroSel : null,
+        comuna: perfil ? perfil.comuna : null,
+        direccion: perfil ? perfil.direccion : null,
+        lat: perfil ? perfil.lat : null,
+        lng: perfil ? perfil.lng : null,
+        estado: 'abierto',
+      };
+      supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
+        if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
+        if (destino === 'uno' && maestroSel) {
+          try {
+            fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'presupuesto_maestro', maestroId: maestroSel, oficio: oficio }) });
+          } catch (e) {}
+        }
+        setMsg('¡Listo! Tu solicitud fue enviada ✓');
+        setDescripcion(''); setArchivos([]);
+        setSubiendo(false);
+        cargarSolicitudes();
       });
+    });
   }
 
   // Agendar = crear la reserva y pasar a pagar el monto cotizado en Mercado Pago.
@@ -204,9 +231,30 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿Qué necesitas?</label>
         <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Ej: tengo una fuga bajo el lavaplatos, gotea cuando abro la llave..." rows={3} style={{ ...inp, marginTop: 4, resize: 'vertical' }} />
 
-        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Video del problema</label>
-        <input ref={fileRef} type="file" accept="video/*" capture="environment" onChange={elegirArchivo} style={{ ...inp, marginTop: 4, padding: 10 }} />
-        {archivo && <div style={{ fontSize: 12, color: '#0d9456', marginBottom: 10 }}>{'✓ ' + archivo.name + ' (' + Math.round(archivo.size / 1024 / 1024 * 10) / 10 + ' MB)'}</div>}
+        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>{'\u{1F4F7} Fotos y video del problema'}</label>
+        <div style={{ fontSize: 11.5, color: '#9aa1b5', margin: '3px 0 8px', lineHeight: 1.4 }}>Graba un video al momento, o sube archivos de tu galería (videos y fotos juntos). Hasta {MAX_ARCHIVOS}.</div>
+        <input ref={grabarRef} type="file" accept="video/*" capture="environment" onChange={agregarArchivos} style={{ display: 'none' }} />
+        <input ref={subirRef} type="file" accept="video/*,image/*" multiple onChange={agregarArchivos} style={{ display: 'none' }} />
+        <div style={{ display: 'flex', gap: 8, marginBottom: archivos.length ? 10 : 4 }}>
+          <button type="button" onClick={function () { if (grabarRef.current) grabarRef.current.click(); }} style={{ flex: 1, border: '1.5px dashed #cbd0dd', background: '#fafbfe', borderRadius: 12, padding: '12px 6px', textAlign: 'center', cursor: 'pointer', color: '#5b6275', fontWeight: 700, fontSize: 12 }}>{'\u{1F3A5}'}<br />Grabar video</button>
+          <button type="button" onClick={function () { if (subirRef.current) subirRef.current.click(); }} style={{ flex: 1, border: '1.5px dashed #cbd0dd', background: '#fafbfe', borderRadius: 12, padding: '12px 6px', textAlign: 'center', cursor: 'pointer', color: '#5b6275', fontWeight: 700, fontSize: 12 }}>{'\u{1F4CE}'}<br />Subir archivos<br /><span style={{ fontWeight: 600, color: '#9aa1b5', fontSize: 10.5 }}>(videos y fotos)</span></button>
+        </div>
+        {archivos.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
+            {archivos.map(function (a, i) {
+              return (
+                <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', border: '1px solid #eee', background: '#000' }}>
+                  {a.tipo === 'video'
+                    ? <video src={a.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                    : <img src={a.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                  {a.tipo === 'video' && <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#fff', fontSize: 18, textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{'▶'}</span>}
+                  <button type="button" onClick={function () { quitarArchivo(i); }} style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,.6)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>{'✕'}</button>
+                  <span style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 8.5, fontWeight: 700, borderRadius: 5, padding: '1px 5px' }}>{a.tipo === 'video' ? 'VIDEO' : 'FOTO'}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿A quién se lo mandamos?</label>
         <div style={{ display: 'flex', gap: 8, margin: '6px 0 10px' }}>
@@ -299,7 +347,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
               </div>
               <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{s.descripcion}</div>
               <div style={{ fontSize: 11, color: '#9aa1b5' }}>{(s.maestro_id ? 'A ' + nombreMaestro(s.maestro_id) : 'Abierto a todos') + ' · ' + fecha(s.creado_en)}</div>
-              {s.video_url && <video src={s.video_url} controls style={{ width: '100%', borderRadius: 12, marginTop: 8, background: '#000', maxHeight: 220 }} />}
+              <MediaCarrusel items={(s.archivos && s.archivos.length) ? s.archivos : (s.video_url ? [{ url: s.video_url, tipo: 'video' }] : [])} alto={220} />
 
               {maestroIds.map(function (mid) {
                 var c = cots.find(function (x) { return x.maestro_id === mid; });
