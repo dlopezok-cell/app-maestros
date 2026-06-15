@@ -357,6 +357,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
                         <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Elige cuándo quieres que vaya {nombreMaestro(mid)}{c.monto ? ' (' + plata(c.monto) + ')' : ''}:</div>
                         <input type="datetime-local" value={agendaFecha} onChange={function (e) { setAgendaFecha(e.target.value); }} style={{ ...inp, marginBottom: 8 }} />
                         <button className="gbtn full" style={{ opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { agendar(s, c); }}>{pagando ? 'Procesando...' : (c.monto ? 'Agendar y pagar ' + plata(c.monto) : 'Agendar')}</button>
+                        {msg && <p style={{ fontSize: 12, fontWeight: 600, textAlign: 'center', margin: '8px 0 0', color: (msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0) ? '#b3261e' : '#0d9456' }}>{msg}</p>}
                         <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 6, textAlign: 'center' }}>Pago seguro con Mercado Pago. Tu dinero queda protegido hasta confirmar el trabajo.</div>
                       </div>
                     )}
