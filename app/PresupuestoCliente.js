@@ -16,7 +16,6 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
   const [cats, setCats] = useState([]); // especialidades del catálogo (admin)
   const [oficio, setOficio] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [destino, setDestino] = useState('todos'); // 'todos' | 'uno'
   const [maestroSel, setMaestroSel] = useState('');
   const [archivos, setArchivos] = useState([]); // { file, tipo:'video'|'foto', url(preview) }
   const [subiendo, setSubiendo] = useState(false);
@@ -122,7 +121,6 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
     if (!usuario) { setMsg('Inicia sesión para pedir un presupuesto'); return; }
     if (!archivos.length) { setMsg('Agrega al menos un video o foto del problema'); return; }
     if (!descripcion.trim()) { setMsg('Cuéntanos brevemente qué necesitas'); return; }
-    if (destino === 'uno' && !maestroSel) { setMsg('Elige un maestro'); return; }
     setSubiendo(true);
     setMsg('Subiendo archivos...');
 
@@ -147,7 +145,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
         descripcion: descripcion.trim(),
         video_url: primerVideo ? primerVideo.url : (media[0] ? media[0].url : null),
         archivos: media,
-        maestro_id: destino === 'uno' ? maestroSel : null,
+        maestro_id: null,
         comuna: perfil ? perfil.comuna : null,
         direccion: perfil ? perfil.direccion : null,
         lat: perfil ? perfil.lat : null,
@@ -156,11 +154,6 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
       };
       supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
         if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
-        if (destino === 'uno' && maestroSel) {
-          try {
-            fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'presupuesto_maestro', maestroId: maestroSel, oficio: oficio }) });
-          } catch (e) {}
-        }
         setMsg('¡Listo! Tu solicitud fue enviada ✓');
         setDescripcion(''); setArchivos([]);
         setSubiendo(false);
@@ -209,7 +202,6 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
 
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#fff' };
   const card = { background: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
-  const maestrosOficio = (maestros || []).filter(function (m) { return m.oficio === oficio; });
   var yaResenados = {}; resenas.forEach(function (x) { yaResenados[x.maestro_id] = true; });
   var porCalificar = [];
   reservas.forEach(function (rv) { if (rv.maestro_id && (rv.trabajo_confirmado || rv.liberado) && !yaResenados[rv.maestro_id] && porCalificar.indexOf(rv.maestro_id) < 0) porCalificar.push(rv.maestro_id); });
@@ -256,18 +248,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
           </div>
         )}
 
-        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿A quién se lo mandamos?</label>
-        <div style={{ display: 'flex', gap: 8, margin: '6px 0 10px' }}>
-          <button onClick={function () { setDestino('todos'); }} style={{ flex: 1, padding: 11, borderRadius: 12, border: destino === 'todos' ? '2px solid #ff5a3c' : '1.5px solid #ddd', background: destino === 'todos' ? '#fff5f2' : '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: destino === 'todos' ? '#ff5a3c' : '#5b6275' }}>Todos los maestros del oficio</button>
-          <button onClick={function () { setDestino('uno'); }} style={{ flex: 1, padding: 11, borderRadius: 12, border: destino === 'uno' ? '2px solid #ff5a3c' : '1.5px solid #ddd', background: destino === 'uno' ? '#fff5f2' : '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: destino === 'uno' ? '#ff5a3c' : '#5b6275' }}>Elegir un maestro</button>
-        </div>
-        {destino === 'uno' && (
-          <select value={maestroSel} onChange={function (e) { setMaestroSel(e.target.value); }} style={inp}>
-            <option value="">Selecciona un maestro...</option>
-            {maestrosOficio.map(function (m) { return <option key={m.id} value={m.id}>{m.nombre + ' · ★ ' + m.rating}</option>; })}
-          </select>
-        )}
-        {destino === 'uno' && maestrosOficio.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5', marginBottom: 10 }}>No hay maestros de este oficio cerca todavía. Puedes mandarlo a "todos".</div>}
+        <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px', margin: '4px 0 10px', lineHeight: 1.45 }}>{'\u{1F4E2}'} Tu solicitud se enviará a todos los maestros de <b>{cats.filter(function (c) { return c.slug === oficio; }).map(function (c) { return c.valor; })[0] || 'la especialidad'}</b>. Te llegarán varias cotizaciones para que elijas.</div>
 
         {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('pesado') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
         <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Enviando...' : 'Enviar y pedir presupuesto'}</button>
