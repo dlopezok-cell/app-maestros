@@ -17,7 +17,7 @@ export default function Terminos() {
       <p style={{ fontSize: 12, color: '#9aa1b5', marginTop: 0 }}>Última actualización: 15 de junio de 2026</p>
 
       <div style={body}>
-        <p>Estos Términos regulan el uso del sitio web y la aplicación de MaestrosEnLínea (la “Plataforma”), operada por <span style={ph}>[RAZÓN SOCIAL]</span>, RUT <span style={ph}>[RUT EMPRESA]</span>, domicilio en <span style={ph}>[DOMICILIO]</span>, Chile. Al crear una cuenta o usar la Plataforma, aceptas estos Términos.</p>
+        <p>Estos Términos regulan el uso del sitio web y la aplicación de MaestrosEnLínea (la “Plataforma”), operada por <b>Simple y Puro SpA</b>, RUT 77.017.256-K, domicilio en La Vega de Pupuya 52, Chile. Al crear una cuenta o usar la Plataforma, aceptas estos Términos.</p>
 
         <h3 style={h3}>1. Qué es MaestrosEnLínea</h3>
         <p>MaestrosEnLínea es una plataforma que <b>conecta</b> a clientes con maestros independientes (gasfíteres, electricistas, cerrajeros, pintores, y otros oficios) para cotizar y contratar servicios. <b>No somos empleadores de los maestros</b> ni prestamos directamente los servicios; los maestros actúan de forma independiente y son los únicos responsables del trabajo que realizan.</p>
@@ -64,7 +64,7 @@ export default function Terminos() {
         <h3 style={h3}>15. Contacto</h3>
         <p>Escríbenos a <b>hola@maestrosenlinea.cl</b>.</p>
 
-        <p style={nota}>Texto base referencial; no constituye asesoría legal. Completa los campos marcados en <span style={ph}>[corchetes]</span> y revísalo con un abogado antes del lanzamiento.</p>
+        <p style={nota}>Texto base referencial; no constituye asesoría legal. Recomendamos revisarlo con un abogado antes del lanzamiento.</p>
       </div>
     </main>
   );
