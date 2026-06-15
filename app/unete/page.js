@@ -63,7 +63,11 @@ export default function Unete() {
     <main><div style={wrap}><div style={{ ...col, textAlign: 'center', paddingTop: 40 }}>
       <div style={{ fontSize: 52 }}>{'\u{1F389}'}</div>
       <h1 style={{ fontSize: 24, fontWeight: 900, margin: '10px 0 6px' }}>¡Quedaste inscrito!</h1>
-      <p style={{ fontSize: 14.5, color: '#6b7184', lineHeight: 1.5, margin: '0 auto 22px', maxWidth: 360 }}>Te contactaremos por WhatsApp para activar tu cuenta de <b>Maestro Fundador</b> antes del lanzamiento. Eres de los primeros 🚀</p>
+      <p style={{ fontSize: 14.5, color: '#6b7184', lineHeight: 1.5, margin: '0 auto 18px', maxWidth: 360 }}>Te contactaremos por WhatsApp para activar tu cuenta de <b>Maestro Fundador</b> antes del lanzamiento. Eres de los primeros 🚀</p>
+      <a href="/maestros" style={{ textDecoration: 'none', display: 'block', marginBottom: 12 }}>
+        <div style={{ background: 'linear-gradient(150deg,#ff6a3d,#ff4d2e)', color: '#fff', borderRadius: 14, padding: 15, fontWeight: 800, fontSize: 15, boxShadow: '0 8px 20px rgba(255,90,60,.3)' }}>Completar mi ficha ahora →</div>
+      </a>
+      <p style={{ fontSize: 11.5, color: '#9aa1b5', margin: '0 0 18px' }}>O hazlo después cuando te contactemos. Toma ~3 minutos: foto, dirección y verificación.</p>
       <div style={{ background: '#fff7ef', border: '1px solid #ffe1c2', borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>{'\u{1F381}'} Gana invitando a otros maestros</div>
         <div style={{ fontSize: 12.5, color: '#6b5a3a', lineHeight: 1.45 }}>Comparte tu invitación: por cada maestro que se sume con tu nombre, los dos ganan beneficios de fundador.</div>
