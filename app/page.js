@@ -5,6 +5,7 @@ import PresupuestoCliente from './PresupuestoCliente';
 import PerfilCliente from './PerfilCliente';
 import CookieBanner from './CookieBanner';
 import Bienvenida from './Bienvenida';
+import EliminarCuenta from './EliminarCuenta';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -247,6 +248,12 @@ export default function Home() {
         <PerfilCliente usuario={usuario} />
         <div className="body" style={{ paddingTop: 0 }}>
           <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
+          <EliminarCuenta redirigir="/" />
+          <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
+            <a href="/privacidad" style={{ color: '#9aa1b5', textDecoration: 'none' }}>Privacidad</a>
+            <span style={{ color: '#d4d7e0', margin: '0 8px' }}>·</span>
+            <a href="/terminos" style={{ color: '#9aa1b5', textDecoration: 'none' }}>Términos</a>
+          </div>
         </div>
       </div>
       <Nav />
