@@ -62,6 +62,7 @@ export default function AgendaMaestro({ usuario }) {
 
         <div style={{ fontSize: 13, color: '#5b6275', marginBottom: 4 }}>{'\u{1F464} ' + (t.cliente_nombre || 'Cliente')}</div>
         {t.direccion && <div style={{ fontSize: 13, color: '#5b6275', marginBottom: 10 }}>{'\u{1F4CD} ' + t.direccion}</div>}
+        {!t.pagado && <div style={{ fontSize: 12, color: '#8a5a00', background: '#fff7ea', border: '1px solid #ffe2b8', borderRadius: 10, padding: '8px 10px', marginBottom: 10, lineHeight: 1.4 }}>{'\u{1F512} La dirección y el teléfono del cliente se revelan cuando pague el trabajo.'}</div>}
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {tel(t) && <a href={'tel:' + tel(t)} style={{ flex: 1, minWidth: 90, textAlign: 'center', textDecoration: 'none', background: '#fff', border: '1px solid #e4e4ef', borderRadius: 10, padding: '8px 0', fontSize: 12.5, fontWeight: 800, color: '#1c1f2b' }}>{'\u{1F4DE} Llamar'}</a>}

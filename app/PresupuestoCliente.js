@@ -294,6 +294,12 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
                 </div>
                 <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{rv.descripcion}</div>
                 <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(rv.fecha_hora)}</div>
+                {rv.pagado && rv.maestro_telefono && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '8px 10px', marginTop: 8 }}>
+                    <span style={{ fontSize: 12.5, color: '#0d7a4f', fontWeight: 700, flex: 1 }}>{'\u{1F4DE} Maestro: ' + rv.maestro_telefono}</span>
+                    <a href={'tel:' + (rv.maestro_telefono || '').replace(/[^0-9+]/g, '')} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>Llamar</a>
+                  </div>
+                )}
                 {s === 'pendiente_pago' && <div style={{ fontSize: 11.5, color: '#b07a1e', fontWeight: 700, marginTop: 6 }}>Pendiente de pago</div>}
                 {puedeConfirmar && (
                   <div style={{ marginTop: 8 }}>

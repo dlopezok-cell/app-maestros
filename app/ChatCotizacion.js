@@ -9,6 +9,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [cargado, setCargado] = useState(false);
+  const [oculto, setOculto] = useState(false);
   const finRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -48,10 +49,23 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
 
   useEffect(function () { if (finRef.current) finRef.current.scrollIntoView({ block: 'end' }); }, [mensajes]);
 
+  // Oculta datos de contacto (modelo Airbnb): correos, links, @usuarios y teléfonos (8+ dígitos)
+  function limpiar(s) {
+    if (!s) return s;
+    var out = s;
+    out = out.replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/gi, '•••');
+    out = out.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '•••');
+    out = out.replace(/@[a-z0-9_.]{2,}/gi, '•••');
+    out = out.replace(/[+(]?\d[\d\s().\-]{6,}\d/g, function (m) { return m.replace(/\D/g, '').length >= 8 ? '•••' : m; });
+    return out;
+  }
+
   function enviar(extra) {
-    var t = (texto || '').trim();
+    var raw = (texto || '').trim();
+    var t = limpiar(raw);
     var fotoUrl = extra && extra.foto_url ? extra.foto_url : null;
     if (!t && !fotoUrl) return;
+    if (t !== raw) { setOculto(true); setTimeout(function () { setOculto(false); }, 5000); }
     setEnviando(true);
     supabase.from('mensajes').insert({ presupuesto_id: presupuestoId, maestro_id: maestroId, autor_rol: miRol, texto: t || null, foto_url: fotoUrl })
       .select().single().then(function (r) {
@@ -96,6 +110,11 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
           <div style={{ fontSize: 10.5, opacity: .85 }}>{'\u{1F512} Chat protegido · sin datos de contacto'}</div>
         </div>
         <button onClick={reportar} title="Reportar" style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '5px 9px' }}>{'\u{26A0}'}</button>
+      </div>
+
+      {/* Aviso de privacidad */}
+      <div style={{ background: oculto ? '#fff3cd' : '#fbfbe8', color: oculto ? '#8a5a00' : '#7a7320', fontSize: 10.5, lineHeight: 1.4, padding: '6px 12px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,.05)' }}>
+        {oculto ? '\u{26A0}\u{FE0F} Ocultamos un dato de contacto. Se comparten teléfono y dirección al pagar.' : '\u{1F512} No compartas teléfonos ni correos: se ocultan y se revelan al pagar.'}
       </div>
 
       {/* Mensajes */}
