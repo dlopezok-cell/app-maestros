@@ -26,6 +26,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   const [perfil, setPerfil] = useState(null);
   const [chatKey, setChatKey] = useState(null);
   const [hojaKey, setHojaKey] = useState(null);     // cotización abierta (hoja)
+  const [miaSel, setMiaSel] = useState(null);       // solicitud expandida en la lista
   const [infoPago, setInfoPago] = useState(false);  // modal "pago protegido"
   const [pagando, setPagando] = useState(false);
   const [reservas, setReservas] = useState([]);
@@ -251,6 +252,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   function trabajosMaestro(id) { var m = maestroDe(id); return m ? m.total_trabajos : null; }
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
+  function tituloMia(s) { return (s && s.titulo && s.titulo.trim()) ? s.titulo : ((s && s.oficio ? s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) : 'Solicitud')); }
   function waLink(tel) { var t = (tel || '').replace(/[^0-9]/g, ''); if (t.length && t[0] !== '5') t = '56' + t; return 'https://wa.me/' + t; }
 
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#fff' };
@@ -428,16 +430,28 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
           var cerrado = s.estado === 'cerrado';
           var conMonto = cots.filter(function (c) { return c.monto; }).length;
           return (
-            <div key={s.id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <b style={{ fontSize: 13 }}>{(s.oficio || 'servicio').charAt(0).toUpperCase() + (s.oficio || '').slice(1)}</b>
-                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#fff9f0'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800 }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZACIÓN' + (conMonto > 1 ? 'ES' : '') : 'ESPERANDO')}</span>
+            <div key={s.id} style={{ borderTop: '1px solid #f1f1f1', padding: '11px 0' }}>
+              <div onClick={function () { setMiaSel(miaSel === s.id ? null : s.id); setMsg(null); }} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                <div style={{ width: 46, height: 46, borderRadius: 10, flexShrink: 0, background: '#19222f', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {(function () { var mm = (s.archivos && s.archivos.length) ? s.archivos[0] : (s.video_url ? { url: s.video_url, tipo: 'video' } : null); return mm && mm.tipo !== 'video' ? <img src={mm.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: '#fff', fontSize: 15 }}>{'▶'}</span>; })()}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                    <b style={{ fontSize: 13.5 }}>{tituloMia(s)}</b>
+                    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 7, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#fff9f0'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800, whiteSpace: 'nowrap' }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZ.' : 'ESPERANDO')}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '1px 0' }}>{s.descripcion || 'Sin descripción'}</div>
+                  <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{(s.oficio ? (s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) + ' · ') : '') + fecha(s.creado_en)}</div>
+                </div>
+                <span style={{ color: '#c5c9d6', fontSize: 18, flexShrink: 0, transform: miaSel === s.id ? 'rotate(90deg)' : 'none' }}>{'›'}</span>
               </div>
-              <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{s.descripcion}</div>
-              <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(s.creado_en)}</div>
+
+              {miaSel === s.id && (
+              <div style={{ marginTop: 8 }}>
               <MediaCarrusel items={(s.archivos && s.archivos.length) ? s.archivos : (s.video_url ? [{ url: s.video_url, tipo: 'video' }] : [])} alto={220} />
 
               {!cerrado && conMonto > 1 && <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', borderRadius: 10, padding: '8px 10px', margin: '8px 0 2px' }}>{'\u{1F50D}'} Recibiste varias cotizaciones. Ábrelas, compáralas y elige la que más te convenga.</div>}
+              {maestroIds.length === 0 && <div style={{ fontSize: 12.5, color: '#9aa1b5', margin: '10px 0 2px' }}>Aún no recibes cotizaciones. Te avisaremos cuando un maestro responda.</div>}
 
               {maestroIds.map(function (mid) {
                 var c = cots.find(function (x) { return x.maestro_id === mid; });
@@ -526,6 +540,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                   </div>
                 );
               })}
+              </div>
+              )}
             </div>
           );
         })}
