@@ -8,7 +8,9 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.maestrosenlinea.cl';
+const SITE = 'https://www.maestrosenlinea.cl';
+// Para enlaces que abren la vista de cliente (home): ?app=1 salta la portada "PRONTO".
+const SITE_APP = SITE + '/?app=1';
 
 function plantilla(titulo, cuerpoHtml, cta, ctaUrl) {
   return (
@@ -54,7 +56,50 @@ export async function POST(req) {
   let to = null, subject = '', html = '';
 
   try {
-    if (tipo === 'cotizacion') {
+    if (tipo === 'trabajo_pagado') {
+      // Trabajo agendado y pagado: avisar al MAESTRO y al CLIENTE (una sola vez,
+      // lo controla el webhook que llama aquí).
+      const rr = await admin.from('reservas')
+        .select('maestro_id, cliente_id, fecha_hora, direccion, descripcion_problema, precio_cotizado')
+        .eq('id', body.reservaId).maybeSingle();
+      const rsv = rr.data;
+      if (!rsv) return Response.json({ ok: true });
+
+      const monto = Number(body.monto) || rsv.precio_cotizado || 0;
+      const fechaTxt = rsv.fecha_hora
+        ? new Date(rsv.fecha_hora).toLocaleString('es-CL', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
+        : 'por coordinar';
+      const clienteNom = await nombreDe(rsv.cliente_id);
+      const maestroNom = await nombreDe(rsv.maestro_id);
+      const toMaestro = await emailDe(rsv.maestro_id);
+      const toCliente = await emailDe(rsv.cliente_id);
+
+      const transport = nodemailer.createTransport({ host: 'smtp.zoho.com', port: 465, secure: true, auth: { user, pass } });
+
+      if (toMaestro) {
+        const htmlM = plantilla(
+          '¡Tienes un trabajo agendado y pagado! \u{1F389}',
+          '<p><b>' + (clienteNom || 'Un cliente') + '</b> agendó y pagó un trabajo' + (monto ? ' por <b>' + plata(monto) + '</b>' : '') + '.</p>' +
+          '<p>\u{1F4C5} <b>Fecha:</b> ' + fechaTxt + '</p>' +
+          (rsv.direccion ? '<p>\u{1F4CD} <b>Dirección:</b> ' + rsv.direccion + '</p>' : '') +
+          (rsv.descripcion_problema ? '<p>\u{1F4DD} <b>Detalle:</b> ' + rsv.descripcion_problema + '</p>' : '') +
+          '<p style="color:#5b6275;font-size:13px">El pago queda <b>protegido</b> y se libera cuando el cliente confirme que el trabajo quedó listo.</p>',
+          'Ver en mi agenda', SITE + '/maestros'
+        );
+        try { await transport.sendMail({ from: '"MaestrosEnLínea" <' + user + '>', to: toMaestro, subject: 'Te agendaron y pagaron un trabajo \u{1F389}', html: htmlM }); } catch (e) {}
+      }
+      if (toCliente) {
+        const htmlC = plantilla(
+          '¡Pago confirmado y trabajo agendado! ✅',
+          '<p>Tu pago' + (monto ? ' de <b>' + plata(monto) + '</b>' : '') + ' a <b>' + (maestroNom || 'tu maestro') + '</b> quedó confirmado.</p>' +
+          '<p>\u{1F4C5} <b>Fecha:</b> ' + fechaTxt + '</p>' +
+          '<p style="color:#5b6275;font-size:13px">Tu dinero queda <b>protegido</b> hasta que confirmes que el trabajo quedó listo.</p>',
+          'Ver mis cotizaciones', SITE_APP
+        );
+        try { await transport.sendMail({ from: '"MaestrosEnLínea" <' + user + '>', to: toCliente, subject: '✅ Tu pago fue confirmado', html: htmlC }); } catch (e) {}
+      }
+      return Response.json({ ok: true });
+    } else if (tipo === 'cotizacion') {
       // Avisar al CLIENTE que recibio una cotizacion
       const r = await admin.from('presupuestos').select('cliente_id, oficio, descripcion').eq('id', body.presupuestoId).maybeSingle();
       const p = r.data;
