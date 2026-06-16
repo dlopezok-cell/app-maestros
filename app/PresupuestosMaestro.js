@@ -102,10 +102,14 @@ export default function PresupuestosMaestro({ usuario }) {
   // "Redactar": la IA lee el problema y propone una cotización formal (pop-up).
   function redactarIA(p) {
     setGenerando(true); setMsg(null);
-    fetch('/api/cotizar-ia', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oficio: p.oficio, descripcion: p.descripcion, notas: '' })
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    supabase.from('mensajes').select('autor_rol, texto, creado_en').eq('presupuesto_id', p.id).eq('maestro_id', usuario.id).order('creado_en', { ascending: true }).limit(40)
+      .then(function (rm) {
+        var conv = (rm.data || []).filter(function (m) { return m.texto; }).map(function (m) { return (m.autor_rol === 'cliente' ? 'Cliente: ' : 'Maestro: ') + m.texto; }).join('\n');
+        return fetch('/api/cotizar-ia', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oficio: p.oficio, descripcion: p.descripcion, descMaestro: descripcion, incluye: incluye, items: lineas, conversacion: conv })
+        });
+      }).then(function (r) { return r.json(); }).then(function (d) {
       setGenerando(false);
       var its = (d && d.items && d.items.length ? d.items : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }])
         .map(function (x) { return { tipo: x.tipo || 'material', desc: limpiarMO(x.desc, x.tipo), valor: Number(x.valor) || 0 }; });
@@ -182,6 +186,8 @@ export default function PresupuestosMaestro({ usuario }) {
   function mediaDe(p) { return (p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : []); }
   function yaRespondida(p) { return (p.cotizaciones || []).length > 0; }
   function ofTit(p) { return (p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1); }
+  function tituloDe(p) { return (p && p.titulo && p.titulo.trim()) ? p.titulo : ofTit(p); }
+  function clienteDe(p) { return (p && p.cliente_nombre && p.cliente_nombre.trim()) ? p.cliente_nombre.trim() : 'Cliente'; }
 
   const inp = { width: '100%', padding: 11, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 14, background: '#fff' };
   const pantalla = { position: 'fixed', inset: 0, zIndex: 250, background: '#fff', display: 'flex', flexDirection: 'column' };
@@ -255,11 +261,11 @@ export default function PresupuestosMaestro({ usuario }) {
                 {Thumb(p)}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                    <b style={{ fontSize: 13.5 }}>{ofTit(p)}</b>
+                    <b style={{ fontSize: 13.5 }}>{tituloDe(p)}</b>
                     {Badge(p)}
                   </div>
                   <div style={{ fontSize: 12, color: '#5b6275', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '1px 0' }}>{p.descripcion || 'Sin descripción'}</div>
-                  <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{'\u{1F4CD} ' + (p.comuna || 'comuna no indicada') + ' · ' + fecha(p.creado_en)}</div>
+                  <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{ofTit(p) + ' · ' + (p.comuna || 'comuna no indicada') + ' · ' + fecha(p.creado_en)}</div>
                 </div>
                 {nl > 0
                   ? <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span>
@@ -280,8 +286,8 @@ export default function PresupuestosMaestro({ usuario }) {
         <div style={topbar}>
           <button onClick={volverLista} style={back}>{'‹'}</button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ofTit(sel) + ' · ' + (sel.comuna || 'comuna no indicada')}</div>
-            <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(sel.creado_en)}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloDe(sel)}</div>
+            <div style={{ fontSize: 11, color: '#9aa1b5' }}>{ofTit(sel) + ' · ' + (sel.comuna || 'comuna no indicada') + ' · ' + fecha(sel.creado_en)}</div>
           </div>
           {Badge(sel)}
         </div>
@@ -312,18 +318,14 @@ export default function PresupuestosMaestro({ usuario }) {
       <div style={pantalla}>
         <div style={topbar}>
           <button onClick={function () { setVista('detalle'); }} style={back}>{'‹'}</button>
-          <div style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>Cotizar</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloDe(sel)}</div>
+            <div style={{ fontSize: 11, color: '#9aa1b5' }}>{ofTit(sel) + ' · ' + clienteDe(sel)}</div>
+          </div>
         </div>
 
         <div style={scroll}>
           <div style={{ padding: '14px 16px 18px' }}>
-            <div style={lab}>¿Qué verá el cliente?</div>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
-              <button type="button" onClick={function () { setModo('abierto'); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 10, border: '1.5px solid ' + (modo === 'abierto' ? '#534AB7' : '#e4e4ef'), background: modo === 'abierto' ? '#eeedfe' : '#fff', color: modo === 'abierto' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 12, cursor: 'pointer', lineHeight: 1.2 }}>Detalle completo<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>ve cada ítem</div></button>
-              <button type="button" onClick={function () { setModo('cerrado'); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 10, border: '1.5px solid ' + (modo === 'cerrado' ? '#534AB7' : '#e4e4ef'), background: modo === 'cerrado' ? '#eeedfe' : '#fff', color: modo === 'cerrado' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 12, cursor: 'pointer', lineHeight: 1.2 }}>Resumen<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>materiales + mano de obra</div></button>
-            </div>
-            <div style={{ fontSize: 10.5, color: '#9aa1b5', marginBottom: 16 }}>En "Resumen" el cliente no ve el precio de cada material por separado.</div>
-
             <div style={lab}>Precio</div>
             {lineas.map(function (l, i) {
               return (
@@ -392,6 +394,14 @@ export default function PresupuestosMaestro({ usuario }) {
                 <div style={{ textAlign: 'right' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>COTIZACIÓN</div><div style={{ fontSize: 10, color: '#9aa6b4' }}>{fechaCorta()}</div></div>
               </div>
               <div style={{ padding: '14px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11, borderBottom: '1px solid #eef0f5', paddingBottom: 9, marginBottom: 11 }}>
+                  <div style={{ minWidth: 0 }}><div style={{ color: '#9aa1b5', fontSize: 9.5 }}>Para</div><div style={{ fontWeight: 800 }}>{clienteDe(sel)}</div></div>
+                  <div style={{ textAlign: 'right', minWidth: 0 }}><div style={{ color: '#9aa1b5', fontSize: 9.5 }}>Trabajo</div><div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloDe(sel)}</div></div>
+                </div>
+                <div style={{ background: '#eeedfe', borderRadius: 8, padding: '7px 9px', marginBottom: 11, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 12 }}>{'\u{2728}'}</span>
+                  <span style={{ fontSize: 10, color: '#3C3489', lineHeight: 1.4 }}>Basado en lo que pidió el cliente, tu descripción y la conversación.</span>
+                </div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#7c8499', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Detalle de costos</div>
                 {propuestaIA.items.map(function (it, ix) {
                   return <div key={ix} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '6px 0', borderBottom: '1px solid #f1f3f7' }}><span>{(it.tipo === 'mano_obra' ? '\u{1F6E0}️ ' : '\u{1F4E6} ') + it.desc}</span><span style={{ fontWeight: 700 }}>{plata(it.valor)}</span></div>;

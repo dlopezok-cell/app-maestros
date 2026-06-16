@@ -15,6 +15,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   var soloLista = modo === 'lista';
   const [cats, setCats] = useState([]);
   const [oficio, setOficio] = useState('');
+  const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [archivos, setArchivos] = useState([]);
   const [subiendo, setSubiendo] = useState(false);
@@ -171,27 +172,45 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     chain.then(function () {
       setProgreso(100);
       if (!media.length) { setMsg('No se pudieron subir los archivos. Intenta de nuevo.'); setSubiendo(false); return; }
+      setMsg('Enviando tu solicitud...');
       var primerVideo = media.filter(function (x) { return x.tipo === 'video'; })[0];
-      var fila = {
-        cliente_id: usuario.id,
-        oficio: oficio,
-        descripcion: descripcion.trim(),
-        video_url: primerVideo ? primerVideo.url : (media[0] ? media[0].url : null),
-        archivos: media,
-        maestro_id: null,
-        comuna: perfil ? perfil.comuna : null,
-        direccion: perfil ? perfil.direccion : null,
-        lat: perfil ? perfil.lat : null,
-        lng: perfil ? perfil.lng : null,
-        estado: 'abierto',
-      };
-      supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
-        if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
-        setMsg('¡Listo! Tu solicitud fue enviada ✓');
-        setDescripcion(''); setArchivos([]);
-        setSubiendo(false);
-        cargarSolicitudes();
-      });
+      var primerNombre = (perfil && perfil.nombre) ? perfil.nombre.trim().split(/\s+/)[0] : null;
+      var tituloManual = (titulo || '').trim();
+
+      function guardar(tituloFinal) {
+        var fila = {
+          cliente_id: usuario.id,
+          oficio: oficio,
+          descripcion: descripcion.trim(),
+          titulo: tituloFinal || null,
+          cliente_nombre: primerNombre,
+          video_url: primerVideo ? primerVideo.url : (media[0] ? media[0].url : null),
+          archivos: media,
+          maestro_id: null,
+          comuna: perfil ? perfil.comuna : null,
+          direccion: perfil ? perfil.direccion : null,
+          lat: perfil ? perfil.lat : null,
+          lng: perfil ? perfil.lng : null,
+          estado: 'abierto',
+        };
+        supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
+          if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
+          setMsg('¡Listo! Tu solicitud fue enviada ✓');
+          setTitulo(''); setDescripcion(''); setArchivos([]);
+          setSubiendo(false);
+          cargarSolicitudes();
+        });
+      }
+
+      if (tituloManual) {
+        guardar(tituloManual);
+      } else {
+        // Si el cliente no puso título, lo genera la IA de respaldo a partir de la descripción.
+        fetch('/api/titulo-ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oficio: oficio, descripcion: descripcion.trim() }) })
+          .then(function (r) { return r.json(); })
+          .catch(function () { return {}; })
+          .then(function (tj) { guardar(tj && tj.titulo ? tj.titulo : null); });
+      }
     });
   }
 
@@ -271,6 +290,10 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         <select value={oficio} onChange={function (e) { setOficio(e.target.value); }} style={{ ...inp, marginTop: 4 }}>
           {cats.map(function (c) { return <option key={c.slug} value={c.slug}>{c.valor}</option>; })}
         </select>
+
+        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Título</label>
+        <input value={titulo} onChange={function (e) { setTitulo(e.target.value); }} placeholder="Ej: Fuga bajo el lavaplatos" maxLength={60} style={{ ...inp, marginTop: 4 }} />
+        <div style={{ fontSize: 11, color: '#9aa1b5', margin: '2px 0 4px' }}>Un título corto para tu solicitud (lo verán los maestros).</div>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿Qué necesitas?</label>
         <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Ej: tengo una fuga bajo el lavaplatos, gotea cuando abro la llave..." rows={3} style={{ ...inp, marginTop: 4, resize: 'vertical' }} />
