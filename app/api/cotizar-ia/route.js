@@ -57,9 +57,9 @@ export async function POST(request) {
     const permitidas = ['Materiales', 'Mano de obra', 'Garantía 30 días', 'Boleta', 'Retiro de escombros', 'Visita incluida'];
     const incluye = Array.isArray(data.incluye) ? data.incluye.filter(function (x) { return permitidas.indexOf(x) >= 0; }) : [];
     const condiciones = (data.condiciones || '').toString().slice(0, 200);
-    const descripcion = (data.descripcion || '').toString().slice(0, 300);
+    const descTrabajo = (data.descripcion || '').toString().slice(0, 300);
 
-    return Response.json({ descripcion: descripcion, items: items, incluye: incluye, condiciones: condiciones });
+    return Response.json({ descripcion: descTrabajo, items: items, incluye: incluye, condiciones: condiciones });
   } catch (e) {
     return Response.json({ error: 'Error inesperado: ' + String(e) }, { status: 500 });
   }
