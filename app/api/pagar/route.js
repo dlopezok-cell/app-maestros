@@ -1,12 +1,27 @@
 // app/api/pagar/route.js
-// Crea una preferencia de pago en Mercado Pago (Checkout Pro) y devuelve el link de pago.
-// El dinero entra a TU cuenta de Mercado Pago; el reparto al maestro se hace aparte.
+// Crea un pago en Flow (pasarela chilena) y devuelve el link de pago.
+// Mantiene el mismo contrato que antes ({ init_point }) para no tocar el frontend:
+// el cliente hace window.location.href = init_point.
+import crypto from 'crypto';
+
+// Flow firma cada petición: se ordenan los parámetros por nombre, se concatenan
+// como clave+valor (sin separadores) y se firma con HMAC-SHA256 (hex) usando la Secret Key.
+function firmar(params, secret) {
+  const keys = Object.keys(params).sort();
+  let cadena = '';
+  for (const k of keys) cadena += k + params[k];
+  return crypto.createHmac('sha256', secret).update(cadena).digest('hex');
+}
 
 export async function POST(req) {
-  const token = process.env.MP_ACCESS_TOKEN;
-  if (!token) {
+  const apiKey = process.env.FLOW_API_KEY;
+  const secret = process.env.FLOW_SECRET_KEY;
+  // Sandbox: https://sandbox.flow.cl/api   ·   Producción: https://www.flow.cl/api
+  const base = process.env.FLOW_BASE || 'https://sandbox.flow.cl/api';
+
+  if (!apiKey || !secret) {
     return Response.json(
-      { error: 'Falta configurar MP_ACCESS_TOKEN en Vercel.' },
+      { error: 'Falta configurar FLOW_API_KEY y FLOW_SECRET_KEY en Vercel.' },
       { status: 500 }
     );
   }
@@ -19,57 +34,45 @@ export async function POST(req) {
   const descripcion = (body.descripcion || (tipo === 'diagnostico' ? 'Diagnóstico por videollamada' : 'Trabajo a domicilio')).slice(0, 120);
   const reservaId = body.reservaId || null;
   const maestroId = body.maestroId || null;
-  const email = body.email || null;
+  const email = (body.email || '').trim();
 
   if (monto < 100) {
     return Response.json({ error: 'Monto inválido (mínimo $100 CLP).' }, { status: 400 });
   }
+  if (!email || email.indexOf('@') < 0) {
+    return Response.json({ error: 'Falta un correo válido para el pago. Inicia sesión e inténtalo de nuevo.' }, { status: 400 });
+  }
 
-  // El sitio publico (para volver tras pagar y para el webhook)
-  const site = process.env.NEXT_PUBLIC_SITE_URL || req.headers.get('origin') || 'https://app-maestros-three.vercel.app';
+  const site = process.env.NEXT_PUBLIC_SITE_URL || req.headers.get('origin') || 'https://www.maestrosenlinea.cl';
+  const commerceOrder = 'ML-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 
-  // Toda la info viaja en external_reference; el webhook la usa al confirmar el pago.
-  const ref = JSON.stringify({ tipo, monto, reservaId, maestroId, email });
-
-  const preferencia = {
-    items: [
-      {
-        title: descripcion,
-        quantity: 1,
-        unit_price: monto,
-        currency_id: 'CLP',
-      },
-    ],
-    external_reference: ref,
-    back_urls: {
-      success: site + '/?pago=ok',
-      failure: site + '/?pago=fallo',
-      pending: site + '/?pago=pendiente',
-    },
-    auto_return: 'approved',
-    notification_url: site + '/api/mp-webhook',
-    statement_descriptor: 'MAESTROSENLINEA',
+  const params = {
+    apiKey,
+    commerceOrder,
+    subject: descripcion,
+    currency: 'CLP',
+    amount: String(monto),
+    email,
+    paymentMethod: '9', // 9 = todos los medios disponibles
+    urlConfirmation: site + '/api/flow?action=confirmar',
+    urlReturn: site + '/api/flow?action=retorno',
+    optional: JSON.stringify({ tipo, reservaId, maestroId }),
   };
+  params.s = firmar(params, secret);
 
   try {
-    const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    const r = await fetch(base + '/payment/create', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token,
-      },
-      body: JSON.stringify(preferencia),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(params).toString(),
     });
     const data = await r.json();
-    if (!r.ok) {
-      return Response.json({ error: data.message || 'Error creando el pago en Mercado Pago.' }, { status: 502 });
+    if (!r.ok || !data.url || !data.token) {
+      return Response.json({ error: (data && data.message) || 'Error creando el pago en Flow.' }, { status: 502 });
     }
-    // init_point = produccion; sandbox_init_point = pruebas
-    return Response.json({
-      init_point: data.init_point || data.sandbox_init_point,
-      preference_id: data.id,
-    });
+    // Flow entrega url + token; el navegador debe ir a url?token=token
+    return Response.json({ init_point: data.url + '?token=' + data.token, flowOrder: data.flowOrder });
   } catch (e) {
-    return Response.json({ error: 'No se pudo conectar con Mercado Pago: ' + e.message }, { status: 502 });
+    return Response.json({ error: 'No se pudo conectar con Flow: ' + e.message }, { status: 502 });
   }
 }
