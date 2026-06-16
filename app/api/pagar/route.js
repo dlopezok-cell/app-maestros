@@ -43,7 +43,8 @@ export async function POST(req) {
     return Response.json({ error: 'Falta un correo válido para el pago. Inicia sesión e inténtalo de nuevo.' }, { status: 400 });
   }
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL || req.headers.get('origin') || 'https://www.maestrosenlinea.cl';
+  // Dominio canónico fijo: Flow llamará aquí para confirmar y devolver al usuario.
+  const site = 'https://www.maestrosenlinea.cl';
   const commerceOrder = 'ML-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 
   const params = {
