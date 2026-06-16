@@ -125,3 +125,7 @@ body { background: #fafafa; color: #1c1f2b; max-width: 480px; margin: 0 auto; pa
   .hero h1 { font-size: 38px; }
   .photo { height: 170px; }
 }
+
+
+/* iOS: evitar auto-zoom al enfocar campos (letra <16px). Revertir: borrar estas 2 lineas. */
+input, textarea, select { font-size: 16px !important; }
