@@ -19,6 +19,8 @@ export default function PresupuestosMaestro({ usuario }) {
   const [lineas, setLineas] = useState([]);       // [{tipo:'mano_obra'|'material', desc, valor}]
   const [incluye, setIncluye] = useState([]);
   const [condiciones, setCondiciones] = useState('');
+  const [modo, setModo] = useState('abierto');   // 'abierto' = cliente ve cada ítem; 'cerrado' = ve agrupado
+  const [descripcion, setDescripcion] = useState('');
   const [generando, setGenerando] = useState(false);
   const [msg, setMsg] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -63,7 +65,7 @@ export default function PresupuestosMaestro({ usuario }) {
 
   function abrirResp(p) {
     setRespId(p.id);
-    setLineas([]); setIncluye([]); setCondiciones(''); setMsg(null);
+    setLineas([]); setIncluye([]); setCondiciones(''); setModo('abierto'); setDescripcion(''); setMsg(null);
     cotizarIA(p); // la IA arranca sola
   }
 
@@ -75,6 +77,7 @@ export default function PresupuestosMaestro({ usuario }) {
       body: JSON.stringify({ oficio: p.oficio, descripcion: p.descripcion, notas: notas || '' })
     }).then(function (r) { return r.json(); }).then(function (d) {
       setGenerando(false);
+      if (d && d.descripcion) setDescripcion(d.descripcion);
       if (d && d.items && d.items.length) {
         setLineas(d.items);
         setIncluye(d.incluye && d.incluye.length ? d.incluye : ['Materiales', 'Mano de obra']);
@@ -102,7 +105,7 @@ export default function PresupuestosMaestro({ usuario }) {
     if (n <= 0) { setMsg('Agrega al menos un ítem con su precio.'); return; }
     setEnviando(true);
     var resumen = (incluye.length ? 'Incluye: ' + incluye.join(', ') + '. ' : '') + (condiciones || '');
-    var detalle = { items: lineas.filter(function (x) { return x.desc && Number(x.valor) > 0; }), incluye: incluye, condiciones: condiciones, neto: n, iva: ivaMonto() };
+    var detalle = { items: lineas.filter(function (x) { return x.desc && Number(x.valor) > 0; }), incluye: incluye, condiciones: condiciones, neto: n, iva: ivaMonto(), modo: modo, descripcion: (descripcion || '').trim() };
     supabase.from('cotizaciones').insert({
       presupuesto_id: p.id,
       maestro_id: usuario.id,
@@ -171,6 +174,13 @@ export default function PresupuestosMaestro({ usuario }) {
                   <button type="button" onClick={function () { cotizarIA(p); }} disabled={generando} style={{ background: 'none', border: 'none', color: '#534AB7', fontWeight: 800, fontSize: 12, cursor: 'pointer', opacity: generando ? 0.5 : 1 }}>{generando ? 'Pensando…' : '↻ Sugerir con IA'}</button>
                 </div>
 
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 5 }}>¿Qué verá el cliente?</div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                  <button type="button" onClick={function () { setModo('abierto'); }} style={{ flex: 1, padding: '8px 6px', borderRadius: 9, border: '1.5px solid ' + (modo === 'abierto' ? '#534AB7' : '#e4e4ef'), background: modo === 'abierto' ? '#eeedfe' : '#fff', color: modo === 'abierto' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', lineHeight: 1.2 }}>Detalle completo<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>ve cada ítem</div></button>
+                  <button type="button" onClick={function () { setModo('cerrado'); }} style={{ flex: 1, padding: '8px 6px', borderRadius: 9, border: '1.5px solid ' + (modo === 'cerrado' ? '#534AB7' : '#e4e4ef'), background: modo === 'cerrado' ? '#eeedfe' : '#fff', color: modo === 'cerrado' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', lineHeight: 1.2 }}>Resumen<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>materiales + mano de obra</div></button>
+                </div>
+                <div style={{ fontSize: 10.5, color: '#9aa1b5', marginBottom: 11 }}>En "Resumen" el cliente no ve el precio de cada material por separado.</div>
+
                 {generando && !lineas.length && <div style={{ fontSize: 12, color: '#7c8499', padding: '6px 0' }}>La IA está leyendo el problema y armando tu cotización…</div>}
 
                 {lineas.map(function (l, i) {
@@ -199,6 +209,9 @@ export default function PresupuestosMaestro({ usuario }) {
                     return <span key={x} onClick={function () { toggleInc(x); }} style={{ fontSize: 11.5, borderRadius: 999, padding: '5px 10px', cursor: 'pointer', background: on ? '#e1f5ee' : '#fff', color: on ? '#0f6e56' : '#7c8499', border: '1px solid ' + (on ? '#bfe6cf' : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + x}</span>;
                   })}
                 </div>
+
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 5 }}>Descripción del trabajo{modo === 'cerrado' ? '' : ' (opcional)'}</div>
+                <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Resume el trabajo en 1-2 líneas (la ve el cliente)." rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13, marginBottom: 8 }} />
 
                 <textarea value={condiciones} onChange={function (e) { setCondiciones(e.target.value); }} placeholder="Condiciones: validez, qué no incluye…" rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13, marginBottom: 8 }} />
 

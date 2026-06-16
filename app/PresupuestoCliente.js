@@ -417,8 +417,29 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
 
                     {abierta && c && c.monto && !cerrado && (
                       <div style={{ marginTop: 10, background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: 13 }}>
-                        {(c.detalle && c.detalle.items && c.detalle.items.length) ? (
+                        {(c.detalle && c.detalle.modo === 'cerrado' && c.detalle.items && c.detalle.items.length) ? (
+                          (function () {
+                            var dd = c.detalle;
+                            var mat = dd.items.filter(function (it) { return it.tipo === 'material'; }).reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0);
+                            var mo = dd.items.filter(function (it) { return it.tipo !== 'material'; }).reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0);
+                            return (
+                              <div>
+                                {(dd.descripcion || c.mensaje) && <div style={{ fontSize: 12.5, color: '#5b6275', lineHeight: 1.5, marginBottom: 10, whiteSpace: 'pre-wrap' }}>{dd.descripcion || c.mensaje}</div>}
+                                <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 10, padding: '11px 12px', marginBottom: 10 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0', borderBottom: '1px solid #f4f4f4' }}><span>{'\u{1F4E6} Materiales'}</span><span style={{ fontWeight: 700 }}>{plata(mat)}</span></div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0' }}><span>{'\u{1F6E0}️ Mano de obra'}</span><span style={{ fontWeight: 700 }}>{plata(mo)}</span></div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499', marginTop: 8 }}><span>IVA (19%)</span><span>{plata(dd.iva)}</span></div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid #eef0f5', marginTop: 6, paddingTop: 7 }}><span style={{ fontSize: 13, fontWeight: 800 }}>Total</span><span style={{ fontSize: 22, fontWeight: 800 }}>{plata(c.monto)}</span></div>
+                                  <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 2 }}>Todos los valores incluyen IVA</div>
+                                </div>
+                                {dd.incluye && dd.incluye.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>{dd.incluye.map(function (x) { return <span key={x} style={{ fontSize: 11, background: '#e1f5ee', color: '#0f6e56', borderRadius: 999, padding: '4px 9px' }}>{'✓ ' + x}</span>; })}</div>}
+                                {dd.condiciones && <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 10, lineHeight: 1.4 }}>{'\u{1F4CB} ' + dd.condiciones}</div>}
+                              </div>
+                            );
+                          })()
+                        ) : (c.detalle && c.detalle.items && c.detalle.items.length) ? (
                           <div>
+                            {c.detalle.descripcion && <div style={{ fontSize: 12.5, color: '#5b6275', lineHeight: 1.5, marginBottom: 10, whiteSpace: 'pre-wrap' }}>{c.detalle.descripcion}</div>}
                             <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 10, padding: '11px 12px', marginBottom: 10 }}>
                               {c.detalle.items.map(function (it, ix) {
                                 return <div key={ix} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0', borderBottom: ix < c.detalle.items.length - 1 ? '1px solid #f4f4f4' : 'none' }}><span>{(it.tipo === 'mano_obra' ? '\u{1F6E0}️ ' : '\u{1F4E6} ') + it.desc}</span><span style={{ fontWeight: 700 }}>{plata(it.valor)}</span></div>;
