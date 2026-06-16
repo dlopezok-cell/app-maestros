@@ -87,6 +87,7 @@ export default function PresupuestosMaestro({ usuario }) {
   function limpiarMO(desc, tipo) {
     if (tipo !== 'mano_obra') return desc;
     var d = (desc || '').replace(/\s*\([^)]*\)/g, '').trim();
+    if (/hora/i.test(d)) d = 'Mano de obra'; // nada de "por hora" / "primera hora"
     return d || 'Mano de obra';
   }
   function parseValidez(t) { var m = (t || '').match(/(\d+)\s*d[ií]a/i); if (m) { var v = m[1] + ' días'; return VALIDEZ_OPC.indexOf(v) >= 0 ? v : null; } return null; }
