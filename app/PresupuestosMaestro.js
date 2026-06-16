@@ -111,17 +111,18 @@ export default function PresupuestosMaestro({ usuario }) {
         });
       }).then(function (r) { return r.json(); }).then(function (d) {
       setGenerando(false);
-      var its = (d && d.items && d.items.length ? d.items : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }])
-        .map(function (x) { return { tipo: x.tipo || 'material', desc: limpiarMO(x.desc, x.tipo), valor: Number(x.valor) || 0 }; });
+      // La IA NO cambia los ítems ni los precios: esos los pone el maestro directo.
+      // Solo propone la descripción y sugiere incluye/validez/garantía.
+      var its = lineas;
       var inc = (d && d.incluye ? d.incluye : []).filter(function (x) { return INCLUYE_OPC.indexOf(x) >= 0; });
-      if (!inc.length) inc = ['Mano de obra'];
+      if (!inc.length) inc = incluye;
       var net = its.reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0);
       var iv = Math.round(net * IVA);
       setPropuestaIA({
         items: its, incluye: inc,
         descripcion: (d && d.descripcion) ? d.descripcion : '',
-        validez: parseValidez(d && d.condiciones) || '15 días',
-        garantia: parseGarantia(d && d.condiciones) || '1 mes',
+        validez: parseValidez(d && d.condiciones) || validez,
+        garantia: parseGarantia(d && d.condiciones) || garantia,
         neto: net, iva: iv, total: net + iv,
       });
     }).catch(function () { setGenerando(false); setMsg('No se pudo redactar con IA. Inténtalo de nuevo.'); });
@@ -129,7 +130,7 @@ export default function PresupuestosMaestro({ usuario }) {
 
   function usarPropuesta() {
     if (!propuestaIA) return;
-    setLineas(propuestaIA.items);
+    // NO tocamos los ítems ni los precios (los pone el maestro). Solo descripción + sugerencias.
     setIncluye(propuestaIA.incluye);
     setDescripcion(propuestaIA.descripcion);
     setValidez(propuestaIA.validez);
@@ -400,7 +401,7 @@ export default function PresupuestosMaestro({ usuario }) {
                 </div>
                 <div style={{ background: '#eeedfe', borderRadius: 8, padding: '7px 9px', marginBottom: 11, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 12 }}>{'\u{2728}'}</span>
-                  <span style={{ fontSize: 10, color: '#3C3489', lineHeight: 1.4 }}>Basado en lo que pidió el cliente, tu descripción y la conversación.</span>
+                  <span style={{ fontSize: 10, color: '#3C3489', lineHeight: 1.4 }}>Redacté la descripción según el cliente y la conversación. Los precios y los ítems los defines tú.</span>
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#7c8499', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Detalle de costos</div>
                 {propuestaIA.items.map(function (it, ix) {
