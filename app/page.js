@@ -117,8 +117,17 @@ export default function Home() {
   if (!cargado || portada === undefined) return <main><div className="body" style={{ paddingTop: 30 }}><p>Cargando...</p></div></main>;
 
   // Portada "PRONTO": si está activa y quien mira no es el admin, mostramos la portada de lanzamiento.
+  // Excepción: dentro de la app nativa (iOS/Android) siempre mostramos el marketplace real,
+  // para que la web pública pueda seguir en "PRONTO" mientras la app funciona normal.
   var esAdmin = usuario && usuario.email === ADMIN_EMAIL;
-  if (portada && portada.portada_activa && !esAdmin) return <Bienvenida config={portada} />;
+  var esApp = false;
+  if (typeof window !== 'undefined') {
+    var qs = window.location.search || '';
+    if (/(^|[?&])app=1/.test(qs)) { try { window.localStorage.setItem('ml_app', '1'); } catch (e) {} }
+    var flag = false; try { flag = window.localStorage.getItem('ml_app') === '1'; } catch (e) {}
+    esApp = !!window.Capacitor || /(^|[?&])app=1/.test(qs) || flag;
+  }
+  if (portada && portada.portada_activa && !esAdmin && !esApp) return <Bienvenida config={portada} />;
 
   // ---- ACCESO (login del cliente) ----
   if (vista === 'acceso') return (
