@@ -1,5 +1,12 @@
 'use client';
-import { FOTO_COCINA, FOTO_BANO, FOTO_PINTURA, FOTO_PORTADA } from './homeFotos';
+import { FOTO_COCINA, FOTO_BANO, FOTO_PINTURA, FOTO_PORTADA, FOTO_MAESTRO1, FOTO_MAESTRO2, FOTO_MAESTRO3 } from './homeFotos';
+
+// Maestros destacados de referencia (se muestran mientras aún no hay maestros reales).
+var REF_MAESTROS = [
+  { foto: FOTO_MAESTRO1, nombre: 'Juan R.', spec: 'Gasfíter' },
+  { foto: FOTO_MAESTRO2, nombre: 'Andrés P.', spec: 'Cocina y baño' },
+  { foto: FOTO_MAESTRO3, nombre: 'Carlos S.', spec: 'Electricista' },
+];
 
 // Home del cliente (diseño "Sodimac": azul marino + coral, íconos de trazo).
 // Estilos propios con prefijo hc- y todo dentro de .hcli para no chocar con globals.css.
@@ -186,19 +193,29 @@ export default function HomeCliente(props) {
 
       <div className="hc-sec">
         <div className="hc-seehead"><h4>Maestros destacados</h4></div>
-        {lista.length === 0 && <div className="hc-empty">Aún no hay maestros de esta especialidad. Prueba con "Todos".</div>}
         <div className="hc-hscroll">
-          {lista.slice(0, 10).map(function (m) {
-            var f = fotoM(m);
-            return (
-              <div key={m.id} className="hc-prom" onClick={function () { onMaestro(m); }}>
-                <div className="hc-mphoto">{f ? <img src={f} alt="" /> : nombreM(m).charAt(0).toUpperCase()}</div>
-                <div className="hc-mname">{nombreM(m)}</div>
-                <div className="hc-mspec">{oficiosM(m).map(ofNombre).join(' · ') || 'Maestro'}</div>
-                {m.verificado && <span className="hc-mbadge">{ICON.check}Verificado</span>}
-              </div>
-            );
-          })}
+          {lista.length > 0
+            ? lista.slice(0, 10).map(function (m) {
+                var f = fotoM(m);
+                return (
+                  <div key={m.id} className="hc-prom" onClick={function () { onMaestro(m); }}>
+                    <div className="hc-mphoto">{f ? <img src={f} alt="" /> : nombreM(m).charAt(0).toUpperCase()}</div>
+                    <div className="hc-mname">{nombreM(m)}</div>
+                    <div className="hc-mspec">{oficiosM(m).map(ofNombre).join(' · ') || 'Maestro'}</div>
+                    {m.verificado && <span className="hc-mbadge">{ICON.check}Verificado</span>}
+                  </div>
+                );
+              })
+            : REF_MAESTROS.map(function (m, i) {
+                return (
+                  <div key={i} className="hc-prom" onClick={onCotizar}>
+                    <div className="hc-mphoto"><img src={m.foto} alt="" /></div>
+                    <div className="hc-mname">{m.nombre}</div>
+                    <div className="hc-mspec">{m.spec}</div>
+                    <span className="hc-mbadge">{ICON.check}Verificado</span>
+                  </div>
+                );
+              })}
         </div>
 
         <div className="hc-trust">
