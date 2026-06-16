@@ -38,7 +38,11 @@ export default function Home() {
       .then(function (r) { setPortada(r.data || null); });
     supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
     if (typeof window !== 'undefined') {
-      var pg = new URLSearchParams(window.location.search).get('pago');
+      var sp = new URLSearchParams(window.location.search);
+      // Guardar la marca de "dentro de la app" ANTES de limpiar la URL, para que el
+      // retorno del pago (que trae ?app=1) salte la portada "PRONTO".
+      if (sp.get('app') === '1') { try { window.localStorage.setItem('ml_app', '1'); } catch (e) {} }
+      var pg = sp.get('pago');
       if (pg) { setPagoMsg(pg); setVista('mias'); window.history.replaceState({}, '', '/'); }
     }
     supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
