@@ -6,32 +6,32 @@ import MediaCarrusel from './MediaCarrusel';
 
 var MAX_ARCHIVOS = 6;
 
-// Presupuesto por video: el cliente graba o sube un video del problema y lo manda
-// a un maestro especifico o a todos los maestros del oficio. Recibe cotizaciones,
-// puede chatear con cada maestro y agendar. Al agendar se crea la reserva y se
-// redirige a Mercado Pago para pagar el monto cotizado (el webhook confirma).
+// Presupuesto por video: el cliente graba/sube un video del problema y lo manda a
+// los maestros del oficio. Recibe cotizaciones, las compara como hojas claras,
+// ACEPTA Y PAGA una (sin fecha). La fecha se coordina después por la app/WhatsApp.
 export default function PresupuestoCliente({ usuario, maestros, modo }) {
   var soloCrear = modo !== 'lista';
   var soloLista = modo === 'lista';
-  const [cats, setCats] = useState([]); // especialidades del catálogo (admin)
+  const [cats, setCats] = useState([]);
   const [oficio, setOficio] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [maestroSel, setMaestroSel] = useState('');
-  const [archivos, setArchivos] = useState([]); // { file, tipo:'video'|'foto', url(preview) }
+  const [archivos, setArchivos] = useState([]);
   const [subiendo, setSubiendo] = useState(false);
   const [msg, setMsg] = useState(null);
   const [solicitudes, setSolicitudes] = useState([]);
   const [mensajesPorPres, setMensajesPorPres] = useState({});
   const [perfil, setPerfil] = useState(null);
   const [chatKey, setChatKey] = useState(null);
-  const [agendaKey, setAgendaKey] = useState(null);
-  const [agendaFecha, setAgendaFecha] = useState('');
+  const [hojaKey, setHojaKey] = useState(null);     // cotización abierta (hoja)
+  const [infoPago, setInfoPago] = useState(false);  // modal "pago protegido"
   const [pagando, setPagando] = useState(false);
   const [reservas, setReservas] = useState([]);
   const [resenas, setResenas] = useState([]);
   const [revStars, setRevStars] = useState({});
   const [revText, setRevText] = useState({});
   const [confirmando, setConfirmando] = useState(null);
+  const [fijarKey, setFijarKey] = useState(null);   // reserva a la que se le fija fecha
+  const [fijarFecha, setFijarFecha] = useState('');
   const grabarRef = useRef(null);
   const subirRef = useRef(null);
 
@@ -54,6 +54,16 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
       setConfirmando(null);
       if (r.error) { setMsg('Error al confirmar: ' + r.error.message); return; }
       setMsg('¡Gracias! Confirmaste el trabajo. Liberaremos el pago al maestro. ✓');
+      cargarReservas();
+    });
+  }
+
+  function fijarFechaReserva(reservaId) {
+    if (!fijarFecha) { setMsg('Elige fecha y hora'); return; }
+    var iso = new Date(fijarFecha).toISOString();
+    supabase.rpc('fijar_fecha_reserva', { p_reserva_id: reservaId, p_fecha: iso }).then(function (r) {
+      if (r.error) { setMsg('No se pudo fijar la fecha: ' + r.error.message); return; }
+      setFijarKey(null); setFijarFecha(''); setMsg('Fecha coordinada ✓');
       cargarReservas();
     });
   }
@@ -170,24 +180,22 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
     });
   }
 
-  // Agendar = crear la reserva y pasar a pagar el monto cotizado en Mercado Pago.
-  function agendar(s, c) {
-    if (!agendaFecha) { setMsg('Elige fecha y hora'); return; }
-    if (!c.monto) { setMsg('Este maestro aún no puso un precio. Pídele en el chat que cotice un monto antes de agendar.'); return; }
+  // Aceptar y pagar = crear la reserva (SIN fecha) y pasar a pagar la cotización.
+  // La fecha se coordina después, una vez pagado.
+  function aceptarYPagar(s, c) {
+    if (!c.monto) { setMsg('Este maestro aún no puso un precio. Pídeselo en el chat.'); return; }
     setPagando(true);
-    setMsg('Creando tu reserva...');
-    var iso = new Date(agendaFecha).toISOString();
+    setMsg('Creando tu pedido...');
     supabase.from('reservas').insert({
       cliente_id: usuario.id,
       maestro_id: c.maestro_id,
       descripcion_problema: s.descripcion,
       direccion: s.direccion,
-      fecha_hora: iso,
       estado: 'pendiente_pago',
       precio_cotizado: c.monto || null,
       link_video: s.video_url || null,
     }).select().single().then(function (r) {
-      if (r.error) { setMsg('Error al agendar: ' + r.error.message); setPagando(false); return; }
+      if (r.error) { setMsg('Error: ' + r.error.message); setPagando(false); return; }
       var reservaId = r.data.id;
       supabase.from('presupuestos').update({ estado: 'cerrado' }).eq('id', s.id).then(function () {});
       setMsg('Redirigiendo al pago seguro...');
@@ -196,17 +204,20 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
         body: JSON.stringify({ monto: c.monto, tipo: 'trabajo', descripcion: (s.oficio || 'servicio') + ' con ' + nombreMaestro(c.maestro_id), reservaId: reservaId, maestroId: c.maestro_id, email: usuario.email })
       }).then(function (rp) { return rp.json(); }).then(function (d) {
         if (d && d.init_point) { window.location.href = d.init_point; }
-        else { setPagando(false); setMsg('No se pudo iniciar el pago: ' + ((d && d.error) || 'intenta de nuevo') + '. Tu reserva quedó como pendiente de pago.'); cargarSolicitudes(); }
-      }).catch(function () { setPagando(false); setMsg('No se pudo conectar con el pago. Tu reserva quedó pendiente.'); cargarSolicitudes(); });
+        else { setPagando(false); setMsg('No se pudo iniciar el pago: ' + ((d && d.error) || 'intenta de nuevo') + '. Tu pedido quedó pendiente de pago.'); cargarSolicitudes(); cargarReservas(); }
+      }).catch(function () { setPagando(false); setMsg('No se pudo conectar con el pago. Tu pedido quedó pendiente.'); cargarSolicitudes(); cargarReservas(); });
     });
   }
 
-  function nombreMaestro(id) {
-    var m = (maestros || []).find(function (x) { return x.id === id; });
-    return m ? m.nombre : 'Maestro';
-  }
+  function maestroDe(id) { return (maestros || []).find(function (x) { return x.id === id; }) || null; }
+  function nombreMaestro(id) { var m = maestroDe(id); return m ? (m.nombre || (m.perfiles && m.perfiles.nombre) || 'Maestro') : 'Maestro'; }
+  function fotoMaestro(id) { var m = maestroDe(id); return m ? (m.foto_url || (m.perfiles && m.perfiles.avatar_url) || null) : null; }
+  function ratingMaestro(id) { var m = maestroDe(id); return m ? m.rating_promedio : null; }
+  function verifMaestro(id) { var m = maestroDe(id); return m ? m.verificado : false; }
+  function trabajosMaestro(id) { var m = maestroDe(id); return m ? m.total_trabajos : null; }
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
+  function waLink(tel) { var t = (tel || '').replace(/[^0-9]/g, ''); if (t.length && t[0] !== '5') t = '56' + t; return 'https://wa.me/' + t; }
 
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#fff' };
   const card = { background: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
@@ -215,16 +226,34 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
   reservas.forEach(function (rv) { if (rv.maestro_id && (rv.trabajo_confirmado || rv.liberado) && !yaResenados[rv.maestro_id] && porCalificar.indexOf(rv.maestro_id) < 0) porCalificar.push(rv.maestro_id); });
   var agendados = reservas.filter(function (rv) { var s = (rv.estado || '').toLowerCase(); return s !== 'pendiente_pago'; });
 
+  function Avatar(props) {
+    var id = props.id, sz = props.size || 38;
+    var f = fotoMaestro(id);
+    return f
+      ? <img src={f} alt="" style={{ width: sz, height: sz, borderRadius: '50%', objectFit: 'cover' }} />
+      : <div style={{ width: sz, height: sz, borderRadius: '50%', background: '#e1f5ee', color: '#0f6e56', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: sz * 0.4 }}>{nombreMaestro(id).charAt(0).toUpperCase()}</div>;
+  }
+
+  function MetaMaestro(props) {
+    var id = props.id;
+    var rt = ratingMaestro(id), tr = trabajosMaestro(id);
+    return (
+      <span style={{ fontSize: 11.5, color: '#9aa1b5' }}>
+        {'★ ' + (rt ? rt : 'nuevo')}{tr ? ' · ' + tr + ' trabajos' : ''}
+      </span>
+    );
+  }
+
   return (
     <div className="body" style={{ paddingTop: 18 }}>
       {soloCrear && (
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F3A5} Pide un presupuesto por video'}</b>
-        <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Graba un video corto mostrando el problema. Un maestro lo revisa, te puede escribir para aclarar dudas y te manda un presupuesto.</div>
-        <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.45, marginBottom: 12 }}>{'\u{1F4A1}'} Aquí <b>creas</b> una cotización nueva. Para ver las que ya enviaste y chatear con los maestros, entra a <b>Mis cotizaciones</b>.</div>
+        <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Graba un video corto mostrando el problema. Los maestros lo revisan y te mandan su cotización para que elijas.</div>
+        <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.45, marginBottom: 12 }}>{'\u{1F4A1}'} Aquí <b>creas</b> una solicitud nueva. Para ver y comparar las cotizaciones que recibas, entra a <b>Mis cotizaciones</b>.</div>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Especialidad</label>
-        <select value={oficio} onChange={function (e) { setOficio(e.target.value); setMaestroSel(''); }} style={{ ...inp, marginTop: 4 }}>
+        <select value={oficio} onChange={function (e) { setOficio(e.target.value); }} style={{ ...inp, marginTop: 4 }}>
           {cats.map(function (c) { return <option key={c.slug} value={c.slug}>{c.valor}</option>; })}
         </select>
 
@@ -258,7 +287,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
 
         <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px', margin: '4px 0 10px', lineHeight: 1.45 }}>{'\u{1F4E2}'} Tu solicitud se enviará a todos los maestros de <b>{cats.filter(function (c) { return c.slug === oficio; }).map(function (c) { return c.valor; })[0] || 'la especialidad'}</b>. Te llegarán varias cotizaciones para que elijas.</div>
 
-        {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('pesado') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
+        {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
         <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Enviando...' : 'Enviar y pedir presupuesto'}</button>
       </div>
       )}
@@ -286,8 +315,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
 
       {soloLista && agendados.length > 0 && (
         <div style={card}>
-          <b style={{ fontSize: 15 }}>{'\u{1F6E0}️ Mis trabajos agendados'}</b>
-          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Cuando el maestro termine, confirma para liberar el pago.</div>
+          <b style={{ fontSize: 15 }}>{'\u{1F6E0}️ Mis trabajos pagados'}</b>
+          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Coordina la fecha con el maestro. Cuando termine, confirma para liberar el pago.</div>
           {agendados.map(function (rv) {
             var s = (rv.estado || '').toLowerCase();
             var pagado = s === 'pagado' || s === 'retenido';
@@ -301,19 +330,30 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
                   <b style={{ fontSize: 14, color: '#1c1f2b' }}>{plata(rv.precio)}</b>
                 </div>
                 <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{rv.descripcion}</div>
-                <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(rv.fecha_hora)}</div>
-                {rv.pagado && rv.maestro_telefono && (
+                <div style={{ fontSize: 11, color: rv.fecha_hora ? '#0d7a4f' : '#b07a1e', fontWeight: 700 }}>{rv.fecha_hora ? '\u{1F4C5} ' + fecha(rv.fecha_hora) : '\u{1F4C5} Fecha por coordinar'}</div>
+
+                {pagado && rv.maestro_telefono && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '8px 10px', marginTop: 8 }}>
-                    <span style={{ fontSize: 12.5, color: '#0d7a4f', fontWeight: 700, flex: 1 }}>{'\u{1F4DE} Maestro: ' + rv.maestro_telefono}</span>
+                    <span style={{ fontSize: 12.5, color: '#0d7a4f', fontWeight: 700, flex: 1 }}>{'\u{1F4DE} ' + rv.maestro_telefono}</span>
+                    <a href={waLink(rv.maestro_telefono)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>WhatsApp</a>
                     <a href={'tel:' + (rv.maestro_telefono || '').replace(/[^0-9+]/g, '')} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>Llamar</a>
                   </div>
                 )}
-                {s === 'pendiente_pago' && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, gap: 8 }}>
-                    <span style={{ fontSize: 11.5, color: '#b07a1e', fontWeight: 700 }}>Pendiente de pago</span>
-                    <button onClick={function () { cancelarReserva(rv.id); }} style={{ background: 'none', border: '1px solid #f0c8c2', color: '#b3261e', borderRadius: 9, padding: '5px 11px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
+
+                {pagado && !completo && (
+                  <div style={{ marginTop: 8 }}>
+                    {fijarKey === rv.id ? (
+                      <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: 12 }}>
+                        <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Fecha y hora acordadas con el maestro:</div>
+                        <input type="datetime-local" value={fijarFecha} onChange={function (e) { setFijarFecha(e.target.value); }} style={{ ...inp, marginBottom: 8 }} />
+                        <button className="gbtn full" onClick={function () { fijarFechaReserva(rv.id); }}>Guardar fecha</button>
+                      </div>
+                    ) : (
+                      <button onClick={function () { setFijarKey(rv.id); setFijarFecha(''); setMsg(null); }} style={{ width: '100%', background: '#fff', color: '#0d9456', border: '1.5px solid #bfe6cf', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{rv.fecha_hora ? '\u{1F4C5} Cambiar fecha' : '\u{1F4C5} Fijar fecha acordada'}</button>
+                    )}
                   </div>
                 )}
+
                 {s === 'cancelado' && <div style={{ fontSize: 11.5, color: '#9aa1b5', fontWeight: 700, marginTop: 6 }}>Cancelada</div>}
                 {puedeConfirmar && (
                   <div style={{ marginTop: 8 }}>
@@ -332,7 +372,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
       {soloLista && (
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F4CB} Mis cotizaciones'}</b>
-        {solicitudes.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no has enviado cotizaciones. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
+        {solicitudes.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no has enviado solicitudes. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
         {solicitudes.map(function (s) {
           var cots = s.cotizaciones || [];
           var msgs = mensajesPorPres[s.id] || [];
@@ -340,41 +380,64 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
           cots.forEach(function (c) { if (maestroIds.indexOf(c.maestro_id) < 0) maestroIds.push(c.maestro_id); });
           msgs.forEach(function (m) { if (maestroIds.indexOf(m.maestro_id) < 0) maestroIds.push(m.maestro_id); });
           var cerrado = s.estado === 'cerrado';
+          var conMonto = cots.filter(function (c) { return c.monto; }).length;
           return (
             <div key={s.id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontSize: 13 }}>{(s.oficio || 'servicio').charAt(0).toUpperCase() + (s.oficio || '').slice(1)}</b>
-                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: cots.length ? '#f2fbf6' : '#fff9f0', color: cots.length ? '#0d9456' : '#b07a1e', fontWeight: 800 }}>{cerrado ? 'AGENDADO' : (cots.length ? cots.length + ' COTIZACIÓN' + (cots.length > 1 ? 'ES' : '') : 'ESPERANDO')}</span>
+                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#fff9f0'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800 }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZACIÓN' + (conMonto > 1 ? 'ES' : '') : 'ESPERANDO')}</span>
               </div>
               <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{s.descripcion}</div>
-              <div style={{ fontSize: 11, color: '#9aa1b5' }}>{(s.maestro_id ? 'A ' + nombreMaestro(s.maestro_id) : 'Abierto a todos') + ' · ' + fecha(s.creado_en)}</div>
+              <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(s.creado_en)}</div>
               <MediaCarrusel items={(s.archivos && s.archivos.length) ? s.archivos : (s.video_url ? [{ url: s.video_url, tipo: 'video' }] : [])} alto={220} />
+
+              {!cerrado && conMonto > 1 && <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', borderRadius: 10, padding: '8px 10px', margin: '8px 0 2px' }}>{'\u{1F50D}'} Recibiste varias cotizaciones. Ábrelas, compáralas y elige la que más te convenga.</div>}
 
               {maestroIds.map(function (mid) {
                 var c = cots.find(function (x) { return x.maestro_id === mid; });
                 var unread = msgs.filter(function (m) { return m.maestro_id === mid && m.autor_rol === 'maestro' && !m.leido; }).length;
                 var ck = s.id + '|' + mid;
+                var abierta = hojaKey === ck;
                 return (
-                  <div key={mid} style={{ background: '#f7f9fc', borderRadius: 12, padding: 11, marginTop: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <b style={{ fontSize: 13 }}>{nombreMaestro(mid)}</b>
-                      {c && c.monto ? <b style={{ fontSize: 14, color: '#0d9456' }}>{plata(c.monto)}</b> : <span style={{ fontSize: 11, color: '#9aa1b5' }}>te escribió</span>}
+                  <div key={mid} style={{ border: '1.5px solid ' + (abierta ? '#ffd6cb' : '#eef0f5'), borderRadius: 14, padding: 12, marginTop: 8, background: '#fff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Avatar id={mid} size={38} />
+                      <div style={{ flex: 1, lineHeight: 1.3 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5 }}>{nombreMaestro(mid)}{verifMaestro(mid) && <span style={{ fontSize: 11, color: '#185FA5' }}>{'✔'}</span>}</div>
+                        <MetaMaestro id={mid} />
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        {c && c.monto ? <b style={{ fontSize: 15, color: '#1c1f2b' }}>{plata(c.monto)}</b> : <span style={{ fontSize: 11, color: '#9aa1b5' }}>te escribió</span>}
+                      </div>
                     </div>
-                    {c && c.mensaje && <div style={{ fontSize: 12, color: '#5b6275', marginTop: 2 }}>{c.mensaje}</div>}
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: chatKey === ck ? '#fff5f2' : '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversación' + (unread > 0 ? ' · ' + unread : '')}</button>
-                      {c && !cerrado && <button onClick={function () { setAgendaKey(agendaKey === ck ? null : ck); setMsg(null); }} style={{ flex: 1, background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4C5} Agendar y pagar'}</button>}
-                    </div>
-                    {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" titulo={nombreMaestro(mid)} onClose={function () { setChatKey(null); }} />}
-                    {agendaKey === ck && c && (
-                      <div style={{ marginTop: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: 12 }}>
-                        <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Elige cuándo quieres que vaya {nombreMaestro(mid)}{c.monto ? ' (' + plata(c.monto) + ')' : ''}:</div>
-                        <input type="datetime-local" value={agendaFecha} onChange={function (e) { setAgendaFecha(e.target.value); }} style={{ ...inp, marginBottom: 8 }} />
-                        <button className="gbtn full" style={{ opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { agendar(s, c); }}>{pagando ? 'Procesando...' : (c.monto ? 'Agendar y pagar ' + plata(c.monto) : 'Agendar')}</button>
+
+                    {c && c.monto && !cerrado && (
+                      <button onClick={function () { setHojaKey(abierta ? null : ck); setMsg(null); }} style={{ width: '100%', marginTop: 10, background: abierta ? '#fff5f2' : '#fafbfe', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{abierta ? 'Ocultar cotización' : '\u{1F4C4} Ver cotización'}</button>
+                    )}
+
+                    {abierta && c && c.monto && !cerrado && (
+                      <div style={{ marginTop: 10, background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: 13 }}>
+                        <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                          <div style={{ fontSize: 11.5, color: '#9aa1b5' }}>Precio del trabajo</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: '#1c1f2b' }}>{plata(c.monto)}</div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#5b6275', marginBottom: 4 }}>Qué incluye</div>
+                        <div style={{ fontSize: 12.5, color: '#5b6275', lineHeight: 1.5, marginBottom: 10, whiteSpace: 'pre-wrap' }}>{c.mensaje ? c.mensaje : 'El maestro no detalló el alcance. Pregúntale por el chat antes de aceptar.'}</div>
+                        <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 8 }}>{'\u{1F4C5}'} La fecha la coordinan después de pagar.</div>
+                        <button onClick={function () { setInfoPago(true); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: '#e1f5ee', color: '#0f6e56', border: 'none', borderRadius: 10, padding: '9px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 10 }}>{'\u{1F6E1}️ Pago protegido'} <span style={{ background: '#5dcaa5', color: '#04342c', borderRadius: '50%', width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>i</span></button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
+                          <button className="gbtn" style={{ flex: 1.3, padding: 10, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { aceptarYPagar(s, c); }}>{pagando ? 'Procesando...' : 'Aceptar y pagar'}</button>
+                        </div>
                         {msg && <p style={{ fontSize: 12, fontWeight: 600, textAlign: 'center', margin: '8px 0 0', color: (msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0) ? '#b3261e' : '#0d9456' }}>{msg}</p>}
-                        <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 6, textAlign: 'center' }}>Pago seguro con Mercado Pago. Tu dinero queda protegido hasta confirmar el trabajo.</div>
                       </div>
                     )}
+
+                    {(!c || !c.monto) && (
+                      <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ width: '100%', marginTop: 10, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
+                    )}
+
+                    {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" titulo={nombreMaestro(mid)} onClose={function () { setChatKey(null); }} />}
                   </div>
                 );
               })}
@@ -382,6 +445,32 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
           );
         })}
       </div>
+      )}
+
+      {infoPago && (
+        <div onClick={function () { setInfoPago(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={function (e) { e.stopPropagation(); }} style={{ width: '100%', maxWidth: 320, background: '#fff', borderRadius: 18, overflow: 'hidden' }}>
+            <div style={{ background: '#e1f5ee', padding: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 26 }}>{'\u{1F6E1}️'}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#04342c', marginTop: 2 }}>Pagas sin riesgo</div>
+            </div>
+            <div style={{ padding: 16 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>{'\u{1F4B0}'}</span>
+                <div style={{ fontSize: 12.5, lineHeight: 1.4 }}>Acuerdas el precio antes: no pagas de más ni hay sorpresas.</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>{'\u{1F9D1}‍\u{1F527}'}</span>
+                <div style={{ fontSize: 12.5, lineHeight: 1.4 }}>Si no llega o no cumple, te devolvemos el 100%.</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 18 }}>{'✅'}</span>
+                <div style={{ fontSize: 12.5, lineHeight: 1.4 }}>Se libera solo cuando confirmas que quedó listo.</div>
+              </div>
+              <button className="gbtn full" onClick={function () { setInfoPago(false); }}>Entendido</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

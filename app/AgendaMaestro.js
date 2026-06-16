@@ -54,7 +54,7 @@ export default function AgendaMaestro({ usuario }) {
     return (
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#1c1f2b' }}>{'\u{1F4C5} ' + soloFecha(d) + ' · ' + hora(d)}</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: t.fecha_hora ? '#1c1f2b' : '#b07a1e' }}>{t.fecha_hora ? ('\u{1F4C5} ' + soloFecha(d) + ' · ' + hora(d)) : '\u{1F4C5} Fecha por coordinar'}</span>
           <span style={{ fontSize: 11, fontWeight: 800, background: c.bg, color: c.fg, borderRadius: 8, padding: '3px 9px' }}>{(t.estado || 'pendiente').toUpperCase()}</span>
         </div>
         <div style={{ fontSize: 14, fontWeight: 800, color: '#1c1f2b', marginBottom: 2 }}>{t.descripcion_problema || 'Trabajo'}</div>
