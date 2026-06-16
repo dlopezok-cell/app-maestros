@@ -3,7 +3,7 @@
   "appName": "MaestrosEnLínea",
   "webDir": "www",
   "server": {
-    "url": "https://www.maestrosenlinea.cl",
+    "url": "https://www.maestrosenlinea.cl/?app=1",
     "cleartext": false
   },
   "ios": {
