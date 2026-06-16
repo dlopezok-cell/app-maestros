@@ -31,6 +31,7 @@ const [pass, setPass] = useState('');
 const [authMsg, setAuthMsg] = useState(null);
 const [pagoMsg, setPagoMsg] = useState(null);
 const [q, setQ] = useState('');
+const [buscado, setBuscado] = useState('');
 const [resenas, setResenas] = useState([]);
 const [portada, setPortada] = useState(undefined); // undefined = cargando
 
@@ -89,6 +90,7 @@ if ((v === 'cotizar' || v === 'cuenta' || v === 'mias') && !usuario) { setDestin
 setVista(v); window.scrollTo(0, 0);
 }
 function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
+function buscar(texto) { setBuscado((texto || '').trim()); irTab('cotizar'); }
 
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
 var lista = maestros.filter(function (m) {
@@ -228,7 +230,7 @@ if (vista === 'cotizar') return (
 <main>
 <div className="darkhead"><div className="dh1">{'➕ Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
 <div style={{ paddingBottom: 90 }}>
-<PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="crear" />
+<PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="crear" descripcionInicial={buscado} />
 </div>
 <Nav />
 </main>
@@ -281,7 +283,7 @@ return (
 cats={cats} oficio={oficio} setOficio={setOficio}
 q={q} setQ={setQ} lista={lista} EMO={EMO} plata={plata}
 nombreM={nombreM} fotoM={fotoM} oficiosM={oficiosM} ofNombre={ofNombre} ratingDe={ratingDe}
-onMaestro={abrirFicha} onCotizar={function () { irTab('cotizar'); }}
+onMaestro={abrirFicha} onCotizar={function () { irTab('cotizar'); }} onBuscar={buscar}
 />
 <CookieBanner />
 <Nav />

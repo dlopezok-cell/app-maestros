@@ -3,13 +3,14 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
 import MediaCarrusel from './MediaCarrusel';
+import { subirACloudinary, LIMITES } from '../lib/cloudinary';
 
 var MAX_ARCHIVOS = 6;
 
 // Presupuesto por video: el cliente graba/sube un video del problema y lo manda a
 // los maestros del oficio. Recibe cotizaciones, las compara como hojas claras,
 // ACEPTA Y PAGA una (sin fecha). La fecha se coordina después por la app/WhatsApp.
-export default function PresupuestoCliente({ usuario, maestros, modo }) {
+export default function PresupuestoCliente({ usuario, maestros, modo, descripcionInicial }) {
   var soloCrear = modo !== 'lista';
   var soloLista = modo === 'lista';
   const [cats, setCats] = useState([]);
@@ -17,6 +18,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
   const [descripcion, setDescripcion] = useState('');
   const [archivos, setArchivos] = useState([]);
   const [subiendo, setSubiendo] = useState(false);
+  const [progreso, setProgreso] = useState(0);
   const [msg, setMsg] = useState(null);
   const [solicitudes, setSolicitudes] = useState([]);
   const [mensajesPorPres, setMensajesPorPres] = useState({});
@@ -77,6 +79,11 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
       });
   }, []);
 
+  // Precarga la descripción desde la búsqueda del inicio (si vino texto).
+  useEffect(function () {
+    if (descripcionInicial) setDescripcion(function (prev) { return prev || descripcionInicial; });
+  }, [descripcionInicial]);
+
   function cargarSolicitudes() {
     if (!usuario) return;
     supabase.from('presupuestos').select('*, cotizaciones(*)').eq('cliente_id', usuario.id).order('creado_en', { ascending: false })
@@ -124,7 +131,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
     for (var k = 0; k < fl.length; k++) {
       var f = fl[k];
       var esVideo = (f.type || '').indexOf('video') === 0;
-      if (esVideo && f.size > 50 * 1024 * 1024) { setMsg('Un video supera los 50MB. Graba o elige uno más corto.'); continue; }
+      if (esVideo && f.size > LIMITES.video) { setMsg('Un video supera los 100MB. Graba o elige uno más corto.'); continue; }
+      if (!esVideo && f.size > LIMITES.foto) { setMsg('Una foto supera los 10MB. Elige una más liviana.'); continue; }
       if (actual + nuevos.length >= MAX_ARCHIVOS) { setMsg('Máximo ' + MAX_ARCHIVOS + ' archivos.'); break; }
       nuevos.push({ file: f, tipo: esVideo ? 'video' : 'foto', url: URL.createObjectURL(f) });
     }
@@ -140,21 +148,28 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
     if (!archivos.length) { setMsg('Agrega al menos un video o foto del problema'); return; }
     if (!descripcion.trim()) { setMsg('Cuéntanos brevemente qué necesitas'); return; }
     setSubiendo(true);
-    setMsg('Subiendo archivos...');
+    setProgreso(0);
+    setMsg('Comprimiendo y subiendo...');
 
-    var subidas = archivos.map(function (a, i) {
-      var ext = (a.file.name.split('.').pop() || (a.tipo === 'video' ? 'mp4' : 'jpg')).toLowerCase();
-      var path = usuario.id + '/' + Date.now() + '_' + i + '.' + ext;
-      return supabase.storage.from('presupuestos').upload(path, a.file, { contentType: a.file.type || (a.tipo === 'video' ? 'video/mp4' : 'image/jpeg') })
-        .then(function (up) {
-          if (up.error) return null;
-          var url = supabase.storage.from('presupuestos').getPublicUrl(path).data.publicUrl;
-          return { url: url, tipo: a.tipo };
+    // Subimos a Cloudinary uno por uno para mostrar progreso. Cloudinary optimiza
+    // la entrega (fotos f_auto,q_auto / videos q_auto) y guardamos esa URL liviana.
+    var total = archivos.length;
+    var media = [];
+    var chain = Promise.resolve();
+    archivos.forEach(function (a, idx) {
+      chain = chain.then(function () {
+        return subirACloudinary(a.file, function (pct) {
+          setProgreso(Math.round((idx * 100 + pct) / total));
+        }).then(function (res) {
+          media.push({ url: res.url, tipo: a.tipo });
+        }).catch(function (e) {
+          setMsg('No se pudo subir un archivo: ' + (e.message || 'error'));
         });
+      });
     });
 
-    Promise.all(subidas).then(function (res) {
-      var media = res.filter(function (x) { return x; });
+    chain.then(function () {
+      setProgreso(100);
       if (!media.length) { setMsg('No se pudieron subir los archivos. Intenta de nuevo.'); setSubiendo(false); return; }
       var primerVideo = media.filter(function (x) { return x.tipo === 'video'; })[0];
       var fila = {
@@ -261,7 +276,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
         <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Ej: tengo una fuga bajo el lavaplatos, gotea cuando abro la llave..." rows={3} style={{ ...inp, marginTop: 4, resize: 'vertical' }} />
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>{'\u{1F4F7} Fotos y video del problema'}</label>
-        <div style={{ fontSize: 11.5, color: '#9aa1b5', margin: '3px 0 8px', lineHeight: 1.4 }}>Graba un video al momento, o sube archivos de tu galería (videos y fotos juntos). Hasta {MAX_ARCHIVOS}.</div>
+        <div style={{ fontSize: 11.5, color: '#9aa1b5', margin: '3px 0 8px', lineHeight: 1.4 }}>Graba un video al momento, o sube archivos de tu galería (videos y fotos juntos). Hasta {MAX_ARCHIVOS}. Se optimizan automáticamente al subir (puedes mandar videos de 1-2 min).</div>
         <input ref={grabarRef} type="file" accept="video/*" capture="environment" onChange={agregarArchivos} style={{ display: 'none' }} />
         <input ref={subirRef} type="file" accept="video/*,image/*" multiple onChange={agregarArchivos} style={{ display: 'none' }} />
         <div style={{ display: 'flex', gap: 8, marginBottom: archivos.length ? 10 : 4 }}>
@@ -288,7 +303,15 @@ export default function PresupuestoCliente({ usuario, maestros, modo }) {
         <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px', margin: '4px 0 10px', lineHeight: 1.45 }}>{'\u{1F4E2}'} Tu solicitud se enviará a todos los maestros de <b>{cats.filter(function (c) { return c.slug === oficio; }).map(function (c) { return c.valor; })[0] || 'la especialidad'}</b>. Te llegarán varias cotizaciones para que elijas.</div>
 
         {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
-        <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Enviando...' : 'Enviar y pedir presupuesto'}</button>
+        {subiendo && (
+          <div style={{ margin: '6px 0 10px' }}>
+            <div style={{ height: 8, background: '#eef0f5', borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: progreso + '%', background: 'linear-gradient(90deg,#ff8a6b,#ff5a3c)', borderRadius: 6, transition: 'width .2s' }} />
+            </div>
+            <div style={{ fontSize: 11, color: '#7c8499', textAlign: 'right', marginTop: 3 }}>{progreso}%</div>
+          </div>
+        )}
+        <button className="gbtn full" style={{ opacity: subiendo ? 0.6 : 1 }} disabled={subiendo} onClick={enviar}>{subiendo ? 'Subiendo ' + progreso + '%...' : 'Enviar y pedir presupuesto'}</button>
       </div>
       )}
 

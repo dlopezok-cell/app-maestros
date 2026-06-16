@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { subirACloudinary } from '../lib/cloudinary';
 
 // Chat cliente <-> maestro, a pantalla completa, con look propio de la marca.
 // Texto + imagen + video + audio (grabado), sonido y notificación al recibir.
@@ -98,13 +99,13 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
     insertar({ texto: t });
   }
 
-  function subir(fileOrBlob, tipo, ext, mime) {
+  function subir(fileOrBlob, tipo) {
     setEnviando(true);
-    var path = usuario.id + '/chat_' + Date.now() + '.' + ext;
-    supabase.storage.from('presupuestos').upload(path, fileOrBlob, { contentType: mime, upsert: true }).then(function (up) {
-      if (up.error) { setEnviando(false); return; }
-      var url = supabase.storage.from('presupuestos').getPublicUrl(path).data.publicUrl;
-      insertar({ media_url: url, media_tipo: tipo });
+    subirACloudinary(fileOrBlob).then(function (res) {
+      insertar({ media_url: res.url, media_tipo: tipo });
+    }).catch(function (e) {
+      setEnviando(false);
+      alert('No se pudo subir el archivo: ' + (e.message || 'intenta de nuevo'));
     });
   }
 
@@ -112,8 +113,9 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
     setAttachOpen(false);
     var f = e.target.files && e.target.files[0]; e.target.value = '';
     if (!f) return;
-    var ext = (f.name.split('.').pop() || (tipo === 'video' ? 'mp4' : 'jpg')).toLowerCase();
-    subir(f, tipo, ext, f.type || (tipo === 'video' ? 'video/mp4' : 'image/jpeg'));
+    if ((f.type || '').indexOf('video') === 0 && f.size > 100 * 1024 * 1024) { alert('El video supera los 100MB. Manda uno más corto.'); return; }
+    if ((f.type || '').indexOf('video') !== 0 && f.size > 20 * 1024 * 1024) { alert('La foto es demasiado pesada. Usa una más liviana.'); return; }
+    subir(f, tipo);
   }
 
   function grabar() {
@@ -126,7 +128,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
         var blob = new Blob(chunks, { type: 'audio/webm' });
         stream.getTracks().forEach(function (t) { t.stop(); });
         recRef.current = null; setGrabando(false);
-        if (blob.size > 0) subir(blob, 'audio', 'webm', 'audio/webm');
+        if (blob.size > 0) subir(blob, 'audio');
       };
       mr.start(); recRef.current = mr; setGrabando(true);
     }).catch(function () { alert('No pudimos acceder al micrófono. Revisa los permisos.'); });

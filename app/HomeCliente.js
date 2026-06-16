@@ -118,10 +118,10 @@ export default function HomeCliente(props) {
           <div className="hc-bell">{ICON.bell}</div>
         </div>
         <div className="hc-tagline">Maestros verificados para tu hogar</div>
-        <div className="hc-search">
+        <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
           {ICON.search}
-          <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" />
-        </div>
+          <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" enterKeyHint="search" />
+        </form>
       </div>
 
       <div className="hc-sec">
