@@ -4,12 +4,15 @@ import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
 import MediaCarrusel from './MediaCarrusel';
 
-var INCLUYE_OPC = ['Materiales', 'Mano de obra', 'Garantía 30 días', 'Boleta', 'Retiro de escombros', 'Visita incluida'];
+var INCLUYE_OPC = ['Materiales', 'Mano de obra', 'Visita técnica', 'Retiro de escombros'];
+var VALIDEZ_OPC = ['15 días', '30 días'];
+var GARANTIA_OPC = ['Sin garantía', '1 mes', '2 meses', '3 meses'];
 var IVA = 0.19;
 
 // Vista del maestro: LISTA de solicitudes -> DETALLE a pantalla completa -> CONSTRUCTOR
-// de cotización a pantalla completa (con barra fija de Total + Enviar). La IA arranca sola
-// leyendo el problema del cliente y propone los ítems; el maestro corrige. El IVA se suma.
+// de cotización a pantalla completa (barra fija Total + Enviar). Validez y garantía van
+// como chips. El botón "Redactar" llama a la IA, que devuelve una cotización formal en un
+// pop-up; el maestro la usa o la edita. El IVA se suma siempre.
 export default function PresupuestosMaestro({ usuario }) {
   const [misOficios, setMisOficios] = useState([]);
   const [esMaestro, setEsMaestro] = useState(false);
@@ -17,15 +20,17 @@ export default function PresupuestosMaestro({ usuario }) {
   const [cargado, setCargado] = useState(false);
 
   const [vista, setVista] = useState('lista');   // 'lista' | 'detalle' | 'cotizar'
-  const [sel, setSel] = useState(null);           // presupuesto seleccionado
-  const [filtro, setFiltro] = useState('nuevas'); // 'nuevas' | 'cotizadas'
+  const [sel, setSel] = useState(null);
+  const [filtro, setFiltro] = useState('nuevas');
 
   const [lineas, setLineas] = useState([]);       // [{tipo:'mano_obra'|'material', desc, valor}]
   const [incluye, setIncluye] = useState([]);
-  const [condiciones, setCondiciones] = useState('');
+  const [validez, setValidez] = useState('15 días');
+  const [garantia, setGarantia] = useState('1 mes');
   const [modo, setModo] = useState('abierto');   // 'abierto' = ve cada ítem; 'cerrado' = agrupado
   const [descripcion, setDescripcion] = useState('');
   const [generando, setGenerando] = useState(false);
+  const [propuestaIA, setPropuestaIA] = useState(null); // cotización formal propuesta (pop-up)
   const [msg, setMsg] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [chatId, setChatId] = useState(null);
@@ -72,27 +77,59 @@ export default function PresupuestosMaestro({ usuario }) {
 
   function abrirCotizar(p) {
     setSel(p); setVista('cotizar');
-    setLineas([]); setIncluye([]); setCondiciones(''); setModo('abierto'); setDescripcion(''); setMsg(null);
-    cotizarIA(p); // la IA arranca sola
+    setLineas([{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]);
+    setIncluye(['Mano de obra']);
+    setValidez('15 días'); setGarantia('1 mes');
+    setModo('abierto'); setDescripcion(''); setPropuestaIA(null); setMsg(null);
   }
 
-  // La IA propone la cotización leyendo el problema del cliente.
-  function cotizarIA(p, notas) {
+  // Limpia el texto de mano de obra ("Mano de obra (por hora)" -> "Mano de obra").
+  function limpiarMO(desc, tipo) {
+    if (tipo !== 'mano_obra') return desc;
+    var d = (desc || '').replace(/\s*\([^)]*\)/g, '').trim();
+    return d || 'Mano de obra';
+  }
+  function parseValidez(t) { var m = (t || '').match(/(\d+)\s*d[ií]a/i); if (m) { var v = m[1] + ' días'; return VALIDEZ_OPC.indexOf(v) >= 0 ? v : null; } return null; }
+  function parseGarantia(t) {
+    if (!t) return null;
+    if (/sin garant/i.test(t)) return 'Sin garantía';
+    var m = t.match(/(\d+)\s*mes/i);
+    if (m) { var n = m[1]; var g = n + (n === '1' ? ' mes' : ' meses'); return GARANTIA_OPC.indexOf(g) >= 0 ? g : null; }
+    return null;
+  }
+
+  // "Redactar": la IA lee el problema y propone una cotización formal (pop-up).
+  function redactarIA(p) {
     setGenerando(true); setMsg(null);
     fetch('/api/cotizar-ia', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oficio: p.oficio, descripcion: p.descripcion, notas: notas || '' })
+      body: JSON.stringify({ oficio: p.oficio, descripcion: p.descripcion, notas: '' })
     }).then(function (r) { return r.json(); }).then(function (d) {
       setGenerando(false);
-      if (d && d.descripcion) setDescripcion(d.descripcion);
-      if (d && d.items && d.items.length) {
-        setLineas(d.items);
-        setIncluye(d.incluye && d.incluye.length ? d.incluye : ['Materiales', 'Mano de obra']);
-        setCondiciones(d.condiciones || 'Validez 15 días. No incluye obras no descritas.');
-      } else {
-        setLineas(function (prev) { return prev.length ? prev : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]; });
-      }
-    }).catch(function () { setGenerando(false); setLineas(function (prev) { return prev.length ? prev : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]; }); });
+      var its = (d && d.items && d.items.length ? d.items : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }])
+        .map(function (x) { return { tipo: x.tipo || 'material', desc: limpiarMO(x.desc, x.tipo), valor: Number(x.valor) || 0 }; });
+      var inc = (d && d.incluye ? d.incluye : []).filter(function (x) { return INCLUYE_OPC.indexOf(x) >= 0; });
+      if (!inc.length) inc = ['Mano de obra'];
+      var net = its.reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0);
+      var iv = Math.round(net * IVA);
+      setPropuestaIA({
+        items: its, incluye: inc,
+        descripcion: (d && d.descripcion) ? d.descripcion : '',
+        validez: parseValidez(d && d.condiciones) || '15 días',
+        garantia: parseGarantia(d && d.condiciones) || '1 mes',
+        neto: net, iva: iv, total: net + iv,
+      });
+    }).catch(function () { setGenerando(false); setMsg('No se pudo redactar con IA. Inténtalo de nuevo.'); });
+  }
+
+  function usarPropuesta() {
+    if (!propuestaIA) return;
+    setLineas(propuestaIA.items);
+    setIncluye(propuestaIA.incluye);
+    setDescripcion(propuestaIA.descripcion);
+    setValidez(propuestaIA.validez);
+    setGarantia(propuestaIA.garantia);
+    setPropuestaIA(null);
   }
 
   function setLinea(i, campo, val) {
@@ -110,8 +147,13 @@ export default function PresupuestosMaestro({ usuario }) {
     var n = neto();
     if (n <= 0) { setMsg('Agrega al menos un ítem con su precio.'); return; }
     setEnviando(true);
-    var resumen = (incluye.length ? 'Incluye: ' + incluye.join(', ') + '. ' : '') + (condiciones || '');
-    var detalle = { items: lineas.filter(function (x) { return x.desc && Number(x.valor) > 0; }), incluye: incluye, condiciones: condiciones, neto: n, iva: ivaMonto(), modo: modo, descripcion: (descripcion || '').trim() };
+    var cond = 'Validez ' + validez + (garantia && garantia !== 'Sin garantía' ? '. Garantía ' + garantia : '');
+    var resumen = (incluye.length ? 'Incluye: ' + incluye.join(', ') + '. ' : '') + cond;
+    var detalle = {
+      items: lineas.filter(function (x) { return x.desc && Number(x.valor) > 0; }),
+      incluye: incluye, validez: validez, garantia: garantia, condiciones: cond,
+      neto: n, iva: ivaMonto(), modo: modo, descripcion: (descripcion || '').trim(),
+    };
     supabase.from('cotizaciones').insert({
       presupuesto_id: p.id,
       maestro_id: usuario.id,
@@ -134,6 +176,7 @@ export default function PresupuestosMaestro({ usuario }) {
   }
 
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
+  function fechaCorta(f) { return new Date(f || Date.now()).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
   function mediaDe(p) { return (p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : []); }
   function yaRespondida(p) { return (p.cotizaciones || []).length > 0; }
@@ -145,6 +188,12 @@ export default function PresupuestosMaestro({ usuario }) {
   const scroll = { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' };
   const bottombar = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', paddingBottom: 'calc(22px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #eef0f5', background: '#fff', flexShrink: 0 };
   const back = { border: 'none', background: 'none', color: '#ff5a3c', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' };
+  const lab = { fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 7 };
+
+  function Chip(props) {
+    var on = props.on;
+    return <span onClick={props.onClick} style={{ fontSize: 11.5, borderRadius: 999, padding: '6px 11px', cursor: 'pointer', background: on ? props.bg : '#fff', color: on ? props.col : '#7c8499', border: '1px solid ' + (on ? props.bd : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + props.label}</span>;
+  }
 
   if (!cargado) return null;
   if (!esMaestro) {
@@ -166,7 +215,7 @@ export default function PresupuestosMaestro({ usuario }) {
 
   function Thumb(p) {
     var m = mediaDe(p)[0];
-    var box = { width: 48, height: 48, borderRadius: 10, flexShrink: 0, background: '#19222f', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' };
+    var box = { width: 48, height: 48, borderRadius: 10, flexShrink: 0, background: '#19222f', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' };
     if (m && m.tipo !== 'video') return <div style={box}><img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>;
     return <div style={box}><span style={{ color: '#fff', fontSize: 16 }}>{'▶'}</span></div>;
   }
@@ -218,13 +267,11 @@ export default function PresupuestosMaestro({ usuario }) {
             );
           })}
         </div>
-
-        {chatId && sel == null && null}
       </div>
     );
   }
 
-  // ---------- DETALLE (pantalla completa) ----------
+  // ---------- DETALLE ----------
   if (vista === 'detalle' && sel) {
     var resp = yaRespondida(sel);
     return (
@@ -258,38 +305,36 @@ export default function PresupuestosMaestro({ usuario }) {
     );
   }
 
-  // ---------- COTIZAR (pantalla completa, barra fija abajo) ----------
+  // ---------- COTIZAR ----------
   if (vista === 'cotizar' && sel) {
     return (
       <div style={pantalla}>
         <div style={topbar}>
           <button onClick={function () { setVista('detalle'); }} style={back}>{'‹'}</button>
           <div style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>Cotizar</div>
-          <button type="button" onClick={function () { cotizarIA(sel); }} disabled={generando} style={{ background: 'none', border: 'none', color: '#534AB7', fontWeight: 800, fontSize: 12.5, cursor: 'pointer', opacity: generando ? 0.5 : 1 }}>{generando ? 'Pensando…' : '\u{2728} Sugerir con IA'}</button>
         </div>
 
         <div style={scroll}>
           <div style={{ padding: '14px 16px 18px' }}>
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 6 }}>¿Qué verá el cliente?</div>
+            <div style={lab}>¿Qué verá el cliente?</div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
               <button type="button" onClick={function () { setModo('abierto'); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 10, border: '1.5px solid ' + (modo === 'abierto' ? '#534AB7' : '#e4e4ef'), background: modo === 'abierto' ? '#eeedfe' : '#fff', color: modo === 'abierto' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 12, cursor: 'pointer', lineHeight: 1.2 }}>Detalle completo<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>ve cada ítem</div></button>
               <button type="button" onClick={function () { setModo('cerrado'); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 10, border: '1.5px solid ' + (modo === 'cerrado' ? '#534AB7' : '#e4e4ef'), background: modo === 'cerrado' ? '#eeedfe' : '#fff', color: modo === 'cerrado' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 12, cursor: 'pointer', lineHeight: 1.2 }}>Resumen<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>materiales + mano de obra</div></button>
             </div>
             <div style={{ fontSize: 10.5, color: '#9aa1b5', marginBottom: 16 }}>En "Resumen" el cliente no ve el precio de cada material por separado.</div>
 
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 7 }}>Precio</div>
-            {generando && !lineas.length && <div style={{ fontSize: 12, color: '#7c8499', padding: '6px 0 10px' }}>La IA está leyendo el problema y armando tu cotización…</div>}
+            <div style={lab}>Precio</div>
             {lineas.map(function (l, i) {
               return (
                 <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>{l.tipo === 'mano_obra' ? '\u{1F6E0}️' : '\u{1F4E6}'}</span>
-                  <input value={l.desc} onChange={function (e) { setLinea(i, 'desc', e.target.value); }} placeholder={l.tipo === 'mano_obra' ? 'Mano de obra' : 'Material'} style={{ ...inp, flex: 1, padding: 9, fontSize: 13.5 }} />
+                  <input value={l.desc} onChange={function (e) { setLinea(i, 'desc', e.target.value); }} placeholder={l.tipo === 'mano_obra' ? 'Mano de obra' : 'Ítem / material'} style={{ ...inp, flex: 1, padding: 9, fontSize: 13.5 }} />
                   <input value={l.valor ? l.valor : ''} onChange={function (e) { setLinea(i, 'valor', e.target.value); }} inputMode="numeric" placeholder="$" style={{ ...inp, width: 84, padding: 9, fontSize: 13.5, textAlign: 'right' }} />
                   <button type="button" onClick={function () { delLinea(i); }} style={{ border: 'none', background: 'none', color: '#c2c7d4', fontSize: 18, cursor: 'pointer', width: 18 }}>{'×'}</button>
                 </div>
               );
             })}
-            <button type="button" onClick={addLinea} style={{ background: 'none', border: '1px dashed #cbd0dd', borderRadius: 9, padding: '7px 11px', fontSize: 12.5, fontWeight: 700, color: '#5b6275', cursor: 'pointer', marginBottom: 16 }}>{'+ Agregar material'}</button>
+            <button type="button" onClick={addLinea} style={{ background: 'none', border: '1px dashed #cbd0dd', borderRadius: 9, padding: '7px 11px', fontSize: 12.5, fontWeight: 700, color: '#5b6275', cursor: 'pointer', marginBottom: 16 }}>{'+ Agregar ítem'}</button>
 
             <div style={{ background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: '10px 12px', marginBottom: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#7c8499', marginBottom: 3 }}><span>Neto</span><span>{plata(neto())}</span></div>
@@ -298,19 +343,32 @@ export default function PresupuestosMaestro({ usuario }) {
               <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 2 }}>Todos los valores incluyen IVA</div>
             </div>
 
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 7 }}>Incluye</div>
+            <div style={lab}>Incluye</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
               {INCLUYE_OPC.map(function (x) {
-                var on = incluye.indexOf(x) >= 0;
-                return <span key={x} onClick={function () { toggleInc(x); }} style={{ fontSize: 11.5, borderRadius: 999, padding: '6px 11px', cursor: 'pointer', background: on ? '#e1f5ee' : '#fff', color: on ? '#0f6e56' : '#7c8499', border: '1px solid ' + (on ? '#bfe6cf' : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + x}</span>;
+                return <Chip key={x} label={x} on={incluye.indexOf(x) >= 0} bg="#e1f5ee" col="#0f6e56" bd="#bfe6cf" onClick={function () { toggleInc(x); }} />;
               })}
             </div>
 
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 6 }}>Descripción del trabajo{modo === 'cerrado' ? '' : ' (opcional)'}</div>
-            <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Resume el trabajo en 1-2 líneas (la ve el cliente)." rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13.5, marginBottom: 10 }} />
+            <div style={lab}>Validez de la cotización</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+              {VALIDEZ_OPC.map(function (x) {
+                return <Chip key={x} label={x} on={validez === x} bg="#e6f1fb" col="#185fa5" bd="#a9cdf2" onClick={function () { setValidez(x); }} />;
+              })}
+            </div>
 
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 6 }}>Condiciones</div>
-            <textarea value={condiciones} onChange={function (e) { setCondiciones(e.target.value); }} placeholder="Validez, qué no incluye, trabajos adicionales…" rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13.5 }} />
+            <div style={lab}>Garantía</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+              {GARANTIA_OPC.map(function (x) {
+                return <Chip key={x} label={x} on={garantia === x} bg="#e6f1fb" col="#185fa5" bd="#a9cdf2" onClick={function () { setGarantia(x); }} />;
+              })}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+              <span style={lab}>Descripción del trabajo</span>
+              <button type="button" onClick={function () { redactarIA(sel); }} disabled={generando} style={{ background: '#fff', border: '1.5px solid #cbc5f0', color: '#534AB7', fontWeight: 800, fontSize: 12, cursor: 'pointer', borderRadius: 999, padding: '5px 13px', opacity: generando ? 0.6 : 1 }}>{generando ? 'Redactando…' : '\u{2728} Redactar'}</button>
+            </div>
+            <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Describe el trabajo (la ve el cliente). O toca Redactar y la IA te propone una cotización." rows={3} style={{ ...inp, resize: 'vertical', fontSize: 13.5 }} />
 
             {msg && <p style={{ fontSize: 12.5, color: '#b3261e', margin: '12px 0 0' }}>{msg}</p>}
           </div>
@@ -323,6 +381,46 @@ export default function PresupuestosMaestro({ usuario }) {
           </div>
           <button className="gbtn" style={{ flex: 1.3, padding: 13, opacity: enviando ? 0.6 : 1 }} disabled={enviando} onClick={function () { responder(sel); }}>{enviando ? 'Enviando...' : 'Enviar cotización'}</button>
         </div>
+
+        {/* Pop-up: cotización formal propuesta por la IA */}
+        {propuestaIA && (
+          <div onClick={function () { setPropuestaIA(null); }} style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(25,34,47,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div onClick={function (e) { e.stopPropagation(); }} style={{ width: '100%', maxWidth: 360, maxHeight: '88vh', overflowY: 'auto', background: '#fff', borderRadius: 14, border: '1px solid #e7eaf1' }}>
+              <div style={{ background: '#19222F', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ color: '#fff', fontSize: 18 }}>{'\u{1F9ED}'}</span><span style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>MaestrosEnLínea</span></div>
+                <div style={{ textAlign: 'right' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>COTIZACIÓN</div><div style={{ fontSize: 10, color: '#9aa6b4' }}>{fechaCorta()}</div></div>
+              </div>
+              <div style={{ padding: '14px 16px' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#7c8499', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Detalle de costos</div>
+                {propuestaIA.items.map(function (it, ix) {
+                  return <div key={ix} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '6px 0', borderBottom: '1px solid #f1f3f7' }}><span>{(it.tipo === 'mano_obra' ? '\u{1F6E0}️ ' : '\u{1F4E6} ') + it.desc}</span><span style={{ fontWeight: 700 }}>{plata(it.valor)}</span></div>;
+                })}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499', marginTop: 8 }}><span>Neto</span><span>{plata(propuestaIA.neto)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499' }}><span>IVA (19%)</span><span>{plata(propuestaIA.iva)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', background: '#f7f9fc', borderRadius: 9, padding: '8px 11px', marginTop: 7 }}><span style={{ fontSize: 13, fontWeight: 800 }}>Total</span><span style={{ fontSize: 19, fontWeight: 800 }}>{plata(propuestaIA.total)}</span></div>
+
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#7c8499', textTransform: 'uppercase', letterSpacing: 0.4, margin: '14px 0 4px' }}>Trabajo a realizar</div>
+                <div style={{ fontSize: 12.5, color: '#2b2f3a', lineHeight: 1.5 }}>{propuestaIA.descripcion || 'Trabajo según lo conversado con el cliente.'}</div>
+
+                {propuestaIA.incluye && propuestaIA.incluye.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                    {propuestaIA.incluye.map(function (x) { return <span key={x} style={{ fontSize: 11, background: '#e1f5ee', color: '#0f6e56', borderRadius: 999, padding: '4px 9px' }}>{'✓ ' + x}</span>; })}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 16, borderTop: '1px solid #eef0f5', marginTop: 13, paddingTop: 10 }}>
+                  <div><div style={{ fontSize: 9.5, color: '#9aa1b5' }}>Validez</div><div style={{ fontSize: 12.5, fontWeight: 800 }}>{propuestaIA.validez}</div></div>
+                  <div><div style={{ fontSize: 9.5, color: '#9aa1b5' }}>Garantía</div><div style={{ fontSize: 12.5, fontWeight: 800 }}>{propuestaIA.garantia}</div></div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                  <button onClick={function () { setPropuestaIA(null); }} style={{ flex: 1, padding: 12, borderRadius: 11, border: '1.5px solid #ddd', background: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', color: '#5b6275' }}>Editar</button>
+                  <button className="gbtn" style={{ flex: 1.4, padding: 12 }} onClick={usarPropuesta}>Usar esta cotización</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
