@@ -211,7 +211,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       )}
 
       {/* Barra de entrada */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', paddingBottom: 'calc(9px + env(safe-area-inset-bottom, 0px))', background: '#fff', boxShadow: '0 -2px 12px rgba(20,20,50,.06)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', paddingBottom: 'calc(22px + env(safe-area-inset-bottom, 0px))', background: '#fff', boxShadow: '0 -2px 12px rgba(20,20,50,.06)' }}>
         <button onClick={function () { setAttachOpen(!attachOpen); }} style={ico}>{attachOpen ? '×' : '＋'}</button>
         <input value={texto} onChange={function (e) { setTexto(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarTexto(); }} placeholder={grabando ? 'Grabando audio…' : 'Escribe un mensaje'} disabled={grabando} style={{ flex: 1, height: 42, border: 'none', borderRadius: 22, padding: '0 16px', fontSize: 14, background: grabando ? '#ffecec' : '#f3f3f8', color: grabando ? '#d3422a' : '#1c1f2b', outline: 'none', boxSizing: 'border-box' }} />
         {texto.trim()
