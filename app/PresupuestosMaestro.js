@@ -7,19 +7,23 @@ import MediaCarrusel from './MediaCarrusel';
 var INCLUYE_OPC = ['Materiales', 'Mano de obra', 'Garantía 30 días', 'Boleta', 'Retiro de escombros', 'Visita incluida'];
 var IVA = 0.19;
 
-// Vista del maestro: solicitudes de presupuesto (videos). Responde con una cotización
-// DESGLOSADA por ítem (mano de obra + materiales). La IA arranca sola leyendo el problema
-// del cliente y propone los ítems; el maestro corrige. El IVA se suma siempre.
+// Vista del maestro: LISTA de solicitudes -> DETALLE a pantalla completa -> CONSTRUCTOR
+// de cotización a pantalla completa (con barra fija de Total + Enviar). La IA arranca sola
+// leyendo el problema del cliente y propone los ítems; el maestro corrige. El IVA se suma.
 export default function PresupuestosMaestro({ usuario }) {
   const [misOficios, setMisOficios] = useState([]);
   const [esMaestro, setEsMaestro] = useState(false);
   const [items, setItems] = useState([]);
   const [cargado, setCargado] = useState(false);
-  const [respId, setRespId] = useState(null);
+
+  const [vista, setVista] = useState('lista');   // 'lista' | 'detalle' | 'cotizar'
+  const [sel, setSel] = useState(null);           // presupuesto seleccionado
+  const [filtro, setFiltro] = useState('nuevas'); // 'nuevas' | 'cotizadas'
+
   const [lineas, setLineas] = useState([]);       // [{tipo:'mano_obra'|'material', desc, valor}]
   const [incluye, setIncluye] = useState([]);
   const [condiciones, setCondiciones] = useState('');
-  const [modo, setModo] = useState('abierto');   // 'abierto' = cliente ve cada ítem; 'cerrado' = ve agrupado
+  const [modo, setModo] = useState('abierto');   // 'abierto' = ve cada ítem; 'cerrado' = agrupado
   const [descripcion, setDescripcion] = useState('');
   const [generando, setGenerando] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -63,8 +67,11 @@ export default function PresupuestosMaestro({ usuario }) {
       });
   }, [usuario]);
 
-  function abrirResp(p) {
-    setRespId(p.id);
+  function abrirDetalle(p) { setSel(p); setVista('detalle'); setMsg(null); window.scrollTo(0, 0); }
+  function volverLista() { setVista('lista'); setSel(null); }
+
+  function abrirCotizar(p) {
+    setSel(p); setVista('cotizar');
     setLineas([]); setIncluye([]); setCondiciones(''); setModo('abierto'); setDescripcion(''); setMsg(null);
     cotizarIA(p); // la IA arranca sola
   }
@@ -82,11 +89,10 @@ export default function PresupuestosMaestro({ usuario }) {
         setLineas(d.items);
         setIncluye(d.incluye && d.incluye.length ? d.incluye : ['Materiales', 'Mano de obra']);
         setCondiciones(d.condiciones || 'Validez 15 días. No incluye obras no descritas.');
-      } else if (!lineas.length) {
-        // si la IA no devolvió nada, dejamos una línea de mano de obra para empezar
-        setLineas([{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]);
+      } else {
+        setLineas(function (prev) { return prev.length ? prev : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]; });
       }
-    }).catch(function () { setGenerando(false); if (!lineas.length) setLineas([{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]); });
+    }).catch(function () { setGenerando(false); setLineas(function (prev) { return prev.length ? prev : [{ tipo: 'mano_obra', desc: 'Mano de obra', valor: 0 }]; }); });
   }
 
   function setLinea(i, campo, val) {
@@ -117,119 +123,209 @@ export default function PresupuestosMaestro({ usuario }) {
       try {
         fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'cotizacion', presupuestoId: p.id, maestroId: usuario.id, monto: total() }) });
       } catch (e) {}
-      setEnviando(false); setRespId(null);
+      setEnviando(false); setVista('lista'); setSel(null);
       cargar(misOficios);
     });
   }
 
   function abrirChat(p) {
-    setChatId(chatId === p.id ? null : p.id);
+    setChatId(p.id);
     setNoLeidos(function (prev) { var n = Object.assign({}, prev); n[p.id] = 0; return n; });
   }
 
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
+  function mediaDe(p) { return (p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : []); }
+  function yaRespondida(p) { return (p.cotizaciones || []).length > 0; }
+  function ofTit(p) { return (p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1); }
 
-  const card = { background: '#fff', borderRadius: 18, padding: 16, margin: '0 16px 14px', border: '1.5px solid #eee' };
   const inp = { width: '100%', padding: 11, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 14, background: '#fff' };
+  const pantalla = { position: 'fixed', inset: 0, zIndex: 250, background: '#fff', display: 'flex', flexDirection: 'column' };
+  const topbar = { display: 'flex', alignItems: 'center', gap: 10, padding: '12px', paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))', borderBottom: '1px solid #eef0f5', background: '#fff', flexShrink: 0 };
+  const scroll = { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' };
+  const bottombar = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #eef0f5', background: '#fff', flexShrink: 0 };
+  const back = { border: 'none', background: 'none', color: '#ff5a3c', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' };
 
   if (!cargado) return null;
   if (!esMaestro) {
     return (
-      <div style={{ ...card, marginTop: 14 }}>
+      <div style={{ background: '#fff', borderRadius: 18, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' }}>
         <b style={{ fontSize: 14 }}>{'\u{1F3A5} Cotizaciones'}</b>
         <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Cuando completes tu ficha como maestro, aquí verás los videos de clientes que piden presupuesto en tu especialidad.</div>
       </div>
     );
   }
 
-  return (
-    <div style={{ marginTop: 14 }}>
-      {items.length === 0 && <div style={card}><div style={{ fontSize: 13, color: '#9aa1b5' }}>No hay solicitudes nuevas por ahora. Te avisaremos cuando llegue un video.</div></div>}
-      {items.map(function (p) {
-        var yaRespondi = (p.cotizaciones || []).length > 0;
-        var nl = noLeidos[p.id] || 0;
-        var abierto = respId === p.id;
-        return (
-          <div key={p.id} style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <b style={{ fontSize: 14 }}>{(p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1)}</b>
-              <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: p.maestro_id ? '#eef4ff' : '#fff5f2', color: p.maestro_id ? '#3b6ef0' : '#ff5a3c', fontWeight: 800 }}>{p.maestro_id ? 'PARA TI' : 'ABIERTO'}</span>
-            </div>
-            <div style={{ fontSize: 13, color: '#5b6275', margin: '4px 0' }}>{p.descripcion}</div>
-            <div style={{ fontSize: 11, color: '#9aa1b5' }}>{['\u{1F4CD} ' + (p.comuna || 'comuna no indicada'), fecha(p.creado_en)].filter(Boolean).join(' · ')}</div>
-            <div style={{ fontSize: 10.5, color: '#b6bccb', marginTop: 2 }}>La dirección exacta y el teléfono aparecen en tu Agenda cuando el cliente paga.</div>
-            <MediaCarrusel items={(p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : [])} alto={240} />
+  function Badge(p) {
+    var resp = yaRespondida(p);
+    var txt = resp ? 'Cotizada' : (p.maestro_id ? 'PARA TI' : 'ABIERTO');
+    var bg = resp ? '#e1f5ee' : (p.maestro_id ? '#fff5f2' : '#eef4ff');
+    var col = resp ? '#0f6e56' : (p.maestro_id ? '#ff5a3c' : '#3b6ef0');
+    return <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 7, background: bg, color: col, whiteSpace: 'nowrap' }}>{txt}</span>;
+  }
 
-            {yaRespondi && <div style={{ fontSize: 12, color: '#0d9456', fontWeight: 700, marginTop: 8 }}>{'✓ Ya enviaste tu cotización'}</div>}
+  function Thumb(p) {
+    var m = mediaDe(p)[0];
+    var box = { width: 48, height: 48, borderRadius: 10, flexShrink: 0, background: '#19222f', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' };
+    if (m && m.tipo !== 'video') return <div style={box}><img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>;
+    return <div style={box}><span style={{ color: '#fff', fontSize: 16 }}>{'▶'}</span></div>;
+  }
 
-            {!yaRespondi && !abierto && (
-              <button className="gbtn full" style={{ marginTop: 10 }} onClick={function () { abrirResp(p); }}>{'✨ Cotizar este trabajo'}</button>
-            )}
+  // ---------- LISTA ----------
+  if (vista === 'lista') {
+    var nuevas = items.filter(function (p) { return !yaRespondida(p); });
+    var cotizadas = items.filter(function (p) { return yaRespondida(p); });
+    var listaF = filtro === 'cotizadas' ? cotizadas : nuevas;
+    function Tab(props) {
+      var on = filtro === props.id;
+      return (
+        <button onClick={function () { setFiltro(props.id); }} style={{ border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 800, padding: '7px 13px', borderRadius: 999, background: on ? '#ff5a3c' : '#f2f3f7', color: on ? '#fff' : '#7c8499' }}>
+          {props.label}{props.n > 0 ? ' ' + props.n : ''}
+        </button>
+      );
+    }
+    return (
+      <div style={{ paddingBottom: 90 }}>
+        <div style={{ display: 'flex', gap: 8, padding: '12px 16px 6px' }}>
+          <Tab id="nuevas" label="Nuevas" n={nuevas.length} />
+          <Tab id="cotizadas" label="Cotizadas" n={cotizadas.length} />
+        </div>
 
-            {!yaRespondi && abierto && (
-              <div style={{ marginTop: 10, background: '#fafbfe', border: '1px solid #eef0f5', borderRadius: 14, padding: 13 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#3C3489' }}>{'✨ Cotización'}</div>
-                  <button type="button" onClick={function () { cotizarIA(p); }} disabled={generando} style={{ background: 'none', border: 'none', color: '#534AB7', fontWeight: 800, fontSize: 12, cursor: 'pointer', opacity: generando ? 0.5 : 1 }}>{generando ? 'Pensando…' : '↻ Sugerir con IA'}</button>
-                </div>
-
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 5 }}>¿Qué verá el cliente?</div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
-                  <button type="button" onClick={function () { setModo('abierto'); }} style={{ flex: 1, padding: '8px 6px', borderRadius: 9, border: '1.5px solid ' + (modo === 'abierto' ? '#534AB7' : '#e4e4ef'), background: modo === 'abierto' ? '#eeedfe' : '#fff', color: modo === 'abierto' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', lineHeight: 1.2 }}>Detalle completo<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>ve cada ítem</div></button>
-                  <button type="button" onClick={function () { setModo('cerrado'); }} style={{ flex: 1, padding: '8px 6px', borderRadius: 9, border: '1.5px solid ' + (modo === 'cerrado' ? '#534AB7' : '#e4e4ef'), background: modo === 'cerrado' ? '#eeedfe' : '#fff', color: modo === 'cerrado' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', lineHeight: 1.2 }}>Resumen<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>materiales + mano de obra</div></button>
-                </div>
-                <div style={{ fontSize: 10.5, color: '#9aa1b5', marginBottom: 11 }}>En "Resumen" el cliente no ve el precio de cada material por separado.</div>
-
-                {generando && !lineas.length && <div style={{ fontSize: 12, color: '#7c8499', padding: '6px 0' }}>La IA está leyendo el problema y armando tu cotización…</div>}
-
-                {lineas.map(function (l, i) {
-                  return (
-                    <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 7 }}>
-                      <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{l.tipo === 'mano_obra' ? '\u{1F6E0}️' : '\u{1F4E6}'}</span>
-                      <input value={l.desc} onChange={function (e) { setLinea(i, 'desc', e.target.value); }} placeholder={l.tipo === 'mano_obra' ? 'Mano de obra' : 'Material'} style={{ ...inp, flex: 1, padding: 8, fontSize: 13 }} />
-                      <input value={l.valor ? l.valor : ''} onChange={function (e) { setLinea(i, 'valor', e.target.value); }} inputMode="numeric" placeholder="$" style={{ ...inp, width: 78, padding: 8, fontSize: 13, textAlign: 'right' }} />
-                      <button type="button" onClick={function () { delLinea(i); }} style={{ border: 'none', background: 'none', color: '#c2c7d4', fontSize: 16, cursor: 'pointer', width: 18 }}>{'×'}</button>
-                    </div>
-                  );
-                })}
-                <button type="button" onClick={addLinea} style={{ background: 'none', border: '1px dashed #cbd0dd', borderRadius: 9, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#5b6275', cursor: 'pointer', marginBottom: 10 }}>{'+ Agregar material'}</button>
-
-                <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499', marginBottom: 3 }}><span>Neto</span><span>{plata(neto())}</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499', marginBottom: 6 }}><span>IVA (19%)</span><span>{plata(ivaMonto())}</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid #eef0f5', paddingTop: 7 }}><span style={{ fontSize: 13, fontWeight: 800 }}>Total al cliente</span><span style={{ fontSize: 19, fontWeight: 800 }}>{plata(total())}</span></div>
-                  <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 2 }}>Todos los valores incluyen IVA</div>
-                </div>
-
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 5 }}>Incluye</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                  {INCLUYE_OPC.map(function (x) {
-                    var on = incluye.indexOf(x) >= 0;
-                    return <span key={x} onClick={function () { toggleInc(x); }} style={{ fontSize: 11.5, borderRadius: 999, padding: '5px 10px', cursor: 'pointer', background: on ? '#e1f5ee' : '#fff', color: on ? '#0f6e56' : '#7c8499', border: '1px solid ' + (on ? '#bfe6cf' : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + x}</span>;
-                  })}
-                </div>
-
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 5 }}>Descripción del trabajo{modo === 'cerrado' ? '' : ' (opcional)'}</div>
-                <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Resume el trabajo en 1-2 líneas (la ve el cliente)." rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13, marginBottom: 8 }} />
-
-                <textarea value={condiciones} onChange={function (e) { setCondiciones(e.target.value); }} placeholder="Condiciones: validez, qué no incluye…" rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13, marginBottom: 8 }} />
-
-                {msg && <p style={{ fontSize: 12, color: '#b3261e', margin: '2px 0' }}>{msg}</p>}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={function () { setRespId(null); }} style={{ flex: 1, padding: 12, borderRadius: 12, border: '1.5px solid #ddd', background: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#5b6275' }}>Cancelar</button>
-                  <button className="gbtn" style={{ flex: 2, opacity: enviando ? 0.6 : 1 }} disabled={enviando} onClick={function () { responder(p); }}>{enviando ? 'Enviando...' : 'Enviar cotización'}</button>
-                </div>
-              </div>
-            )}
-
-            <button onClick={function () { abrirChat(p); }} style={{ width: '100%', marginTop: 10, background: chatId === p.id ? '#fff5f2' : '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
-              {'\u{1F4AC} Conversación' + (nl > 0 ? ' · ' + nl + ' nuevo' + (nl > 1 ? 's' : '') : '')}
-            </button>
-            {chatId === p.id && <ChatCotizacion usuario={usuario} presupuestoId={p.id} maestroId={usuario.id} miRol="maestro" titulo={p.cliente_nombre || 'Cliente'} onClose={function () { setChatId(null); }} />}
+        {listaF.length === 0 && (
+          <div style={{ background: '#fff', borderRadius: 16, padding: 16, margin: '8px 16px', border: '1.5px solid #eee', fontSize: 13, color: '#9aa1b5' }}>
+            {filtro === 'nuevas' ? 'No hay solicitudes nuevas por ahora. Te avisaremos cuando llegue un video.' : 'Aún no has enviado cotizaciones.'}
           </div>
-        );
-      })}
-    </div>
-  );
+        )}
+
+        <div style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          {listaF.map(function (p) {
+            var nl = noLeidos[p.id] || 0;
+            return (
+              <div key={p.id} onClick={function () { abrirDetalle(p); }} style={{ display: 'flex', gap: 10, alignItems: 'center', background: '#fff', border: '1.5px solid #eef0f5', borderRadius: 14, padding: 10, cursor: 'pointer' }}>
+                {Thumb(p)}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                    <b style={{ fontSize: 13.5 }}>{ofTit(p)}</b>
+                    {Badge(p)}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#5b6275', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '1px 0' }}>{p.descripcion || 'Sin descripción'}</div>
+                  <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{'\u{1F4CD} ' + (p.comuna || 'comuna no indicada') + ' · ' + fecha(p.creado_en)}</div>
+                </div>
+                {nl > 0
+                  ? <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span>
+                  : <span style={{ color: '#c5c9d6', fontSize: 20, flexShrink: 0 }}>{'›'}</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {chatId && sel == null && null}
+      </div>
+    );
+  }
+
+  // ---------- DETALLE (pantalla completa) ----------
+  if (vista === 'detalle' && sel) {
+    var resp = yaRespondida(sel);
+    return (
+      <div style={pantalla}>
+        <div style={topbar}>
+          <button onClick={volverLista} style={back}>{'‹'}</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ofTit(sel) + ' · ' + (sel.comuna || 'comuna no indicada')}</div>
+            <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(sel.creado_en)}</div>
+          </div>
+          {Badge(sel)}
+        </div>
+
+        <div style={scroll}>
+          <MediaCarrusel items={mediaDe(sel)} alto={300} />
+          <div style={{ padding: '14px 16px' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#5b6275', marginBottom: 4 }}>Lo que pide el cliente</div>
+            <div style={{ fontSize: 14, color: '#2b2f3a', lineHeight: 1.55 }}>{sel.descripcion || 'Sin descripción.'}</div>
+            <div style={{ fontSize: 10.5, color: '#b6bccb', marginTop: 12, background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px' }}>{'\u{1F512}'} La dirección exacta y el teléfono aparecen en tu Agenda cuando el cliente paga.</div>
+            {resp && <div style={{ fontSize: 13, color: '#0d9456', fontWeight: 800, marginTop: 14 }}>{'✓ Ya enviaste tu cotización'}</div>}
+          </div>
+        </div>
+
+        <div style={bottombar}>
+          <button onClick={function () { abrirChat(sel); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + ((noLeidos[sel.id] || 0) > 0 ? ' · ' + noLeidos[sel.id] : '')}</button>
+          {!resp && <button className="gbtn" style={{ flex: 1.4, padding: 13 }} onClick={function () { abrirCotizar(sel); }}>{'✨ Cotizar este trabajo'}</button>}
+        </div>
+
+        {chatId === sel.id && <ChatCotizacion usuario={usuario} presupuestoId={sel.id} maestroId={usuario.id} miRol="maestro" titulo={sel.cliente_nombre || 'Cliente'} onClose={function () { setChatId(null); }} />}
+      </div>
+    );
+  }
+
+  // ---------- COTIZAR (pantalla completa, barra fija abajo) ----------
+  if (vista === 'cotizar' && sel) {
+    return (
+      <div style={pantalla}>
+        <div style={topbar}>
+          <button onClick={function () { setVista('detalle'); }} style={back}>{'‹'}</button>
+          <div style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>Cotizar</div>
+          <button type="button" onClick={function () { cotizarIA(sel); }} disabled={generando} style={{ background: 'none', border: 'none', color: '#534AB7', fontWeight: 800, fontSize: 12.5, cursor: 'pointer', opacity: generando ? 0.5 : 1 }}>{generando ? 'Pensando…' : '\u{2728} Sugerir con IA'}</button>
+        </div>
+
+        <div style={scroll}>
+          <div style={{ padding: '14px 16px 18px' }}>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 6 }}>¿Qué verá el cliente?</div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+              <button type="button" onClick={function () { setModo('abierto'); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 10, border: '1.5px solid ' + (modo === 'abierto' ? '#534AB7' : '#e4e4ef'), background: modo === 'abierto' ? '#eeedfe' : '#fff', color: modo === 'abierto' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 12, cursor: 'pointer', lineHeight: 1.2 }}>Detalle completo<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>ve cada ítem</div></button>
+              <button type="button" onClick={function () { setModo('cerrado'); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 10, border: '1.5px solid ' + (modo === 'cerrado' ? '#534AB7' : '#e4e4ef'), background: modo === 'cerrado' ? '#eeedfe' : '#fff', color: modo === 'cerrado' ? '#3C3489' : '#7c8499', fontWeight: 800, fontSize: 12, cursor: 'pointer', lineHeight: 1.2 }}>Resumen<div style={{ fontWeight: 600, fontSize: 10, marginTop: 1 }}>materiales + mano de obra</div></button>
+            </div>
+            <div style={{ fontSize: 10.5, color: '#9aa1b5', marginBottom: 16 }}>En "Resumen" el cliente no ve el precio de cada material por separado.</div>
+
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 7 }}>Precio</div>
+            {generando && !lineas.length && <div style={{ fontSize: 12, color: '#7c8499', padding: '6px 0 10px' }}>La IA está leyendo el problema y armando tu cotización…</div>}
+            {lineas.map(function (l, i) {
+              return (
+                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>{l.tipo === 'mano_obra' ? '\u{1F6E0}️' : '\u{1F4E6}'}</span>
+                  <input value={l.desc} onChange={function (e) { setLinea(i, 'desc', e.target.value); }} placeholder={l.tipo === 'mano_obra' ? 'Mano de obra' : 'Material'} style={{ ...inp, flex: 1, padding: 9, fontSize: 13.5 }} />
+                  <input value={l.valor ? l.valor : ''} onChange={function (e) { setLinea(i, 'valor', e.target.value); }} inputMode="numeric" placeholder="$" style={{ ...inp, width: 84, padding: 9, fontSize: 13.5, textAlign: 'right' }} />
+                  <button type="button" onClick={function () { delLinea(i); }} style={{ border: 'none', background: 'none', color: '#c2c7d4', fontSize: 18, cursor: 'pointer', width: 18 }}>{'×'}</button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={addLinea} style={{ background: 'none', border: '1px dashed #cbd0dd', borderRadius: 9, padding: '7px 11px', fontSize: 12.5, fontWeight: 700, color: '#5b6275', cursor: 'pointer', marginBottom: 16 }}>{'+ Agregar material'}</button>
+
+            <div style={{ background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: '10px 12px', marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#7c8499', marginBottom: 3 }}><span>Neto</span><span>{plata(neto())}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#7c8499' }}><span>IVA (19%)</span><span>{plata(ivaMonto())}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid #e7eaf1', marginTop: 7, paddingTop: 7 }}><span style={{ fontSize: 13, fontWeight: 800 }}>Total al cliente</span><span style={{ fontSize: 20, fontWeight: 800 }}>{plata(total())}</span></div>
+              <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 2 }}>Todos los valores incluyen IVA</div>
+            </div>
+
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 7 }}>Incluye</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+              {INCLUYE_OPC.map(function (x) {
+                var on = incluye.indexOf(x) >= 0;
+                return <span key={x} onClick={function () { toggleInc(x); }} style={{ fontSize: 11.5, borderRadius: 999, padding: '6px 11px', cursor: 'pointer', background: on ? '#e1f5ee' : '#fff', color: on ? '#0f6e56' : '#7c8499', border: '1px solid ' + (on ? '#bfe6cf' : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + x}</span>;
+              })}
+            </div>
+
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 6 }}>Descripción del trabajo{modo === 'cerrado' ? '' : ' (opcional)'}</div>
+            <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); }} placeholder="Resume el trabajo en 1-2 líneas (la ve el cliente)." rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13.5, marginBottom: 10 }} />
+
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#5b6275', marginBottom: 6 }}>Condiciones</div>
+            <textarea value={condiciones} onChange={function (e) { setCondiciones(e.target.value); }} placeholder="Validez, qué no incluye, trabajos adicionales…" rows={2} style={{ ...inp, resize: 'vertical', fontSize: 13.5 }} />
+
+            {msg && <p style={{ fontSize: 12.5, color: '#b3261e', margin: '12px 0 0' }}>{msg}</p>}
+          </div>
+        </div>
+
+        <div style={bottombar}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, color: '#9aa1b5' }}>Total al cliente</div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>{plata(total())}</div>
+          </div>
+          <button className="gbtn" style={{ flex: 1.3, padding: 13, opacity: enviando ? 0.6 : 1 }} disabled={enviando} onClick={function () { responder(sel); }}>{enviando ? 'Enviando...' : 'Enviar cotización'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
