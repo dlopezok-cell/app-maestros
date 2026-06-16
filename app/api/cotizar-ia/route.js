@@ -21,9 +21,11 @@ export async function POST(request) {
       'Con el oficio y la descripción del problema del cliente, propón una cotización DESGLOSADA y realista en pesos chilenos (CLP). ' +
       'Los montos son NETOS (sin IVA; el IVA se suma aparte). No exageres los precios; usa valores de mercado razonables en Chile. ' +
       'Devuelve EXCLUSIVAMENTE un JSON válido (sin texto antes ni después, sin ```), con esta forma exacta:\n' +
-      '{"items":[{"tipo":"mano_obra","desc":"Mano de obra","valor":30000},{"tipo":"material","desc":"Sifón PVC 40 mm","valor":8000}],' +
+      '{"descripcion":"Reparación de fuga bajo el lavaplatos: cambio de sifón y sellado.",' +
+      '"items":[{"tipo":"mano_obra","desc":"Mano de obra","valor":30000},{"tipo":"material","desc":"Sifón PVC 40 mm","valor":8000}],' +
       '"incluye":["Materiales","Garantía 30 días"],"condiciones":"Validez 15 días. No incluye obras no descritas."}\n' +
-      'Reglas: incluye 1 ítem de mano de obra y los materiales típicos del trabajo (máx 6 ítems en total), cada uno con su precio NETO estimado. ' +
+      'Reglas: "descripcion" es 1-2 líneas que resumen el trabajo en lenguaje claro para el cliente. ' +
+      'incluye 1 ítem de mano de obra y los materiales típicos del trabajo (máx 6 ítems en total), cada uno con su precio NETO estimado. ' +
       '"incluye" son etiquetas cortas elegidas SOLO de esta lista: Materiales, Mano de obra, Garantía 30 días, Boleta, Retiro de escombros, Visita incluida. ' +
       '"condiciones" es UNA línea breve (validez y qué no incluye). No inventes datos del cliente.\n\n' +
       'Oficio: ' + (oficio || 'no indicado') + '\n' +
@@ -55,8 +57,9 @@ export async function POST(request) {
     const permitidas = ['Materiales', 'Mano de obra', 'Garantía 30 días', 'Boleta', 'Retiro de escombros', 'Visita incluida'];
     const incluye = Array.isArray(data.incluye) ? data.incluye.filter(function (x) { return permitidas.indexOf(x) >= 0; }) : [];
     const condiciones = (data.condiciones || '').toString().slice(0, 200);
+    const descripcion = (data.descripcion || '').toString().slice(0, 300);
 
-    return Response.json({ items: items, incluye: incluye, condiciones: condiciones });
+    return Response.json({ descripcion: descripcion, items: items, incluye: incluye, condiciones: condiciones });
   } catch (e) {
     return Response.json({ error: 'Error inesperado: ' + String(e) }, { status: 500 });
   }
