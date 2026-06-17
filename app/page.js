@@ -34,6 +34,7 @@ const [q, setQ] = useState('');
 const [buscado, setBuscado] = useState('');
 const [resenas, setResenas] = useState([]);
 const [portada, setPortada] = useState(undefined); // undefined = cargando
+const [noLeidosCli, setNoLeidosCli] = useState(0);  // mensajes de maestros sin leer (badge)
 
 useEffect(function () {
 supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
@@ -54,6 +55,18 @@ supabase.from('maestros').select('id, oficio, oficios, descripcion, rating_prome
 supabase.from('resenas').select('maestro_id, estrellas, comentario, creado_en')
 .then(function (r) { setResenas(r.data || []); });
 }, []);
+
+useEffect(function () {
+if (!usuario) return;
+function contar() {
+supabase.from('mensajes').select('id, presupuestos!inner(cliente_id)', { count: 'exact', head: true })
+.eq('autor_rol', 'maestro').eq('leido', false).eq('presupuestos.cliente_id', usuario.id)
+.then(function (r) { setNoLeidosCli(r.count || 0); });
+}
+contar();
+var iv = setInterval(contar, 20000);
+return function () { clearInterval(iv); };
+}, [usuario, vista]);
 
 function ratingDe(id) {
 var rs = resenas.filter(function (x) { return x.maestro_id === id; });
@@ -107,7 +120,7 @@ return (
 <div className="tabbar">
 <div className={'tab' + (vista === 'inicio' || vista === 'ficha' ? ' on' : '')} onClick={function () { irTab('inicio'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
 <div className={'tab' + (vista === 'cotizar' ? ' on' : '')} onClick={function () { irTab('cotizar'); }}><span className="ti">{'➕'}</span>Cotizar</div>
-<div className={'tab' + (vista === 'mias' ? ' on' : '')} onClick={function () { irTab('mias'); }}><span className="ti">{'\u{1F4CB}'}</span>Mis cotizaciones</div>
+<div className={'tab' + (vista === 'mias' ? ' on' : '')} onClick={function () { irTab('mias'); }}><span className="ti" style={{ position: 'relative', display: 'inline-block' }}>{'\u{1F4CB}'}{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#ff5a3c', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}</span>Mis cotizaciones</div>
 <div className={'tab' + (vista === 'cuenta' ? ' on' : '')} onClick={function () { irTab('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
 </div>
 );
