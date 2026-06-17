@@ -466,8 +466,18 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
               </div>
 
               {miaSel === s.id && (
-              <div style={{ marginTop: 8 }}>
-              <MediaCarrusel items={(s.archivos && s.archivos.length) ? s.archivos : (s.video_url ? [{ url: s.video_url, tipo: 'video' }] : [])} alto={220} />
+              <div style={{ position: 'fixed', inset: 0, zIndex: 250, background: '#fff', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px', paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))', borderBottom: '1px solid #eef0f5', flexShrink: 0 }}>
+                <button onClick={function () { setMiaSel(null); }} style={{ border: 'none', background: 'none', color: '#ff5a3c', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>{'‹'}</button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloMia(s)}</div>
+                  <div style={{ fontSize: 11, color: '#9aa1b5' }}>{(s.oficio ? (s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) + ' · ') : '') + fecha(s.creado_en)}</div>
+                </div>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 7, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#fff9f0'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800, whiteSpace: 'nowrap' }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZ.' : 'ESPERANDO')}</span>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 16px 24px' }}>
+              {s.descripcion && <div style={{ fontSize: 13, color: '#5b6275', margin: '12px 0 2px', lineHeight: 1.5 }}>{s.descripcion}</div>}
+              <MediaCarrusel items={(s.archivos && s.archivos.length) ? s.archivos : (s.video_url ? [{ url: s.video_url, tipo: 'video' }] : [])} alto={260} />
 
               {!cerrado && conMonto > 1 && <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', borderRadius: 10, padding: '8px 10px', margin: '8px 0 2px' }}>{'\u{1F50D}'} Recibiste varias cotizaciones. Ábrelas, compáralas y elige la que más te convenga.</div>}
               {maestroIds.length === 0 && <div style={{ fontSize: 12.5, color: '#9aa1b5', margin: '10px 0 2px' }}>Aún no recibes cotizaciones. Te avisaremos cuando un maestro responda.</div>}
@@ -559,6 +569,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                   </div>
                 );
               })}
+              </div>
               </div>
               )}
             </div>
