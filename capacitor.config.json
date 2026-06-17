@@ -4,7 +4,18 @@
   "webDir": "www",
   "server": {
     "url": "https://www.maestrosenlinea.cl/?app=1",
-    "cleartext": false
+    "cleartext": false,
+    "allowNavigation": [
+      "www.maestrosenlinea.cl",
+      "maestrosenlinea.cl",
+      "appleid.apple.com",
+      "*.apple.com",
+      "accounts.google.com",
+      "*.google.com",
+      "*.googleusercontent.com",
+      "hwacptgxkzovesgduuma.supabase.co",
+      "*.supabase.co"
+    ]
   },
   "ios": {
     "contentInset": "always",
