@@ -203,6 +203,9 @@ export default function PresupuestosMaestro({ usuario }) {
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
   function telCL(t) { var d = (t || '').replace(/[^0-9]/g, ''); if (d.indexOf('56') !== 0) { if (d.length === 9) d = '56' + d; else if (d.length === 8) d = '569' + d; else d = '56' + d; } return d; }
   function telBonito(t) { var d = telCL(t); if (d.length === 11 && d.slice(0, 3) === '569') return '+56 9 ' + d.slice(3, 7) + ' ' + d.slice(7); return '+' + d; }
+  function waContactado(key) { try { return !!window.localStorage.getItem('wa1_' + key); } catch (e) { return false; } }
+  function waHref(tel, titulo, key) { var base = 'https://wa.me/' + telCL(tel); if (waContactado(key)) return base; var msg = 'Hola, le escribo de MaestrosEnLínea por su solicitud "' + (titulo || '') + '". ¿Coordinamos?'; return base + '?text=' + encodeURIComponent(msg); }
+  function waMarcar(key) { try { window.localStorage.setItem('wa1_' + key, '1'); } catch (e) {} }
   function mediaDe(p) { return (p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : []); }
   function yaRespondida(p) { return (p.cotizaciones || []).length > 0; }
   function ofTit(p) { return (p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1); }
@@ -356,7 +359,7 @@ export default function PresupuestosMaestro({ usuario }) {
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                     <a href={'tel:+' + telNum} style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 9, padding: '9px 0', fontSize: 13, fontWeight: 800 }}>{'\u{1F4DE} Llamar'}</a>
-                    <a href={'https://wa.me/' + telNum} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 9, padding: '9px 0', fontSize: 13, fontWeight: 800 }}>{'\u{1F4AC} WhatsApp'}</a>
+                    <a href={waHref(rt.cliente_telefono, rt.titulo || rt.descripcion_problema, rt.id)} onClick={function () { waMarcar(rt.id); }} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 9, padding: '9px 0', fontSize: 13, fontWeight: 800 }}>{'\u{1F4AC} WhatsApp'}</a>
                   </div>
                 </div>
                 {rt.direccion && (
