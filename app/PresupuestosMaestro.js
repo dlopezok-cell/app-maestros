@@ -75,7 +75,14 @@ export default function PresupuestosMaestro({ usuario }) {
             supabase.from('reservas').select('id, presupuesto_id').eq('maestro_id', usuario.id).then(function (rb) {
               var mp = {}; (rb.data || []).forEach(function (x) { mp[x.id] = x.presupuesto_id; });
               rows.forEach(function (r) { if (!r.presupuesto_id) r.presupuesto_id = mp[r.id]; });
-              setAceptadas(rows);
+              var pids = rows.map(function (r) { return r.presupuesto_id; }).filter(Boolean);
+              if (pids.length) {
+                supabase.from('presupuestos').select('id, titulo').in('id', pids).then(function (rp) {
+                  var tm = {}; (rp.data || []).forEach(function (x) { tm[x.id] = x.titulo; });
+                  rows.forEach(function (r) { if (tm[r.presupuesto_id]) r.titulo = tm[r.presupuesto_id]; });
+                  setAceptadas(rows);
+                });
+              } else { setAceptadas(rows); }
             });
           });
         } else { setEsMaestro(false); setCargado(true); }
@@ -268,7 +275,7 @@ export default function PresupuestosMaestro({ usuario }) {
                   <div style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0, background: '#e8f7ef', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 20 }}>{'\u{1F6E0}️'}</span></div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                      <b style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.descripcion_problema || 'Trabajo'}</b>
+                      <b style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.titulo || t.descripcion_problema || 'Trabajo'}</b>
                       <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 7, background: '#e1f5ee', color: '#0f6e56', whiteSpace: 'nowrap' }}>Cotización aceptada</span>
                     </div>
                     <div style={{ fontSize: 12.5, color: '#0d9456', fontWeight: 800, margin: '1px 0' }}>{plata(t.precio_cotizado)}</div>
@@ -324,7 +331,7 @@ export default function PresupuestosMaestro({ usuario }) {
         <div style={topbar}>
           <button onClick={function () { setVista('lista'); setResSel(null); }} style={back}>{'‹'}</button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rt.descripcion_problema || 'Trabajo'}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rt.titulo || rt.descripcion_problema || 'Trabajo'}</div>
             <div style={{ fontSize: 11, color: '#9aa1b5' }}>{'\u{1F464} ' + (rt.cliente_nombre || 'Cliente')}</div>
           </div>
           <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 7, background: '#e1f5ee', color: '#0f6e56', whiteSpace: 'nowrap' }}>Cotización aceptada</span>
