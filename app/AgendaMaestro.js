@@ -50,7 +50,7 @@ export default function AgendaMaestro({ usuario }) {
     var t = props.t;
     var d = fechaDe(t);
     var c = estadoColor(t.estado);
-    var w = wa(t), m = mapa(t);
+    var m = mapa(t);
     return (
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -66,7 +66,6 @@ export default function AgendaMaestro({ usuario }) {
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {tel(t) && <a href={'tel:' + tel(t)} style={{ flex: 1, minWidth: 90, textAlign: 'center', textDecoration: 'none', background: '#fff', border: '1px solid #e4e4ef', borderRadius: 10, padding: '8px 0', fontSize: 12.5, fontWeight: 800, color: '#1c1f2b' }}>{'\u{1F4DE} Llamar'}</a>}
-          {w && <a href={w} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 90, textAlign: 'center', textDecoration: 'none', background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '8px 0', fontSize: 12.5, fontWeight: 800, color: '#0d9456' }}>{'\u{1F4AC} WhatsApp'}</a>}
           {m && <a href={m} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 90, textAlign: 'center', textDecoration: 'none', background: '#e9f1ff', border: '1px solid #c5dafa', borderRadius: 10, padding: '8px 0', fontSize: 12.5, fontWeight: 800, color: '#2b5fd0' }}>{'\u{1F5FA} Mapa'}</a>}
         </div>
       </div>

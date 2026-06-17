@@ -6,7 +6,7 @@ import { subirACloudinary } from '../lib/cloudinary';
 // Chat cliente <-> maestro, a pantalla completa, con look propio de la marca.
 // Texto + imagen + video + audio (grabado), sonido y notificación al recibir.
 // Oculta datos de contacto hasta el pago (modelo Airbnb). Solo in-app.
-export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRol, titulo, onClose }) {
+export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRol, titulo, onClose, contacto }) {
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -172,6 +172,14 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       <div style={{ background: oculto ? '#fff3cd' : '#fbf7ee', color: oculto ? '#8a5a00' : '#8a7a3a', fontSize: 10.5, lineHeight: 1.4, padding: '6px 12px', textAlign: 'center' }}>
         {oculto ? '⚠️ Ocultamos un dato de contacto. El teléfono y la dirección se comparten al pagar.' : '🔒 Mantén la conversación aquí. Teléfonos y correos se ocultan hasta pagar.'}
       </div>
+
+      {/* Contacto revelado (trabajo pagado): teléfono para llamar + dirección. Sin WhatsApp. */}
+      {contacto && (contacto.telefono || contacto.direccion) && (
+        <div style={{ background: '#e8f7ef', borderBottom: '1px solid #bfe6cf', padding: '9px 12px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {contacto.telefono && <a href={'tel:' + (contacto.telefono || '').replace(/[^0-9+]/g, '')} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 800 }}>{'\u{1F4DE} Llamar ' + contacto.telefono}</a>}
+          {contacto.direccion && <span style={{ fontSize: 11.5, color: '#0d7a4f', fontWeight: 700 }}>{'\u{1F4CD} ' + contacto.direccion}</span>}
+        </div>
+      )}
 
       {/* Mensajes */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px 12px 6px' }}>

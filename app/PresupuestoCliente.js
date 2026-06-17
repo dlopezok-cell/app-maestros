@@ -27,6 +27,9 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   const [chatKey, setChatKey] = useState(null);
   const [hojaKey, setHojaKey] = useState(null);     // cotización abierta (hoja)
   const [miaSel, setMiaSel] = useState(null);       // solicitud expandida en la lista
+  const [tabMia, setTabMia] = useState('activas');  // 'activas' | 'pagadas'
+  const [presMap, setPresMap] = useState({});       // reserva.id -> presupuesto_id
+  const [chatPagado, setChatPagado] = useState(null); // chat de un trabajo pagado {presupuestoId, maestroId, titulo, telefono}
   const [infoPago, setInfoPago] = useState(false);  // modal "pago protegido"
   const [pagando, setPagando] = useState(false);
   const [reservas, setReservas] = useState([]);
@@ -108,6 +111,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     supabase.from('perfiles').select('*').eq('id', usuario.id).maybeSingle()
       .then(function (r) { setPerfil(r.data || null); });
     cargarReservas();
+    supabase.from('reservas').select('id, presupuesto_id').eq('cliente_id', usuario.id)
+      .then(function (r) { var m = {}; (r.data || []).forEach(function (x) { m[x.id] = x.presupuesto_id; }); setPresMap(m); });
     supabase.from('resenas').select('maestro_id').eq('cliente_id', usuario.id)
       .then(function (r) { setResenas(r.data || []); });
     cargarSolicitudes();
@@ -224,6 +229,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     supabase.from('reservas').insert({
       cliente_id: usuario.id,
       maestro_id: c.maestro_id,
+      presupuesto_id: s.id,
       descripcion_problema: s.descripcion,
       direccion: s.direccion,
       estado: 'pendiente_pago',
@@ -340,7 +346,20 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
       </div>
       )}
 
-      {soloLista && porCalificar.length > 0 && (
+      {soloLista && (
+        <div style={{ display: 'flex', gap: 8, padding: '0 2px 12px' }}>
+          {[['activas', 'Activas'], ['pagadas', 'Pagadas']].map(function (o) {
+            var on = tabMia === o[0];
+            return <button key={o[0]} onClick={function () { setTabMia(o[0]); }} style={{ border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 800, padding: '8px 16px', borderRadius: 999, background: on ? '#ff5a3c' : '#f2f3f7', color: on ? '#fff' : '#7c8499' }}>{o[1]}</button>;
+          })}
+        </div>
+      )}
+
+      {soloLista && tabMia === 'pagadas' && porCalificar.length === 0 && agendados.length === 0 && (
+        <div style={card}><p style={{ fontSize: 13, color: '#9aa1b5', margin: 0 }}>Aún no tienes trabajos pagados. Cuando aceptes y pagues una cotización, aparecerá aquí con los datos de contacto del maestro.</p></div>
+      )}
+
+      {soloLista && tabMia === 'pagadas' && porCalificar.length > 0 && (
         <div style={card}>
           <b style={{ fontSize: 15 }}>{'⭐ Califica a tus maestros'}</b>
           <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Tu opinión ayuda a otros clientes a elegir bien.</div>
@@ -361,7 +380,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         </div>
       )}
 
-      {soloLista && agendados.length > 0 && (
+      {soloLista && tabMia === 'pagadas' && agendados.length > 0 && (
         <div style={card}>
           <b style={{ fontSize: 15 }}>{'\u{1F6E0}️ Mis trabajos pagados'}</b>
           <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>Coordina la fecha con el maestro. Cuando termine, confirma para liberar el pago.</div>
@@ -383,7 +402,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 {pagado && rv.maestro_telefono && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '8px 10px', marginTop: 8 }}>
                     <span style={{ fontSize: 12.5, color: '#0d7a4f', fontWeight: 700, flex: 1 }}>{'\u{1F4DE} ' + rv.maestro_telefono}</span>
-                    <a href={waLink(rv.maestro_telefono)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>WhatsApp</a>
+                    {presMap[rv.id] && <button onClick={function () { setChatPagado({ presupuestoId: presMap[rv.id], maestroId: rv.maestro_id, titulo: rv.maestro_nombre || nombreMaestro(rv.maestro_id), telefono: rv.maestro_telefono }); }} style={{ background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F4AC} Chat'}</button>}
                     <a href={'tel:' + (rv.maestro_telefono || '').replace(/[^0-9+]/g, '')} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>Llamar</a>
                   </div>
                 )}
@@ -417,11 +436,11 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         </div>
       )}
 
-      {soloLista && (
+      {soloLista && tabMia === 'activas' && (
       <div style={card}>
-        <b style={{ fontSize: 15 }}>{'\u{1F4CB} Mis cotizaciones'}</b>
-        {solicitudes.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no has enviado solicitudes. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
-        {solicitudes.map(function (s) {
+        <b style={{ fontSize: 15 }}>{'\u{1F4CB} Mis solicitudes'}</b>
+        {solicitudes.filter(function (s) { return s.estado !== 'cerrado'; }).length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>No tienes solicitudes activas. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
+        {solicitudes.filter(function (s) { return s.estado !== 'cerrado'; }).map(function (s) {
           var cots = s.cotizaciones || [];
           var msgs = mensajesPorPres[s.id] || [];
           var maestroIds = [];
@@ -547,6 +566,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         })}
       </div>
       )}
+
+      {chatPagado && <ChatCotizacion usuario={usuario} presupuestoId={chatPagado.presupuestoId} maestroId={chatPagado.maestroId} miRol="cliente" titulo={chatPagado.titulo} contacto={{ telefono: chatPagado.telefono }} onClose={function () { setChatPagado(null); }} />}
 
       {infoPago && (
         <div onClick={function () { setInfoPago(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>

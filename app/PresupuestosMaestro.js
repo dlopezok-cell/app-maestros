@@ -70,7 +70,14 @@ export default function PresupuestosMaestro({ usuario }) {
         if (r.data) {
           var ofs = r.data.oficios && r.data.oficios.length ? r.data.oficios : (r.data.oficio ? [r.data.oficio] : []);
           setEsMaestro(true); setMisOficios(ofs); cargar(ofs);
-          supabase.rpc('agenda_maestro').then(function (ra) { setAceptadas(ra.error ? [] : (ra.data || [])); });
+          supabase.rpc('agenda_maestro').then(function (ra) {
+            var rows = ra.error ? [] : (ra.data || []);
+            supabase.from('reservas').select('id, presupuesto_id').eq('maestro_id', usuario.id).then(function (rb) {
+              var mp = {}; (rb.data || []).forEach(function (x) { mp[x.id] = x.presupuesto_id; });
+              rows.forEach(function (r) { if (!r.presupuesto_id) r.presupuesto_id = mp[r.id]; });
+              setAceptadas(rows);
+            });
+          });
         } else { setEsMaestro(false); setCargado(true); }
       });
   }, [usuario]);
@@ -356,7 +363,7 @@ export default function PresupuestosMaestro({ usuario }) {
             <button onClick={function () { setChatId(rt.presupuesto_id); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar'}</button>
           </div>
         )}
-        {chatId && rt.presupuesto_id && chatId === rt.presupuesto_id && <ChatCotizacion usuario={usuario} presupuestoId={rt.presupuesto_id} maestroId={usuario.id} miRol="maestro" titulo={rt.cliente_nombre || 'Cliente'} onClose={function () { setChatId(null); }} />}
+        {chatId && rt.presupuesto_id && chatId === rt.presupuesto_id && <ChatCotizacion usuario={usuario} presupuestoId={rt.presupuesto_id} maestroId={usuario.id} miRol="maestro" titulo={rt.cliente_nombre || 'Cliente'} contacto={{ telefono: rt.cliente_telefono, direccion: rt.direccion }} onClose={function () { setChatId(null); }} />}
       </div>
     );
   }
