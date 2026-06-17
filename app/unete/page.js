@@ -8,7 +8,9 @@ export default function Unete() {
   const [cats, setCats] = useState([]);
   const [nombre, setNombre] = useState('');
   const [oficio, setOficio] = useState('');
+  const [oficioOtro, setOficioOtro] = useState('');
   const [comuna, setComuna] = useState('');
+  const REGIONES = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'];
   const [tel, setTel] = useState('');
   const [ref, setRef] = useState('');
   const [msg, setMsg] = useState(null);
@@ -28,17 +30,19 @@ export default function Unete() {
     if (!nombre.trim()) { setMsg('Escribe tu nombre'); return; }
     var n = (tel || '').replace(/\D/g, '');
     if (n.length < 8) { setMsg('Escribe tu WhatsApp (8 dígitos)'); return; }
+    if (oficio === 'Otro' && !oficioOtro.trim()) { setMsg('Especifica tu oficio'); return; }
+    var oficioFinal = oficio === 'Otro' ? oficioOtro.trim() : oficio;
     setEnviando(true); setMsg('Enviando...');
     supabase.from('maestros_interesados').insert({
       nombre: nombre.trim(),
-      oficio: oficio || null,
+      oficio: oficioFinal || null,
       comuna: comuna.trim() || null,
       whatsapp: '+56 9 ' + n.slice(-8),
       referido_por: ref.trim() || null,
     }).then(function (r) {
       setEnviando(false);
       if (r.error) { setMsg('Error: ' + r.error.message); return; }
-      try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'maestro_interesado', nombre: nombre.trim(), oficio: oficio, comuna: comuna }) }); } catch (e) {}
+      try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'maestro_interesado', nombre: nombre.trim(), oficio: oficioFinal, comuna: comuna }) }); } catch (e) {}
       setOk(true);
     });
   }
@@ -106,7 +110,14 @@ export default function Unete() {
             {cats.map(function (c) { return <option key={c.slug} value={c.valor}>{c.valor}</option>; })}
             <option value="Otro">Otro</option>
           </select>
-          <input value={comuna} onChange={function (e) { setComuna(e.target.value); }} placeholder="¿En qué comuna trabajas?" style={inp} />
+          {oficio === 'Otro' && (
+            <input value={oficioOtro} onChange={function (e) { setOficioOtro(e.target.value); }} placeholder="Especifica tu oficio (ej: Cerrajería)" autoFocus style={{ ...inp, border: '1.5px solid #ff5a3c' }} />
+          )}
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Tu región</label>
+          <select value={comuna} onChange={function (e) { setComuna(e.target.value); }} style={{ ...inp, marginTop: 4, color: comuna ? '#16181f' : '#9aa1b5' }}>
+            <option value="">Selecciona tu región</option>
+            {REGIONES.map(function (r) { return <option key={r} value={r} style={{ color: '#16181f' }}>{r}</option>; })}
+          </select>
           <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Tu WhatsApp</label>
           <div style={{ display: 'flex', gap: 8, marginTop: 4, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0 11px', background: '#f5f5f7', borderRadius: 12, fontSize: 14, fontWeight: 700, color: '#41434d' }}>{'\u{1F1E8}\u{1F1F1} +56 9'}</div>
