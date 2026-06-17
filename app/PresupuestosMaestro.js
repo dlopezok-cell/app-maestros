@@ -19,9 +19,11 @@ export default function PresupuestosMaestro({ usuario }) {
   const [items, setItems] = useState([]);
   const [cargado, setCargado] = useState(false);
 
-  const [vista, setVista] = useState('lista');   // 'lista' | 'detalle' | 'cotizar'
+  const [vista, setVista] = useState('lista');   // 'lista' | 'detalle' | 'cotizar' | 'reserva'
   const [sel, setSel] = useState(null);
-  const [filtro, setFiltro] = useState('nuevas');
+  const [filtro, setFiltro] = useState('nuevas'); // 'nuevas' | 'cotizadas' | 'aceptadas'
+  const [aceptadas, setAceptadas] = useState([]); // trabajos con cotización aceptada (pagados)
+  const [resSel, setResSel] = useState(null);     // reserva seleccionada
 
   const [lineas, setLineas] = useState([]);       // [{tipo:'mano_obra'|'material', desc, valor}]
   const [incluye, setIncluye] = useState([]);
@@ -68,6 +70,7 @@ export default function PresupuestosMaestro({ usuario }) {
         if (r.data) {
           var ofs = r.data.oficios && r.data.oficios.length ? r.data.oficios : (r.data.oficio ? [r.data.oficio] : []);
           setEsMaestro(true); setMisOficios(ofs); cargar(ofs);
+          supabase.rpc('agenda_maestro').then(function (ra) { setAceptadas(ra.error ? [] : (ra.data || [])); });
         } else { setEsMaestro(false); setCargado(true); }
       });
   }, [usuario]);
@@ -246,8 +249,31 @@ export default function PresupuestosMaestro({ usuario }) {
         <div style={{ display: 'flex', gap: 8, padding: '12px 16px 6px' }}>
           <Tab id="nuevas" label="Nuevas" n={nuevas.length} />
           <Tab id="cotizadas" label="Cotizadas" n={cotizadas.length} />
+          <Tab id="aceptadas" label="Aceptadas" n={aceptadas.length} />
         </div>
 
+        {filtro === 'aceptadas' ? (
+          <div style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {aceptadas.length === 0 && <div style={{ background: '#fff', borderRadius: 16, padding: 16, margin: '4px 4px', border: '1.5px solid #eee', fontSize: 13, color: '#9aa1b5' }}>Aún no tienes cotizaciones aceptadas. Cuando un cliente acepte y pague, aparecerá aquí con sus datos de contacto.</div>}
+            {aceptadas.map(function (t) {
+              return (
+                <div key={t.id} onClick={function () { setResSel(t); setVista('reserva'); window.scrollTo(0, 0); }} style={{ display: 'flex', gap: 10, alignItems: 'center', background: '#fff', border: '1.5px solid #eef0f5', borderRadius: 14, padding: 10, cursor: 'pointer' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0, background: '#e8f7ef', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 20 }}>{'\u{1F6E0}️'}</span></div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                      <b style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.descripcion_problema || 'Trabajo'}</b>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 7, background: '#e1f5ee', color: '#0f6e56', whiteSpace: 'nowrap' }}>Cotización aceptada</span>
+                    </div>
+                    <div style={{ fontSize: 12.5, color: '#0d9456', fontWeight: 800, margin: '1px 0' }}>{plata(t.precio_cotizado)}</div>
+                    <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{'\u{1F464} ' + (t.cliente_nombre || 'Cliente') + (t.fecha_hora ? ' · ' + fecha(t.fecha_hora) : ' · fecha por coordinar')}</div>
+                  </div>
+                  <span style={{ color: '#c5c9d6', fontSize: 20, flexShrink: 0 }}>{'›'}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+        <div>
         {listaF.length === 0 && (
           <div style={{ background: '#fff', borderRadius: 16, padding: 16, margin: '8px 16px', border: '1.5px solid #eee', fontSize: 13, color: '#9aa1b5' }}>
             {filtro === 'nuevas' ? 'No hay solicitudes nuevas por ahora. Te avisaremos cuando llegue un video.' : 'Aún no has enviado cotizaciones.'}
@@ -275,6 +301,62 @@ export default function PresupuestosMaestro({ usuario }) {
             );
           })}
         </div>
+        </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- RESERVA (cotización aceptada / pagada) ----------
+  if (vista === 'reserva' && resSel) {
+    var rt = resSel;
+    var telNum = (rt.cliente_telefono || '').replace(/[^0-9+]/g, '');
+    var mapaUrl = rt.direccion ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(rt.direccion) : null;
+    return (
+      <div style={pantalla}>
+        <div style={topbar}>
+          <button onClick={function () { setVista('lista'); setResSel(null); }} style={back}>{'‹'}</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rt.descripcion_problema || 'Trabajo'}</div>
+            <div style={{ fontSize: 11, color: '#9aa1b5' }}>{'\u{1F464} ' + (rt.cliente_nombre || 'Cliente')}</div>
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 7, background: '#e1f5ee', color: '#0f6e56', whiteSpace: 'nowrap' }}>Cotización aceptada</span>
+        </div>
+        <div style={scroll}>
+          <div style={{ padding: '14px 16px' }}>
+            <div style={{ background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: '#9aa1b5' }}>Precio acordado</div>
+              <div style={{ fontSize: 22, fontWeight: 800 }}>{plata(rt.precio_cotizado)}</div>
+              <div style={{ fontSize: 12, color: rt.fecha_hora ? '#0d7a4f' : '#b07a1e', fontWeight: 700, marginTop: 4 }}>{rt.fecha_hora ? ('\u{1F4C5} ' + fecha(rt.fecha_hora)) : '\u{1F4C5} Fecha por coordinar'}</div>
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#5b6275', marginBottom: 8 }}>Datos de contacto</div>
+            {telNum ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: '11px 13px' }}>
+                  <span style={{ fontSize: 16 }}>{'\u{1F4DE}'}</span>
+                  <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#9aa1b5' }}>Teléfono</div><div style={{ fontSize: 14, fontWeight: 700 }}>{rt.cliente_telefono}</div></div>
+                  <a href={'tel:' + telNum} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 9, padding: '8px 14px', fontSize: 13, fontWeight: 800 }}>Llamar</a>
+                </div>
+                {rt.direccion && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: '11px 13px' }}>
+                    <span style={{ fontSize: 16 }}>{'\u{1F4CD}'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 11, color: '#9aa1b5' }}>Dirección</div><div style={{ fontSize: 13.5 }}>{rt.direccion}</div></div>
+                    {mapaUrl && <a href={mapaUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#e9f1ff', color: '#2b5fd0', border: '1px solid #c5dafa', borderRadius: 9, padding: '8px 12px', fontSize: 12.5, fontWeight: 800 }}>Mapa</a>}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12.5, color: '#8a5a00', background: '#fff7ea', border: '1px solid #ffe2b8', borderRadius: 10, padding: '10px 12px' }}>{'\u{1F512} El teléfono y la dirección aparecen cuando el pago queda confirmado.'}</div>
+            )}
+          </div>
+        </div>
+        {rt.presupuesto_id && (
+          <div style={bottombar}>
+            <button onClick={function () { setChatId(rt.presupuesto_id); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar'}</button>
+          </div>
+        )}
+        {chatId && rt.presupuesto_id && chatId === rt.presupuesto_id && <ChatCotizacion usuario={usuario} presupuestoId={rt.presupuesto_id} maestroId={usuario.id} miRol="maestro" titulo={rt.cliente_nombre || 'Cliente'} onClose={function () { setChatId(null); }} />}
       </div>
     );
   }
