@@ -448,6 +448,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
           msgs.forEach(function (m) { if (maestroIds.indexOf(m.maestro_id) < 0) maestroIds.push(m.maestro_id); });
           var cerrado = s.estado === 'cerrado';
           var conMonto = cots.filter(function (c) { return c.monto; }).length;
+          var cotsNum = cots.filter(function (x) { return x.monto; }).slice().sort(function (a, b) { return new Date(a.creado_en || 0) - new Date(b.creado_en || 0); });
           return (
             <div key={s.id} style={{ borderTop: '1px solid #f1f1f1', padding: '11px 0' }}>
               <div onClick={function () { setMiaSel(miaSel === s.id ? null : s.id); setMsg(null); }} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
@@ -487,8 +488,11 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 var unread = msgs.filter(function (m) { return m.maestro_id === mid && m.autor_rol === 'maestro' && !m.leido; }).length;
                 var ck = s.id + '|' + mid;
                 var abierta = hojaKey === ck;
+                var ni = cotsNum.findIndex(function (x) { return x.maestro_id === mid; });
+                var numCot = ni >= 0 ? ni + 1 : null;
                 return (
                   <div key={mid} style={{ border: '1.5px solid ' + (abierta ? '#ffd6cb' : '#eef0f5'), borderRadius: 14, padding: 12, marginTop: 8, background: '#fff' }}>
+                    {numCot && <div style={{ fontSize: 10, fontWeight: 800, color: '#D85A30', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>{'Cotización ' + numCot}</div>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar id={mid} size={38} />
                       <div style={{ flex: 1, lineHeight: 1.3 }}>
