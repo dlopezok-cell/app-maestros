@@ -10,7 +10,6 @@ import AgendaMaestro from '../AgendaMaestro';
 import GananciasMaestro from '../GananciasMaestro';
 import AccesoMaestro from '../AccesoMaestro';
 import ComunicadosBanner from '../ComunicadosBanner';
-import EliminarCuenta from '../EliminarCuenta';
 
 // App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
 // cuenta y arme su ficha. Navega por pestañas: Perfil · Solicitudes · Agenda · Ganancias.
@@ -18,6 +17,7 @@ export default function Maestros() {
   const [usuario, setUsuario] = useState(null);
   const [cargado, setCargado] = useState(false);
   const [pestana, setPestana] = useState('perfil');
+  const [noLeidos, setNoLeidos] = useState(0); // mensajes de clientes sin leer (badge)
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) {
@@ -25,6 +25,18 @@ export default function Maestros() {
       setCargado(true);
     });
   }, []);
+
+  useEffect(function () {
+    if (!usuario) return;
+    function contar() {
+      supabase.from('mensajes').select('id', { count: 'exact', head: true })
+        .eq('maestro_id', usuario.id).eq('autor_rol', 'cliente').eq('leido', false)
+        .then(function (r) { setNoLeidos(r.count || 0); });
+    }
+    contar();
+    var iv = setInterval(contar, 20000);
+    return function () { clearInterval(iv); };
+  }, [usuario, pestana]);
 
   function salir() {
     supabase.auth.signOut().then(function () { setUsuario(null); });
@@ -39,7 +51,11 @@ export default function Maestros() {
     var on = pestana === props.id;
     return (
       <div className={'tab' + (on ? ' on' : '')} onClick={function () { setPestana(props.id); window.scrollTo(0, 0); }}>
-        <span className="ti">{props.icono}</span>{props.nombre}
+        <span className="ti" style={{ position: 'relative', display: 'inline-block' }}>
+          {props.icono}
+          {props.badge > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#ff5a3c', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{props.badge > 9 ? '9+' : props.badge}</span>}
+        </span>
+        {props.nombre}
       </div>
     );
   }
@@ -50,46 +66,11 @@ export default function Maestros() {
         <div>
           <CabeceraMaestro usuario={usuario} />
           <ComunicadosBanner segmento="maestros" />
-
-          {/* Paso 1: Ficha */}
-          <div className="body" style={{ paddingTop: 12, paddingBottom: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#ede9fb', color: '#534ab7', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
-              <b style={{ fontSize: 15 }}>Tu ficha de maestro</b>
-            </div>
-            <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 2 }}>Oficios, descripción, precios y zonas.</div>
-          </div>
-          <RegistroMaestro usuario={usuario} />
-
-          {/* Paso 2: Galería */}
-          <div className="body" style={{ paddingTop: 12, paddingBottom: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#f0f0f3', color: '#5f5e5a', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
-              <b style={{ fontSize: 15 }}>Tus trabajos</b>
-              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9aa1b5' }}>opcional</span>
-            </div>
-            <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 2 }}>Sube fotos de tus trabajos cuando quieras.</div>
-          </div>
-          <GaleriaMaestro usuario={usuario} />
-
-          {/* Paso 3: Verificación (al final) */}
-          <div className="body" style={{ paddingTop: 12, paddingBottom: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#fdeccd', color: '#b07a1e', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
-              <b style={{ fontSize: 15 }}>Verifica tu identidad</b>
-            </div>
-            <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 2 }}>El último paso para activar tu sello verificado.</div>
-          </div>
           <Verificacion usuario={usuario} />
-
+          <GaleriaMaestro usuario={usuario} />
+          <RegistroMaestro usuario={usuario} />
           <div className="body" style={{ paddingTop: 4, paddingBottom: 90 }}>
             <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
-            <EliminarCuenta redirigir="/maestros" />
-            <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
-              <a href="/privacidad" style={{ color: '#9aa1b5', textDecoration: 'none' }}>Privacidad</a>
-              <span style={{ color: '#d4d7e0', margin: '0 8px' }}>·</span>
-              <a href="/terminos" style={{ color: '#9aa1b5', textDecoration: 'none' }}>Términos</a>
-            </div>
           </div>
         </div>
       )}
@@ -112,7 +93,7 @@ export default function Maestros() {
 
       <div className="tabbar">
         <Tab id="perfil" icono={'\u{1F6E0}'} nombre="Perfil" />
-        <Tab id="solicitudes" icono={'\u{1F4CB}'} nombre="Cotizaciones" />
+        <Tab id="solicitudes" icono={'\u{1F4CB}'} nombre="Cotizaciones" badge={noLeidos} />
         <Tab id="agenda" icono={'\u{1F4C5}'} nombre="Agenda" />
         <Tab id="ganancias" icono={'\u{1F4B0}'} nombre="Ganancias" />
       </div>
