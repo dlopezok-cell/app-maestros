@@ -50,7 +50,7 @@ if (pg) { setPagoMsg(pg); setVista('mias'); window.history.replaceState({}, '', 
 }
 supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
 .then(function (r) { setCats(r.data || []); });
-supabase.from('maestros').select('id, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comuna, region, verificado, perfiles(nombre, avatar_url)')
+supabase.from('maestros').select('id, nombre, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comuna, region, verificado')
 .then(function (r) { setMaestros(r.data || []); });
 supabase.from('resenas').select('maestro_id, estrellas, comentario, creado_en')
 .then(function (r) { setResenas(r.data || []); });
@@ -94,7 +94,7 @@ supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: typeof
 }
 function salir() { supabase.auth.signOut().then(function () { setUsuario(null); setVista('inicio'); }); }
 
-function nombreM(m) { return (m.perfiles && m.perfiles.nombre) || 'Maestro'; }
+function nombreM(m) { return m.nombre || (m.perfiles && m.perfiles.nombre) || 'Maestro'; }
 function fotoM(m) { return m.foto_url || (m.perfiles && m.perfiles.avatar_url) || null; }
 function oficiosM(m) { return m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []); }
 function ofNombre(slug) { var c = cats.filter(function (x) { return x.slug === slug; })[0]; return c ? c.valor : (slug || ''); }
