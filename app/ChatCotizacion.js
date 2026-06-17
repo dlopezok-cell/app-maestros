@@ -87,6 +87,8 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       setEnviando(false);
       if (r.error) return;
       setMensajes(function (prev) { return prev.some(function (x) { return x.id === r.data.id; }) ? prev : prev.concat([r.data]); });
+      // Avisar por correo a la otra persona que recibió un mensaje.
+      try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'mensaje', presupuestoId: presupuestoId, maestroId: maestroId, autorRol: miRol }) }); } catch (e) {}
     });
   }
 

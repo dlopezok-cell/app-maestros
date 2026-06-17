@@ -463,7 +463,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                   <div style={{ fontSize: 12, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '1px 0' }}>{s.descripcion || 'Sin descripción'}</div>
                   <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{(s.oficio ? (s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) + ' · ') : '') + fecha(s.creado_en)}</div>
                 </div>
-                <span style={{ color: '#c5c9d6', fontSize: 18, flexShrink: 0, transform: miaSel === s.id ? 'rotate(90deg)' : 'none' }}>{'›'}</span>
+                {(function () { var nl = (mensajesPorPres[s.id] || []).filter(function (m) { return m.autor_rol === 'maestro' && !m.leido; }).length; return nl > 0 ? <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span> : <span style={{ color: '#c5c9d6', fontSize: 18, flexShrink: 0 }}>{'›'}</span>; })()}
               </div>
 
               {miaSel === s.id && (
