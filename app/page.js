@@ -89,6 +89,9 @@ setUsuario(r.data.user); setAuthMsg(null); setVista(destinoLogin); window.scroll
 function conGoogle() {
 supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined } });
 }
+function conApple() {
+supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined } });
+}
 function salir() { supabase.auth.signOut().then(function () { setUsuario(null); setVista('inicio'); }); }
 
 function nombreM(m) { return (m.perfiles && m.perfiles.nombre) || 'Maestro'; }
@@ -168,6 +171,7 @@ if (vista === 'acceso') return (
 <button className="gbtn full" onClick={entrar}>{authTab === 'ingresar' ? 'Ingresar' : 'Crear cuenta'}</button>
 <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '8px 0' }}>o</div>
 <button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #ddd', boxShadow: 'none' }} onClick={conGoogle}>{'\u{1F310} Continuar con Google'}</button>
+<button className="gbtn full" style={{ background: '#000', color: '#fff', border: 'none', boxShadow: 'none', marginTop: 9 }} onClick={conApple}>{'\u{F8FF} Continuar con Apple'}</button>
 <button onClick={function () { setVista('inicio'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 10 }}>Volver al inicio</button>
 </div>
 <Nav />

@@ -26,6 +26,9 @@ export default function Bienvenida({ config }) {
       window.location.reload();
     });
   }
+  function conApple() {
+    supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: typeof window !== 'undefined' ? window.location.href : undefined } });
+  }
   function conGoogle() {
     supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: typeof window !== 'undefined' ? window.location.href : undefined } });
   }
@@ -54,6 +57,7 @@ export default function Bienvenida({ config }) {
           {msg && <p style={{ fontSize: 12, color: '#b3261e', margin: '0 0 9px' }}>{msg}</p>}
           <button onClick={entrar} style={{ width: '100%', background: '#16181f', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 9 }}>Ingresar</button>
           <button onClick={conGoogle} style={{ width: '100%', background: '#fff', color: '#16181f', border: '1.5px solid #e4e4ea', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 9 }}>{'\u{1F310} Continuar con Google'}</button>
+          <button onClick={conApple} style={{ width: '100%', background: '#000', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 9 }}>{'\u{F8FF} Continuar con Apple'}</button>
           <button onClick={function () { setLogin(false); setMsg(null); }} style={{ width: '100%', background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Volver</button>
         </div>
       </div>

@@ -49,6 +49,10 @@ export default function AccesoMaestro() {
     supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
   }
 
+  function conApple() {
+    supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: window.location.href } });
+  }
+
   var wrap = { minHeight: '100vh', background: 'linear-gradient(160deg,#2a2350 0%,#3a2f6e 50%,#1d1840 100%)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '46px 22px 36px', boxSizing: 'border-box', textAlign: 'center' };
   var inp = { width: '100%', padding: 13, borderRadius: 12, border: 'none', fontSize: 14, marginBottom: 9, boxSizing: 'border-box', color: '#1c1f2b' };
   var btnP = { width: '100%', background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer', marginBottom: 9 };
@@ -102,6 +106,7 @@ export default function AccesoMaestro() {
             <div style={{ flex: 1, height: 1, background: '#e4e4ef' }} /><span style={{ fontSize: 11, color: '#9aa1b5' }}>o</span><div style={{ flex: 1, height: 1, background: '#e4e4ef' }} />
           </div>
           <button onClick={conGoogle} style={btnG}>{'\u{1F310} Continuar con Google'}</button>
+          <button onClick={conApple} style={{ width: '100%', background: '#000', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 9 }}>{'\u{F8FF} Continuar con Apple'}</button>
         </div>
 
         <a href="/" style={{ marginTop: 22, color: 'rgba(255,255,255,.65)', fontWeight: 700, fontSize: 12.5, textDecoration: 'none' }}>← Volver a la app de clientes</a>
