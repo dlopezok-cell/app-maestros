@@ -201,6 +201,8 @@ export default function PresupuestosMaestro({ usuario }) {
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
   function fechaCorta(f) { return new Date(f || Date.now()).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
+  function telCL(t) { var d = (t || '').replace(/[^0-9]/g, ''); if (d.indexOf('56') !== 0) { if (d.length === 9) d = '56' + d; else if (d.length === 8) d = '569' + d; else d = '56' + d; } return d; }
+  function telBonito(t) { var d = telCL(t); if (d.length === 11 && d.slice(0, 3) === '569') return '+56 9 ' + d.slice(3, 7) + ' ' + d.slice(7); return '+' + d; }
   function mediaDe(p) { return (p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : []); }
   function yaRespondida(p) { return (p.cotizaciones || []).length > 0; }
   function ofTit(p) { return (p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1); }
@@ -324,7 +326,7 @@ export default function PresupuestosMaestro({ usuario }) {
   // ---------- RESERVA (cotización aceptada / pagada) ----------
   if (vista === 'reserva' && resSel) {
     var rt = resSel;
-    var telNum = (rt.cliente_telefono || '').replace(/[^0-9+]/g, '');
+    var telNum = telCL(rt.cliente_telefono);
     var mapaUrl = rt.direccion ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(rt.direccion) : null;
     return (
       <div style={pantalla}>
@@ -347,10 +349,15 @@ export default function PresupuestosMaestro({ usuario }) {
             <div style={{ fontSize: 12, fontWeight: 800, color: '#5b6275', marginBottom: 8 }}>Datos de contacto</div>
             {telNum ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: '11px 13px' }}>
-                  <span style={{ fontSize: 16 }}>{'\u{1F4DE}'}</span>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#9aa1b5' }}>Teléfono</div><div style={{ fontSize: 14, fontWeight: 700 }}>{rt.cliente_telefono}</div></div>
-                  <a href={'tel:' + telNum} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 9, padding: '8px 14px', fontSize: 13, fontWeight: 800 }}>Llamar</a>
+                <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: '11px 13px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>{'\u{1F4DE}'}</span>
+                    <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#9aa1b5' }}>Teléfono</div><div style={{ fontSize: 14, fontWeight: 700 }}>{telBonito(rt.cliente_telefono)}</div></div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <a href={'tel:+' + telNum} style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 9, padding: '9px 0', fontSize: 13, fontWeight: 800 }}>{'\u{1F4DE} Llamar'}</a>
+                    <a href={'https://wa.me/' + telNum} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 9, padding: '9px 0', fontSize: 13, fontWeight: 800 }}>{'\u{1F4AC} WhatsApp'}</a>
+                  </div>
                 </div>
                 {rt.direccion && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: '11px 13px' }}>

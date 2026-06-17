@@ -254,7 +254,9 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
   function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
   function tituloMia(s) { return (s && s.titulo && s.titulo.trim()) ? s.titulo : ((s && s.oficio ? s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) : 'Solicitud')); }
-  function waLink(tel) { var t = (tel || '').replace(/[^0-9]/g, ''); if (t.length && t[0] !== '5') t = '56' + t; return 'https://wa.me/' + t; }
+  function waLink(tel) { return 'https://wa.me/' + telCL(tel); }
+  function telCL(t) { var d = (t || '').replace(/[^0-9]/g, ''); if (d.indexOf('56') !== 0) { if (d.length === 9) d = '56' + d; else if (d.length === 8) d = '569' + d; else d = '56' + d; } return d; }
+  function telBonito(t) { var d = telCL(t); if (d.length === 11 && d.slice(0, 3) === '569') return '+56 9 ' + d.slice(3, 7) + ' ' + d.slice(7); return '+' + d; }
 
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#fff' };
   const card = { background: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
@@ -395,10 +397,13 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 <div style={{ fontSize: 11, color: rv.fecha_hora ? '#0d7a4f' : '#b07a1e', fontWeight: 700 }}>{rv.fecha_hora ? '\u{1F4C5} ' + fecha(rv.fecha_hora) : '\u{1F4C5} Fecha por coordinar'}</div>
 
                 {pagado && rv.maestro_telefono && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '8px 10px', marginTop: 8 }}>
-                    <span style={{ fontSize: 12.5, color: '#0d7a4f', fontWeight: 700, flex: 1 }}>{'\u{1F4DE} ' + rv.maestro_telefono}</span>
-                    {presMap[rv.id] && <button onClick={function () { setChatPagado({ presupuestoId: presMap[rv.id], maestroId: rv.maestro_id, titulo: rv.maestro_nombre || nombreMaestro(rv.maestro_id), telefono: rv.maestro_telefono }); }} style={{ background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F4AC} Chat'}</button>}
-                    <a href={'tel:' + (rv.maestro_telefono || '').replace(/[^0-9+]/g, '')} style={{ textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>Llamar</a>
+                  <div style={{ background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '9px 10px', marginTop: 8 }}>
+                    <span style={{ fontSize: 13, color: '#0d7a4f', fontWeight: 800 }}>{'\u{1F4DE} ' + telBonito(rv.maestro_telefono)}</span>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      {presMap[rv.id] && <button onClick={function () { setChatPagado({ presupuestoId: presMap[rv.id], maestroId: rv.maestro_id, titulo: rv.maestro_nombre || nombreMaestro(rv.maestro_id), telefono: rv.maestro_telefono }); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F4AC} Chat'}</button>}
+                      <a href={'tel:+' + telCL(rv.maestro_telefono)} style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800 }}>{'\u{1F4DE} Llamar'}</a>
+                      <a href={waLink(rv.maestro_telefono)} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800 }}>{'\u{1F4AC} WhatsApp'}</a>
+                    </div>
                   </div>
                 )}
 
