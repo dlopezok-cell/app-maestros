@@ -225,28 +225,23 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   function aceptarYPagar(s, c) {
     if (!c.monto) { setMsg('Este maestro aún no puso un precio. Pídeselo en el chat.'); return; }
     setPagando(true);
-    setMsg('Creando tu pedido...');
+    setMsg('Aceptando la cotización...');
     supabase.from('reservas').insert({
       cliente_id: usuario.id,
       maestro_id: c.maestro_id,
       presupuesto_id: s.id,
       descripcion_problema: s.descripcion,
       direccion: s.direccion,
-      estado: 'pendiente_pago',
+      estado: 'pagado',
       precio_cotizado: c.monto || null,
       link_video: s.video_url || null,
     }).select().single().then(function (r) {
       if (r.error) { setMsg('Error: ' + r.error.message); setPagando(false); return; }
-      var reservaId = r.data.id;
       supabase.from('presupuestos').update({ estado: 'cerrado' }).eq('id', s.id).then(function () {});
-      setMsg('Redirigiendo al pago seguro...');
-      fetch('/api/pagar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monto: c.monto, tipo: 'trabajo', descripcion: (s.oficio || 'servicio') + ' con ' + nombreMaestro(c.maestro_id), reservaId: reservaId, maestroId: c.maestro_id, email: usuario.email })
-      }).then(function (rp) { return rp.json(); }).then(function (d) {
-        if (d && d.init_point) { window.location.href = d.init_point; }
-        else { setPagando(false); setMsg('No se pudo iniciar el pago: ' + ((d && d.error) || 'intenta de nuevo') + '. Tu pedido quedó pendiente de pago.'); cargarSolicitudes(); cargarReservas(); }
-      }).catch(function () { setPagando(false); setMsg('No se pudo conectar con el pago. Tu pedido quedó pendiente.'); cargarSolicitudes(); cargarReservas(); });
+      try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'trabajo_pagado', reservaId: r.data.id, monto: c.monto }) }); } catch (e) {}
+      setPagando(false); setHojaKey(null); setMiaSel(null);
+      setMsg('¡Aceptaste la cotización! Coordina con el maestro en "Pagadas".');
+      cargarSolicitudes(); cargarReservas();
     });
   }
 
@@ -558,11 +553,10 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                             <div style={{ fontSize: 12.5, color: '#5b6275', lineHeight: 1.5, marginBottom: 10, whiteSpace: 'pre-wrap' }}>{c.mensaje ? c.mensaje : 'El maestro no detalló el alcance. Pregúntale por el chat antes de aceptar.'}</div>
                           </div>
                         )}
-                        <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 8 }}>{'\u{1F4C5}'} La fecha la coordinan después de pagar.</div>
-                        <button onClick={function () { setInfoPago(true); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: '#e1f5ee', color: '#0f6e56', border: 'none', borderRadius: 10, padding: '9px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 10 }}>{'\u{1F6E1}️ Pago protegido'} <span style={{ background: '#5dcaa5', color: '#04342c', borderRadius: '50%', width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>i</span></button>
+                        <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 10 }}>{'\u{1F4C5}'} Al aceptar se revela el contacto del maestro y coordinan fecha y pago directamente.</div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
-                          <button className="gbtn" style={{ flex: 1.3, padding: 10, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { aceptarYPagar(s, c); }}>{pagando ? 'Procesando...' : 'Aceptar y pagar'}</button>
+                          <button className="gbtn" style={{ flex: 1.3, padding: 10, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { aceptarYPagar(s, c); }}>{pagando ? 'Aceptando...' : 'Aceptar'}</button>
                         </div>
                         {msg && <p style={{ fontSize: 12, fontWeight: 600, textAlign: 'center', margin: '8px 0 0', color: (msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0) ? '#b3261e' : '#0d9456' }}>{msg}</p>}
                       </div>
