@@ -501,7 +501,10 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                     </div>
 
                     {c && c.monto && !cerrado && (
-                      <button onClick={function () { setHojaKey(abierta ? null : ck); setMsg(null); }} style={{ width: '100%', marginTop: 10, background: abierta ? '#fff5f2' : '#fafbfe', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{abierta ? 'Ocultar cotización' : '\u{1F4C4} Ver cotización'}</button>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
+                        <button onClick={function () { setHojaKey(abierta ? null : ck); setMsg(null); }} style={{ flex: 1.2, background: abierta ? '#fff5f2' : '#fafbfe', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{abierta ? 'Ocultar' : '\u{1F4C4} Ver cotización'}</button>
+                      </div>
                     )}
 
                     {abierta && c && c.monto && !cerrado && (
