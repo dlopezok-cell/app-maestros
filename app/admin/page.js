@@ -1,25 +1,23 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import CampanaMaestros from '../CampanaMaestros';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen' },
-  { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada' },
   { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads' },
-  { id: 'interesados', icono: '\u{1F9F0}', nombre: 'Maestros interesados' },
-  { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
-  { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes' },
+  { id: 'conversaciones', icono: '\u{1F4AC}', nombre: 'Conversaciones' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
   { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
-  { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
+  { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña' },
 ];
 
 // Detecta intentos de pasar contacto fuera de la plataforma
@@ -46,11 +44,6 @@ export default function Admin() {
   const [perfiles, setPerfiles] = useState([]);
   const [reservas, setReservas] = useState([]);
   const [pagos, setPagos] = useState([]);
-  const [porLiberar, setPorLiberar] = useState([]);
-  const [liberandoId, setLiberandoId] = useState(null);
-  const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO' });
-  const [portadaMsg, setPortadaMsg] = useState(null);
-  const [interesados, setInteresados] = useState([]);
   const [resenas, setResenas] = useState([]);
   const [mensajes, setMensajes] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
@@ -58,11 +51,6 @@ export default function Admin() {
   const [denuncias, setDenuncias] = useState([]);
   const [comunicados, setComunicados] = useState([]);
   const [listaEspera, setListaEspera] = useState([]);
-  const [catalogos, setCatalogos] = useState([]);
-  const [nuevoCat, setNuevoCat] = useState({ especialidad: '', tipo: '', ofrece: '' });
-  const [msop, setMsop] = useState([]);
-  const [chatMaestro, setChatMaestro] = useState(null);
-  const [chatTxt, setChatTxt] = useState('');
   const [hilo, setHilo] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [maestroDet, setMaestroDet] = useState(null);
@@ -82,68 +70,7 @@ export default function Admin() {
     });
   }, []);
 
-  function cargarPorLiberar() {
-    supabase.rpc('pagos_por_liberar').then(function (r) { setPorLiberar(r.error ? [] : (r.data || [])); });
-  }
-
-  function cargarPortada() {
-    supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
-      .then(function (r) { if (r.data) setPortada(r.data); });
-  }
-
-  function cargarInteresados() {
-    supabase.from('maestros_interesados').select('*').order('creado_en', { ascending: false })
-      .then(function (r) { setInteresados(r.error ? [] : (r.data || [])); });
-  }
-
-  function marcarContactado(it) {
-    supabase.from('maestros_interesados').update({ contactado: !it.contactado }).eq('id', it.id)
-      .then(function () { cargarInteresados(); });
-  }
-
-  function cancelarReservaAdmin(r) {
-    var pagada = ['pagado', 'retenido', 'completado'].indexOf((r.estado || '').toLowerCase()) >= 0;
-    var aviso = pagada
-      ? '¿Cancelar esta reserva PAGADA? Recuerda hacer el reembolso de ' + plata(r.precio_cotizado) + ' al cliente en MercadoPago.'
-      : '¿Cancelar esta reserva? (no había pago)';
-    if (typeof window !== 'undefined' && !window.confirm(aviso)) return;
-    supabase.rpc('cancelar_reserva', { p_reserva_id: r.id }).then(function (res) {
-      if (res.error) { setMsg('Error al cancelar: ' + res.error.message); return; }
-      cargarTodo();
-    });
-  }
-
-  function guardarPortada(extra) {
-    var fila = Object.assign({ id: 1 }, portada, extra || {});
-    fila.actualizado_en = new Date().toISOString();
-    setPortadaMsg('Guardando...');
-    supabase.from('home_config').upsert(fila, { onConflict: 'id' }).select().single()
-      .then(function (r) {
-        if (r.error) { setPortadaMsg('Error: ' + r.error.message); return; }
-        setPortada(r.data); setPortadaMsg('Guardado ✓');
-        setTimeout(function () { setPortadaMsg(null); }, 2500);
-      });
-  }
-
-  function togglePortada() {
-    var nuevo = !portada.portada_activa;
-    setPortada(function (p) { return Object.assign({}, p, { portada_activa: nuevo }); });
-    guardarPortada({ portada_activa: nuevo });
-  }
-
-  function liberarPago(reservaId) {
-    setLiberandoId(reservaId);
-    supabase.rpc('liberar_pago', { p_reserva_id: reservaId }).then(function (r) {
-      setLiberandoId(null);
-      if (r.error) { setMsg('Error al liberar: ' + r.error.message); return; }
-      cargarPorLiberar();
-    });
-  }
-
   function cargarTodo() {
-    cargarPorLiberar();
-    cargarPortada();
-    cargarInteresados();
     Promise.all([
       supabase.from('verificaciones').select('*').order('creado_at', { ascending: false }),
       supabase.from('maestros').select('*'),
@@ -157,8 +84,6 @@ export default function Admin() {
       supabase.from('denuncias').select('*').order('creado_en', { ascending: false }),
       supabase.from('comunicados').select('*').order('creado_en', { ascending: false }),
       supabase.from('lista_espera').select('*').order('creado_en', { ascending: false }),
-      supabase.from('catalogos').select('*').order('tipo', { ascending: true }).order('orden', { ascending: true }),
-      supabase.from('mensajes_soporte').select('*').order('creado_en', { ascending: true }),
     ]).then(function (rs) {
       setVerifs(rs[0].data || []);
       setMaestros(rs[1].data || []);
@@ -172,8 +97,6 @@ export default function Admin() {
       setDenuncias(rs[9].data || []);
       setComunicados(rs[10].data || []);
       setListaEspera(rs[11].data || []);
-      setCatalogos(rs[12].data || []);
-      setMsop(rs[13].data || []);
       setCargando(false);
       (rs[0].data || []).forEach(function (v) {
         if (!v.carnet_path || v.estado !== 'pendiente') return;
@@ -281,45 +204,6 @@ export default function Admin() {
     supabase.from('comunicados').delete().eq('id', c.id)
       .then(function (r) { if (r.error) setMsg(r.error.message); else cargarTodo(); });
   }
-  function borrarLead(e) {
-    if (!window.confirm('¿Borrar este lead (' + e.email + ')? Esta acción no se puede deshacer.')) return;
-    supabase.from('lista_espera').delete().eq('id', e.id)
-      .then(function (r) { if (r.error) setMsg('No se pudo borrar: ' + r.error.message); else cargarTodo(); });
-  }
-  function slugify(s) {
-    return ('' + s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '').slice(0, 40);
-  }
-  function agregarCatalogo(tipo) {
-    var valor = (nuevoCat[tipo] || '').trim();
-    if (!valor) return;
-    var maxOrden = catalogos.filter(function (c) { return c.tipo === tipo; }).reduce(function (m, c) { return Math.max(m, c.orden || 0); }, 0);
-    var fila = { tipo: tipo, valor: valor, orden: maxOrden + 1, activo: true };
-    if (tipo === 'especialidad') fila.slug = slugify(valor);
-    supabase.from('catalogos').insert(fila).then(function (r) {
-      if (r.error) { setMsg('No se pudo agregar: ' + r.error.message); return; }
-      setNuevoCat(function (p) { var n = { ...p }; n[tipo] = ''; return n; });
-      cargarTodo();
-    });
-  }
-  function quitarCatalogo(c) {
-    if (!window.confirm('¿Quitar "' + c.valor + '" del catálogo?')) return;
-    supabase.from('catalogos').delete().eq('id', c.id)
-      .then(function (r) { if (r.error) setMsg('No se pudo quitar: ' + r.error.message); else cargarTodo(); });
-  }
-  function eliminarPedido(p) {
-    if (!window.confirm('¿Eliminar este pedido y toda su conversación y cotizaciones? No se puede deshacer.')) return;
-    supabase.rpc('admin_borrar_pedido', { p_id: p.id })
-      .then(function (r) { if (r.error) setMsg('No se pudo eliminar: ' + r.error.message); else cargarTodo(); });
-  }
-  function abrirChatMaestro(mid) {
-    setChatMaestro(mid);
-    supabase.from('mensajes_soporte').update({ leido: true }).eq('maestro_id', mid).eq('autor', 'maestro').eq('leido', false).then(function () {});
-  }
-  function enviarSoporte() {
-    if (!chatMaestro || !chatTxt.trim()) return;
-    supabase.from('mensajes_soporte').insert({ maestro_id: chatMaestro, autor: 'admin', texto: chatTxt.trim() })
-      .then(function (r) { if (r.error) { setMsg(r.error.message); return; } setChatTxt(''); cargarTodo(); });
-  }
 
   const wrap = { maxWidth: 920, margin: '0 auto', padding: 16 };
   const card = { background: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
@@ -369,8 +253,6 @@ export default function Admin() {
 
   // ---- métricas ----
   const pendientes = verifs.filter(function (v) { return v.estado === 'pendiente'; });
-  const verifSinFicha = pendientes.filter(function (v) { return !maestros.some(function (m) { return m.id === v.user_id; }); });
-  const soporteNoLeidos = msop.filter(function (m) { return m.autor === 'maestro' && !m.leido; }).length;
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const reservasHoy = reservas.filter(function (r) { return new Date(r.creado_en) >= hoy; }).length;
@@ -453,7 +335,6 @@ export default function Admin() {
     return la < lb ? 1 : -1;
   });
   const hilosFlag = hilos.filter(function (h) { return h.flag; }).length;
-  const porLiberarCount = porLiberar.filter(function (x) { return x.trabajo_confirmado && !x.liberado; }).length;
 
   return (
     <main style={wrap}>
@@ -468,7 +349,7 @@ export default function Admin() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {SECCIONES.map(function (s) {
           const on = seccion === s.id;
-          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'liberar' ? porLiberarCount : 0;
+          const badge = s.id === 'verificaciones' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : 0;
           return (
             <button key={s.id} onClick={function () { setSeccion(s.id); }}
               style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
@@ -480,90 +361,6 @@ export default function Admin() {
       </div>
 
       {msg && <p style={{ color: '#b3261e', fontSize: 13 }}>{msg}</p>}
-
-      {/* ---------------- MAESTROS INTERESADOS ---------------- */}
-      {seccion === 'interesados' && (
-        <div style={card}>
-          <b style={{ fontSize: 14 }}>{'\u{1F9F0} Maestros interesados (' + interesados.length + ')'}</b>
-          <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 8px' }}>Inscritos desde la portada (antes del lanzamiento). Contáctalos por WhatsApp para activarlos.</div>
-          {interesados.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Aún no hay maestros inscritos.</p>}
-          {interesados.map(function (it) {
-            var wnum = (it.whatsapp || '').replace(/\D/g, '');
-            if (wnum.length === 8) wnum = '569' + wnum; else if (wnum.length === 9) wnum = '56' + wnum;
-            return (
-              <div key={it.id} style={{ borderTop: '1px solid #f1f1f5', padding: '11px 0', opacity: it.contactado ? 0.55 : 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <b style={{ fontSize: 13.5 }}>{it.nombre}</b>
-                  <span style={{ fontSize: 10.5, color: '#9aa1b5' }}>{fecha(it.creado_en)}</span>
-                </div>
-                <div style={{ fontSize: 12, color: '#5b6275', margin: '2px 0' }}>{[it.oficio, it.comuna].filter(Boolean).join(' · ') || 'Sin oficio/comuna'}</div>
-                {it.referido_por && <div style={{ fontSize: 11, color: '#b07a1e' }}>{'Invitado por: ' + it.referido_por}</div>}
-                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                  {wnum && <a href={'https://wa.me/' + wnum} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: '#e8f7ef', border: '1px solid #bfe6cf', color: '#0d9456', borderRadius: 9, padding: '6px 11px', fontSize: 12, fontWeight: 800 }}>{'\u{1F4AC} ' + (it.whatsapp || 'WhatsApp')}</a>}
-                  <button onClick={function () { marcarContactado(it); }} style={{ border: '1px solid #e4e4ef', background: it.contactado ? '#eef0f5' : '#fff', color: '#5b6275', borderRadius: 9, padding: '6px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{it.contactado ? '✓ Contactado' : 'Marcar contactado'}</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ---------------- PORTADA (home on/off) ---------------- */}
-      {seccion === 'portada' && (
-        <div>
-          <div style={{ ...card, background: portada.portada_activa ? 'linear-gradient(160deg,#16181f,#2a2d3a)' : '#fff', color: portada.portada_activa ? '#fff' : '#1c1f2b', border: portada.portada_activa ? 'none' : '1px solid #eef0f5' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ minWidth: 0 }}>
-                <b style={{ fontSize: 15 }}>{'\u{1FAA7} Portada de lanzamiento'}</b>
-                <div style={{ fontSize: 12.5, color: portada.portada_activa ? 'rgba(255,255,255,.8)' : '#7c8499', marginTop: 4, lineHeight: 1.45 }}>
-                  {portada.portada_activa
-                    ? 'ENCENDIDA: los clientes ven la portada "PRONTO". Tú (admin) sigues viendo la app real.'
-                    : 'APAGADA: los clientes ven el home real con los maestros.'}
-                </div>
-              </div>
-              <button onClick={togglePortada} style={{ flexShrink: 0, position: 'relative', width: 64, height: 34, borderRadius: 20, border: 'none', cursor: 'pointer', background: portada.portada_activa ? '#25c26e' : '#cfd3df' }}>
-                <span style={{ position: 'absolute', top: 4, left: portada.portada_activa ? 34 : 4, width: 26, height: 26, borderRadius: '50%', background: '#fff', transition: '.15s' }} />
-              </button>
-            </div>
-          </div>
-
-          <div style={card}>
-            <b style={{ fontSize: 14 }}>Contenido de la portada</b>
-            <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Edita lo que se muestra y guarda. Cambia al instante en la portada pública.</div>
-
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Título</label>
-            <input style={inp} value={portada.titulo || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { titulo: v }); }); }} />
-
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Subtítulo</label>
-            <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={portada.subtitulo || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { subtitulo: v }); }); }} />
-
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Etiqueta (badge)</label>
-            <input style={inp} value={portada.badge || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { badge: v }); }); }} />
-
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>URL de la foto</label>
-            <input style={inp} placeholder="https://..." value={portada.foto_url || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { foto_url: v }); }); }} />
-            {portada.foto_url
-              ? <img src={portada.foto_url} alt="" style={{ width: '100%', borderRadius: 12, marginTop: 6, maxHeight: 200, objectFit: 'cover' }} />
-              : <div style={{ fontSize: 11.5, color: '#9aa1b5', marginTop: 4 }}>Sin foto: se muestra una ilustración por defecto.</div>}
-
-            <button onClick={function () { guardarPortada(); }} style={{ marginTop: 12, width: '100%', background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar portada</button>
-            {portadaMsg && <p style={{ fontSize: 12.5, textAlign: 'center', color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', marginTop: 8 }}>{portadaMsg}</p>}
-          </div>
-
-          <div style={card}>
-            <b style={{ fontSize: 14 }}>{'\u{1F4E5} Inscritos en lista de espera (' + listaEspera.length + ')'}</b>
-            {listaEspera.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>Todavía nadie se ha inscrito desde la portada.</p>}
-            {listaEspera.slice(0, 50).map(function (l) {
-              return (
-                <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f4f4f7', padding: '8px 0', fontSize: 12.5 }}>
-                  <span>{l.email}</span>
-                  <span style={{ color: '#9aa1b5' }}>{fecha(l.creado_en)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ---------------- RESUMEN ---------------- */}
       {seccion === 'resumen' && (
@@ -641,22 +438,6 @@ export default function Admin() {
             <b style={{ fontSize: 14 }}>{maestros.length + ' maestros'}</b>
             <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
           </div>
-          {verifSinFicha.length > 0 && (
-            <div style={{ background: '#fff9f0', border: '1px solid #ffe2b8', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-              <b style={{ fontSize: 13, color: '#b07a1e' }}>{'\u{23F3} ' + verifSinFicha.length + ' en verificación (aún sin ficha publicada)'}</b>
-              {verifSinFicha.map(function (v) {
-                return (
-                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f4ead2', paddingTop: 8, marginTop: 8 }}>
-                    <div style={{ fontSize: 12 }}>{nombreDe(v.user_id)} <span style={{ color: '#9aa1b5' }}>{'· RUT ' + (v.rut || '—')}</span></div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { aprobar(v); }}>Aprobar</button>
-                      <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { rechazar(v); }}>Rechazar</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead><tr><th style={th}>Nombre</th><th style={th}>Oficio</th><th style={th}>Rating</th><th style={th}>Trabajos</th><th style={th}>Cotiz.</th><th style={th}>Reservas</th><th style={th}>Estado</th><th style={th}>Acción</th></tr></thead>
@@ -781,7 +562,7 @@ export default function Admin() {
           {listaEspera.length > 0 && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
-                <thead><tr><th style={th}>Correo</th><th style={th}>Origen</th><th style={th}>Fecha</th><th style={th}>Acción</th></tr></thead>
+                <thead><tr><th style={th}>Correo</th><th style={th}>Origen</th><th style={th}>Fecha</th></tr></thead>
                 <tbody>
                   {listaEspera.map(function (e) {
                     return (
@@ -789,7 +570,6 @@ export default function Admin() {
                         <td style={td}>{e.email}</td>
                         <td style={td}>{tag('LISTA DE ESPERA', 'pend')}</td>
                         <td style={{ ...td, color: '#9aa1b5' }}>{fecha(e.creado_en)}</td>
-                        <td style={td}><button style={{ ...btnS, color: '#fff', background: '#b3261e', border: 'none' }} onClick={function () { borrarLead(e); }}>Borrar</button></td>
                       </tr>
                     );
                   })}
@@ -797,39 +577,6 @@ export default function Admin() {
               </table>
             </div>
           )}
-        </div>
-      )}
-
-      {/* ---------------- CATÁLOGOS ---------------- */}
-      {seccion === 'catalogos' && (
-        <div>
-          <div style={{ fontSize: 12, color: '#9aa1b5', margin: '0 0 12px' }}>Lo que edites aquí aparece al instante en el registro de los maestros.</div>
-          {[['especialidad', '\u{1F527} Especialidades', 'Nueva especialidad...'], ['tipo', '\u{1F4BC} Tipos de trabajo', 'Nuevo tipo...'], ['ofrece', '✅ Qué ofreces', 'Nuevo ítem...']].map(function (g) {
-            var tipo = g[0];
-            var items = catalogos.filter(function (c) { return c.tipo === tipo; });
-            return (
-              <div key={tipo} style={card}>
-                <b style={{ fontSize: 14 }}>{g[1]}</b>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '12px 0' }}>
-                  {items.length === 0 && <span style={{ fontSize: 12, color: '#9aa1b5' }}>Sin ítems todavía</span>}
-                  {items.map(function (c) {
-                    return (
-                      <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 999, fontSize: 12.5, background: '#fff', border: '1px solid #e0e0ec', color: '#3C3489' }}>
-                        {c.valor}
-                        <button onClick={function () { quitarCatalogo(c); }} style={{ border: 'none', background: 'none', color: '#b3261e', fontWeight: 800, fontSize: 14, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
-                      </span>
-                    );
-                  })}
-                </div>
-                <div style={{ display: 'flex', gap: 7 }}>
-                  <input value={nuevoCat[tipo]} onChange={function (e) { var v = e.target.value; setNuevoCat(function (p) { var n = { ...p }; n[tipo] = v; return n; }); }}
-                    onKeyDown={function (e) { if (e.key === 'Enter') agregarCatalogo(tipo); }}
-                    placeholder={g[2]} style={{ flex: 1, padding: '9px 11px', border: '1.5px solid #ddd', borderRadius: 9, fontSize: 13 }} />
-                  <button onClick={function () { agregarCatalogo(tipo); }} style={{ background: '#26215C', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Agregar</button>
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -853,7 +600,6 @@ export default function Admin() {
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     {reserva ? tag('AGENDADO', 'ok') : cots.length ? tag(cots.length + ' COTIZ', 'pend') : tag('ESPERANDO', 'pend')}
                     <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 4 }}>{abierto ? 'Cerrar' : 'Ver timeline'}</div>
-                    <button onClick={function (e) { e.stopPropagation(); eliminarPedido(p); }} style={{ marginTop: 6, background: '#b3261e', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F5D1} Eliminar'}</button>
                   </div>
                 </div>
                 {abierto && (
@@ -864,21 +610,6 @@ export default function Admin() {
                       {cots.map(function (c) { return <div key={c.id} style={{ marginLeft: 12, marginTop: 4 }}>{'• ' + nombreDe(c.maestro_id) + ' → ' + (c.monto ? plata(c.monto) : 's/monto') + (c.mensaje ? ' · ' + c.mensaje : '')}</div>; })}
                     </div>
                     <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}><b>3. Conversación</b> · {msgs.length + ' mensaje(s)'} {flagContacto(msgs.map(function (m) { return m.texto; }).join(' ')) ? <span style={{ color: '#b3261e', fontWeight: 800 }}>· {'\u{1F6A9}'} posible contacto fuera de la app</span> : null}</div>
-                    {msgs.length > 0 && (
-                      <div style={{ background: '#fafafc', borderRadius: 10, padding: 10, marginBottom: 10, maxHeight: 300, overflowY: 'auto' }}>
-                        {msgs.slice().sort(function (a, b) { return a.creado_en < b.creado_en ? -1 : 1; }).map(function (mm) {
-                          var cli = mm.autor_rol === 'cliente';
-                          return (
-                            <div key={mm.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 6 }}>
-                              <div style={{ maxWidth: '78%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 12, padding: '6px 10px', fontSize: 12.5, lineHeight: 1.4 }}>
-                                <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 800, marginBottom: 1 }}>{cli ? 'Cliente' : 'Maestro'}</div>
-                                {mm.texto || (mm.foto_url ? '\u{1F4F7} foto' : '')}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                     <div style={{ fontSize: 12, color: '#5b6275' }}><b>4. Reserva</b> · {reserva ? (fecha(reserva.fecha_hora) + ' · ' + plata(reserva.precio_cotizado) + ' · ' + (reserva.estado || '')) : <span style={{ color: '#9aa1b5' }}>aún no agenda</span>}</div>
                   </div>
                 )}
@@ -887,63 +618,6 @@ export default function Admin() {
           })}
         </div>
       )}
-
-      {/* ---------------- MENSAJES (chat admin <-> maestro) ---------------- */}
-      {seccion === 'mensajes' && (function () {
-        var porMaestro = {};
-        msop.forEach(function (m) { (porMaestro[m.maestro_id] = porMaestro[m.maestro_id] || []).push(m); });
-        var ids = {};
-        maestros.forEach(function (m) { ids[m.id] = true; });
-        Object.keys(porMaestro).forEach(function (k) { ids[k] = true; });
-        var lista = Object.keys(ids);
-        var hilo = chatMaestro ? (porMaestro[chatMaestro] || []) : [];
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 12 }}>
-            <div style={{ ...card, padding: 0, overflow: 'hidden', margin: 0 }}>
-              {lista.length === 0 && <div style={{ padding: 14, fontSize: 12, color: '#9aa1b5' }}>Aún no hay maestros.</div>}
-              {lista.map(function (mid) {
-                var hs = porMaestro[mid] || [];
-                var ult = hs.length ? hs[hs.length - 1] : null;
-                var nl = hs.filter(function (x) { return x.autor === 'maestro' && !x.leido; }).length;
-                var on = chatMaestro === mid;
-                return (
-                  <div key={mid} onClick={function () { abrirChatMaestro(mid); }} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px 12px', borderBottom: '1px solid #f4f4f7', cursor: 'pointer', background: on ? '#fff4f1' : '#fff' }}>
-                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#7F77DD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{nombreDe(mid).charAt(0).toUpperCase()}</div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>{nombreDe(mid)}</div>
-                      <div style={{ fontSize: 11, color: '#9aa1b5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ult ? ult.texto : 'Sin mensajes'}</div>
-                    </div>
-                    {nl > 0 && <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: 999, padding: '0 6px' }}>{nl}</span>}
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ ...card, margin: 0, display: 'flex', flexDirection: 'column', minHeight: 420 }}>
-              {!chatMaestro && <div style={{ fontSize: 13, color: '#9aa1b5' }}>Elige un maestro para ver y responder su conversación.</div>}
-              {chatMaestro && (
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  <b style={{ fontSize: 14, marginBottom: 8 }}>{nombreDe(chatMaestro)}</b>
-                  <div style={{ flex: 1, overflowY: 'auto', background: '#fafafc', borderRadius: 10, padding: 10, marginBottom: 10, maxHeight: 360 }}>
-                    {hilo.length === 0 && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Aún no hay mensajes con este maestro. Escríbele abajo.</div>}
-                    {hilo.map(function (m) {
-                      var out = m.autor === 'admin';
-                      return (
-                        <div key={m.id} style={{ display: 'flex', justifyContent: out ? 'flex-end' : 'flex-start', marginBottom: 7 }}>
-                          <div style={{ maxWidth: '78%', background: out ? '#ff5a3c' : '#fff', color: out ? '#fff' : '#1c1f2b', border: out ? 'none' : '1px solid #eee', borderRadius: 12, padding: '7px 10px', fontSize: 13, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input value={chatTxt} onChange={function (e) { setChatTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarSoporte(); }} placeholder="Escribe al maestro..." style={{ flex: 1, padding: 10, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13 }} />
-                    <button onClick={enviarSoporte} style={{ background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Enviar</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ---------------- CONVERSACIONES ---------------- */}
       {seccion === 'conversaciones' && (
@@ -1055,16 +729,54 @@ export default function Admin() {
         </div>
       )}
 
+      {/* ---------------- VERIFICACIONES ---------------- */}
+      {seccion === 'verificaciones' && (
+        <div>
+          {pendientes.length === 0 && <div style={card}><b style={{ fontSize: 14 }}>Sin pendientes ✓</b></div>}
+          {pendientes.map(function (v) {
+            const u = urls[v.id] || {};
+            return (
+              <div key={v.id} style={card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <b style={{ fontSize: 14 }}>{v.email}</b>{tag('PENDIENTE', 'pend')}
+                </div>
+                <div style={{ fontSize: 13, color: '#444', marginBottom: 10 }}>
+                  {'RUT: ' + (v.rut || '—') + ' · N° doc: ' + (v.num_serie || '—')}<br />
+                  <span style={{ fontSize: 11, color: '#9aa1b5' }}>{'Enviado: ' + fecha(v.creado_at)}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  {u.carnet ? <a href={u.carnet} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.carnet} alt="carnet" style={{ width: '100%', borderRadius: 12, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando carnet...</div>}
+                  {u.selfie ? <a href={u.selfie} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.selfie} alt="selfie" style={{ width: '100%', borderRadius: 12, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando selfie...</div>}
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button style={{ ...btnS, flex: 1, background: '#0d9456', color: '#fff', border: 'none', padding: '10px 14px' }} onClick={function () { aprobar(v); }}>{'Aprobar ✓'}</button>
+                  <button style={{ ...btnS, flex: 1, color: '#b3261e', borderColor: '#f5c2c2', padding: '10px 14px' }} onClick={function () { rechazar(v); }}>Rechazar</button>
+                </div>
+              </div>
+            );
+          })}
+          {verifs.filter(function (v) { return v.estado !== 'pendiente'; }).map(function (v) {
+            return (
+              <div key={v.id} style={{ ...card, padding: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div><b style={{ fontSize: 13 }}>{v.email}</b><div style={{ fontSize: 11, color: '#9aa1b5' }}>{(v.rut || '') + (v.notas ? ' · ' + v.notas : '')}</div></div>
+                  {tag(v.estado.toUpperCase(), v.estado === 'aprobado' ? 'ok' : 'mal')}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ---------------- RESERVAS ---------------- */}
       {seccion === 'reservas' && (
         <div style={card}>
           <b style={{ fontSize: 14 }}>Últimas reservas</b>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, minWidth: 600 }}>
-              <thead><tr><th style={th}>Problema</th><th style={th}>Cliente</th><th style={th}>Maestro</th><th style={th}>Estado</th><th style={th}>Cotizado</th><th style={th}>Acción</th></tr></thead>
+              <thead><tr><th style={th}>Problema</th><th style={th}>Cliente</th><th style={th}>Maestro</th><th style={th}>Estado</th><th style={th}>Cotizado</th></tr></thead>
               <tbody>
                 {reservas.map(function (r) {
-                  var cancelada = (r.estado || '').toLowerCase() === 'cancelado';
                   return (
                     <tr key={r.id}>
                       <td style={td}>{r.descripcion_problema || r.tipo || '—'}</td>
@@ -1072,7 +784,6 @@ export default function Admin() {
                       <td style={{ ...td, color: '#7c8499' }}>{nombreDe(r.maestro_id)}</td>
                       <td style={td}>{tag((r.estado || '—').toUpperCase(), 'pend')}</td>
                       <td style={td}>{plata(r.precio_cotizado)}</td>
-                      <td style={td}>{cancelada ? <span style={{ fontSize: 11, color: '#9aa1b5' }}>—</span> : <button onClick={function () { cancelarReservaAdmin(r); }} style={{ background: 'none', border: '1px solid #f0c8c2', color: '#b3261e', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>}</td>
                     </tr>
                   );
                 })}
@@ -1080,57 +791,6 @@ export default function Admin() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* ---------------- POR LIBERAR (escrow) ---------------- */}
-      {seccion === 'liberar' && (
-        <div style={card}>
-          <b style={{ fontSize: 14 }}>{'\u{1F513} Pagos retenidos por liberar'}</b>
-          <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 6px' }}>El dinero del cliente está retenido. Cuando el trabajo termine (idealmente con la confirmación del cliente), libera el neto al maestro.</div>
-          {porLiberar.filter(function (x) { return !x.liberado; }).length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>No hay pagos pendientes de liberar.</p>}
-          {porLiberar.filter(function (x) { return !x.liberado; }).map(function (x) {
-            return (
-              <div key={x.reserva_id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <b style={{ fontSize: 13 }}>{(x.maestro_nombre || 'Maestro') + '  ←  ' + (x.cliente_nombre || 'Cliente')}</b>
-                    <div style={{ fontSize: 12, color: '#7c8499', margin: '2px 0' }}>{x.descripcion || 'Trabajo'}</div>
-                    <div style={{ fontSize: 11, color: '#9aa1b5' }}>{fecha(x.fecha_hora)}</div>
-                    <div style={{ marginTop: 6 }}>
-                      {x.trabajo_confirmado
-                        ? tag('CLIENTE CONFIRMÓ', 'ok')
-                        : tag('EN GARANTÍA · sin confirmar', 'pend')}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <div style={{ fontSize: 11, color: '#9aa1b5' }}>{'Cobrado: ' + plata(x.precio)}</div>
-                    <div style={{ fontSize: 11, color: '#0d9456' }}>{'Comisión: ' + plata(x.comision)}</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1c1f2b', marginTop: 2 }}>{plata(x.liquido_maestro)}</div>
-                    <div style={{ fontSize: 10, color: '#9aa1b5' }}>al maestro</div>
-                  </div>
-                </div>
-                <button onClick={function () { if (window.confirm('¿Liberar ' + plata(x.liquido_maestro) + ' a ' + (x.maestro_nombre || 'el maestro') + '? Esto marca el pago como liberado.')) liberarPago(x.reserva_id); }}
-                  disabled={liberandoId === x.reserva_id}
-                  style={{ marginTop: 10, width: '100%', background: '#0d9456', color: '#fff', border: 'none', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: liberandoId === x.reserva_id ? 0.6 : 1 }}>
-                  {liberandoId === x.reserva_id ? 'Liberando...' : '\u{1F513} Liberar pago al maestro'}
-                </button>
-              </div>
-            );
-          })}
-          {porLiberar.filter(function (x) { return x.liberado; }).length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <b style={{ fontSize: 13, color: '#7c8499' }}>Ya liberados</b>
-              {porLiberar.filter(function (x) { return x.liberado; }).map(function (x) {
-                return (
-                  <div key={x.reserva_id} style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f6f6f6', padding: '8px 0', fontSize: 12 }}>
-                    <span style={{ color: '#5b6275' }}>{(x.maestro_nombre || 'Maestro') + ' · ' + (x.descripcion || '')}</span>
-                    <span style={{ color: '#0d9456', fontWeight: 700 }}>{plata(x.liquido_maestro) + ' ✓'}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
@@ -1180,6 +840,8 @@ export default function Admin() {
           {resenas.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5' }}>Sin reseñas todavía</p>}
         </div>
       )}
+
+      {seccion === 'campana' && <CampanaMaestros />}
     </main>
   );
 }
