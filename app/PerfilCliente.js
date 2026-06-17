@@ -70,15 +70,20 @@ export default function PerfilCliente({ usuario }) {
   }, [editando, cargado]);
 
   function ubicar() {
-    if (!navigator.geolocation) { setMsg('Tu navegador no soporta ubicación'); return; }
+    if (!navigator.geolocation) { setMsg('Tu navegador no soporta ubicación. Escribe tu dirección arriba.'); return; }
     setMsg('Obteniendo tu ubicación...');
+    var listo = false;
+    var falla = function () { if (listo) return; listo = true; setMsg('No pudimos obtener tu ubicación. Escribe tu dirección en el campo de arriba.'); };
+    var t = setTimeout(falla, 9000);
     navigator.geolocation.getCurrentPosition(
       function (pos) {
+        if (listo) return; listo = true; clearTimeout(t);
         var la = pos.coords.latitude, lo = pos.coords.longitude;
         setLat(la); setLng(lo);
         setMsg('Ubicación capturada ✓ ajusta el pin y escribe tu dirección');
       },
-      function () { setMsg('No pudimos obtener tu ubicación. Revisa los permisos.'); }
+      function () { clearTimeout(t); falla(); },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
     );
   }
 
@@ -106,6 +111,7 @@ export default function PerfilCliente({ usuario }) {
   if (!usuario || !cargado) return <div className="body" style={{ paddingTop: 18 }}><p>Cargando tu perfil...</p></div>;
 
   const dis = !editando;
+  const enApp = typeof window !== 'undefined' && /[?&]app=1/.test(window.location.search);
   const inp = { width: '100%', padding: 12, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, background: dis ? '#f6f7f9' : '#fff', color: dis ? '#5b6275' : '#1c1f2b' };
   const card = { background: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
 
@@ -124,7 +130,7 @@ export default function PerfilCliente({ usuario }) {
 
         <input value={comuna} disabled={dis} onChange={function (e) { setComuna(e.target.value); }} placeholder="Comuna" style={inp} />
 
-        {editando && (
+        {editando && !enApp && (
           <button onClick={ubicar} style={{ width: '100%', padding: 12, border: '1.5px dashed #ccc', borderRadius: 12, fontSize: 13, marginBottom: 10, background: lat ? '#f2fbf6' : '#fafafa', color: lat ? '#0d9456' : '#7c8499', fontWeight: 700, cursor: 'pointer' }}>
             {lat ? '\u{1F4CD} Ubicación guardada · tocar para actualizar' : '\u{1F4CD} Usar mi ubicación actual'}
           </button>
