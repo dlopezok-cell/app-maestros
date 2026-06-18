@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import CampanaMaestros from '../CampanaMaestros';
+import InfluencersPanel from '../InfluencersPanel';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 const SECCIONES = [
@@ -22,6 +23,7 @@ const SECCIONES = [
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
   { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña' },
+  { id: 'influencers', icono: '\u{1F517}', nombre: 'Influencers' },
 ];
 
 // Detecta intentos de pasar contacto fuera de la plataforma
@@ -1183,6 +1185,7 @@ export default function Admin() {
         </div>
       )}
     {seccion === 'campana' && <CampanaMaestros />}
+      {seccion === 'influencers' && <InfluencersPanel />}
       </main>
   );
 }
