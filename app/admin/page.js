@@ -3,28 +3,52 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import CampanaMaestros from '../CampanaMaestros';
 import InfluencersPanel from '../InfluencersPanel';
+import UsuariosPanel from '../UsuariosPanel';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
-const SECCIONES = [
-  { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen' },
-  { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada' },
-  { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding' },
-  { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros' },
-  { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes' },
-  { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads' },
-  { id: 'interesados', icono: '\u{1F9F0}', nombre: 'Maestros interesados' },
-  { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos' },
-  { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos' },
-  { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes' },
-  { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas' },
-  { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados' },
-  { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas' },
-  { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar' },
-  { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos' },
-  { id: 'resenas', icono: '⭐', nombre: 'Reseñas' },
-  { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña' },
-  { id: 'influencers', icono: '\u{1F517}', nombre: 'Influencers' },
+
+// Categorías para agrupar las pestañas y dar acceso por grupo a otros usuarios.
+const CATEGORIAS = [
+  { id: 'resumen', nombre: 'Resumen', icono: '\u{1F4CA}' },
+  { id: 'marketing', nombre: 'Marketing', icono: '\u{1F4E3}' },
+  { id: 'operaciones', nombre: 'Operaciones', icono: '\u{1F6E0}' },
+  { id: 'finanzas', nombre: 'Finanzas', icono: '\u{1F4B0}' },
+  { id: 'comunidad', nombre: 'Comunidad', icono: '\u{1F465}' },
+  { id: 'config', nombre: 'Configuración', icono: '⚙️' },
 ];
+const TODAS_CATS = CATEGORIAS.map(function (c) { return c.id; });
+
+const SECCIONES = [
+  { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen', cat: 'resumen' },
+  { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'marketing' },
+  { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña', cat: 'marketing' },
+  { id: 'influencers', icono: '\u{1F517}', nombre: 'Influencers', cat: 'marketing' },
+  { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads', cat: 'marketing' },
+  { id: 'interesados', icono: '\u{1F9F0}', nombre: 'Maestros interesados', cat: 'marketing' },
+  { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados', cat: 'marketing' },
+  { id: 'pipeline', icono: '\u{1F6A6}', nombre: 'Onboarding', cat: 'operaciones' },
+  { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos', cat: 'operaciones' },
+  { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas', cat: 'operaciones' },
+  { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes', cat: 'operaciones' },
+  { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas', cat: 'operaciones' },
+  { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos', cat: 'finanzas' },
+  { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar', cat: 'finanzas' },
+  { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros', cat: 'comunidad' },
+  { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes', cat: 'comunidad' },
+  { id: 'resenas', icono: '⭐', nombre: 'Reseñas', cat: 'comunidad' },
+  { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos', cat: 'config' },
+  { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios', cat: 'config', soloSuper: true },
+];
+
+// Primera sección visible según las categorías permitidas.
+function primeraSeccion(cats, esSuper) {
+  for (var i = 0; i < SECCIONES.length; i++) {
+    var s = SECCIONES[i];
+    if (s.soloSuper && !esSuper) continue;
+    if (esSuper || cats.indexOf(s.cat) >= 0) return s.id;
+  }
+  return 'resumen';
+}
 
 // Detecta intentos de pasar contacto fuera de la plataforma
 function flagContacto(txt) {
@@ -40,6 +64,10 @@ export default function Admin() {
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [seccion, setSeccion] = useState('resumen');
+  // permisos: super admin ve todo; otros usuarios ven solo sus categorías
+  const [esSuper, setEsSuper] = useState(false);
+  const [cats, setCats] = useState([]);
+  const [sinPermiso, setSinPermiso] = useState(false);
   // login propio del panel
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
@@ -80,11 +108,34 @@ export default function Admin() {
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) {
-      setUsuario(r.data.user || null);
-      if (r.data.user && r.data.user.email === ADMIN_EMAIL) cargarTodo();
-      else setCargando(false);
+      var u = r.data.user || null;
+      setUsuario(u);
+      if (!u) { setCargando(false); return; }
+      resolverAcceso(u);
     });
   }, []);
+
+  // Decide qué puede ver el usuario: super admin = todo; otros = sus categorías.
+  function resolverAcceso(u) {
+    if (u.email === ADMIN_EMAIL) {
+      setEsSuper(true);
+      setCats(TODAS_CATS);
+      setSeccion('resumen');
+      cargarTodo();
+      return;
+    }
+    supabase.from('panel_usuarios').select('categorias, activo').eq('email', u.email).maybeSingle().then(function (res) {
+      if (res.data && res.data.activo) {
+        var cs = res.data.categorias || [];
+        setCats(cs);
+        setSeccion(primeraSeccion(cs, false));
+        cargarTodo();
+      } else {
+        setSinPermiso(true);
+        setCargando(false);
+      }
+    });
+  }
 
   function cargarPorLiberar() {
     supabase.rpc('pagos_por_liberar').then(function (r) { setPorLiberar(r.error ? [] : (r.data || [])); });
@@ -203,7 +254,18 @@ export default function Admin() {
       if (r.error) { setAuthMsg('Correo o contraseña incorrectos'); return; }
       const u = r.data && r.data.user;
       setUsuario(u || null);
-      if (u && u.email === ADMIN_EMAIL) cargarTodo();
+      if (u) { setCargando(true); resolverAcceso(u); }
+    });
+  }
+  function conEnlace(e) {
+    if (e) e.preventDefault();
+    if (!email.trim()) { setAuthMsg('Escribe tu correo'); return; }
+    setEntrando(true); setAuthMsg(null);
+    const base = (typeof window !== 'undefined' ? window.location.origin : 'https://www.maestrosenlinea.cl');
+    supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: base + '/admin' } }).then(function (r) {
+      setEntrando(false);
+      if (r.error) { setAuthMsg(r.error.message); return; }
+      setAuthMsg('Te enviamos un enlace de acceso a ' + email.trim() + '. Ábrelo en este dispositivo para entrar.');
     });
   }
   function conGoogle() {
@@ -357,16 +419,17 @@ export default function Admin() {
           <button type="submit" className="gbtn full" disabled={entrando} style={{ opacity: entrando ? 0.6 : 1 }}>{entrando ? 'Entrando...' : 'Entrar al panel'}</button>
         </form>
         <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '14px 0 10px' }}>o</div>
+        <button onClick={conEnlace} disabled={entrando} style={{ width: '100%', padding: 12, borderRadius: 12, border: '1.5px solid #e4e4ef', background: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginBottom: 10 }}>{'\u{2709}\u{FE0F} Entrar con enlace por correo'}</button>
         <button onClick={conGoogle} style={{ width: '100%', padding: 12, borderRadius: 12, border: '1.5px solid #e4e4ef', background: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{'\u{1F310} Continuar con Google'}</button>
       </div>
     </main>
   );
 
-  // ---- Con sesión pero sin permisos de admin ----
-  if (usuario.email !== ADMIN_EMAIL) return (
+  // ---- Con sesión pero sin permisos de panel ----
+  if (sinPermiso || (!esSuper && cats.length === 0)) return (
     <main style={wrap}>
       <h2>Acceso restringido</h2>
-      <p style={{ color: '#7c8499', fontSize: 14 }}>La cuenta <b>{usuario.email}</b> no tiene permisos de administrador.</p>
+      <p style={{ color: '#7c8499', fontSize: 14 }}>La cuenta <b>{usuario.email}</b> no tiene acceso al panel. Pide al administrador que te habilite.</p>
       <button onClick={salir} style={{ ...btnS, marginTop: 10, padding: '8px 14px' }}>Cerrar sesión</button>
     </main>
   );
@@ -469,16 +532,27 @@ export default function Admin() {
         <button onClick={salir} style={{ background: 'none', border: '1.5px solid #f0c8c2', color: '#b3261e', fontWeight: 800, fontSize: 12, cursor: 'pointer', borderRadius: 10, padding: '6px 12px' }}>Cerrar sesión</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-        {SECCIONES.map(function (s) {
-          const on = seccion === s.id;
-          const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'liberar' ? porLiberarCount : 0;
+      <div style={{ marginBottom: 16 }}>
+        {CATEGORIAS.filter(function (categoria) { return esSuper || cats.indexOf(categoria.id) >= 0; }).map(function (categoria) {
+          var secs = SECCIONES.filter(function (s) { return s.cat === categoria.id && (esSuper || !s.soloSuper); });
+          if (!secs.length) return null;
           return (
-            <button key={s.id} onClick={function () { setSeccion(s.id); }}
-              style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
-              {s.icono + ' ' + s.nombre}
-              {badge > 0 && <span style={{ marginLeft: 5, background: on ? '#fff' : '#ff5a3c', color: on ? '#ff5a3c' : '#fff', borderRadius: 8, padding: '1px 6px', fontSize: 10 }}>{badge}</span>}
-            </button>
+            <div key={categoria.id} style={{ marginBottom: 8 }}>
+              {esSuper && <div style={{ fontSize: 10, fontWeight: 800, color: '#b3b8c6', textTransform: 'uppercase', letterSpacing: '.05em', margin: '2px 2px 4px' }}>{categoria.icono + ' ' + categoria.nombre}</div>}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {secs.map(function (s) {
+                  const on = seccion === s.id;
+                  const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'liberar' ? porLiberarCount : 0;
+                  return (
+                    <button key={s.id} onClick={function () { setSeccion(s.id); }}
+                      style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
+                      {s.icono + ' ' + s.nombre}
+                      {badge > 0 && <span style={{ marginLeft: 5, background: on ? '#fff' : '#ff5a3c', color: on ? '#ff5a3c' : '#fff', borderRadius: 8, padding: '1px 6px', fontSize: 10 }}>{badge}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>
@@ -1186,6 +1260,7 @@ export default function Admin() {
       )}
     {seccion === 'campana' && <CampanaMaestros />}
       {seccion === 'influencers' && <InfluencersPanel />}
+      {seccion === 'usuarios' && esSuper && <UsuariosPanel categorias={CATEGORIAS} />}
       </main>
   );
 }
