@@ -36,13 +36,31 @@ export default function CampanaMaestros() {
   const [plError, setPlError] = useState('');
   const [tmpl, setTmpl] = useState('');      // "nombre|idioma"
   const [vars, setVars] = useState('');
+  // estadísticas (efectividad): teléfonos de quienes llenaron cada formulario
+  const [intSet, setIntSet] = useState({});  // form 1 (maestros_interesados.whatsapp)
+  const [regSet, setRegSet] = useState({});  // form 2 (perfiles.telefono rol=maestro)
+  const [totales, setTotales] = useState({ int: 0, reg: 0 });
 
   useEffect(function () {
     try { setEstado(JSON.parse(localStorage.getItem(STORE) || '{}')); } catch (e) {}
     try { var t = localStorage.getItem('mel_tmpl_sel'); if (t) setTmpl(t); } catch (e) {}
     try { var v = localStorage.getItem('mel_tmpl_vars'); if (v) setVars(v); } catch (e) {}
     cargarPlantillas();
+    cargarStats();
   }, []);
+
+  function last9(p) { var d = String(p || '').replace(/\D/g, ''); return d.slice(-9); }
+  async function cargarStats() {
+    try {
+      var a = await supabase.from('maestros_interesados').select('whatsapp');
+      var b = await supabase.from('perfiles').select('telefono').eq('rol', 'maestro');
+      var iset = {}, rset = {};
+      (a.data || []).forEach(function (x) { var k = last9(x.whatsapp); if (k && k.length >= 8) iset[k] = 1; });
+      (b.data || []).forEach(function (x) { var k = last9(x.telefono); if (k && k.length >= 8) rset[k] = 1; });
+      setIntSet(iset); setRegSet(rset);
+      setTotales({ int: (a.data || []).length, reg: (b.data || []).length });
+    } catch (e) {}
+  }
 
   async function jwtAdmin() {
     var s = await supabase.auth.getSession();
@@ -95,6 +113,13 @@ export default function CampanaMaestros() {
   var pend = lista.filter(function (c) { return getSt(c) === 'pend'; }).length;
   var env = lista.filter(function (c) { return getSt(c) !== 'pend'; }).length;
   var ins = lista.filter(function (c) { return getSt(c) === 'ins'; }).length;
+
+  // ---- Embudo de efectividad (sobre TODOS los contactados, cruzando por teléfono) ----
+  var contactados = CONTACTS.filter(function (c) { return getSt(c) !== 'pend'; });
+  var nContact = contactados.length;
+  var f1 = contactados.filter(function (c) { return intSet[last9(c.w)]; }).length;
+  var f2 = contactados.filter(function (c) { return regSet[last9(c.w)]; }).length;
+  function pct(a, b) { return b > 0 ? Math.round(a / b * 100) : 0; }
 
   function tmplPartes() {
     var p = (tmpl || '').split('|');
@@ -161,6 +186,30 @@ export default function CampanaMaestros() {
           <div style={{ fontSize: 17, fontWeight: 800 }}>Campaña de reclutamiento</div>
           <div style={{ fontSize: 13, opacity: .9 }}>Lista de números · filtra por tipo, región y comuna · marca los enviados</div>
         </div>
+      </div>
+
+      {/* Embudo de efectividad */}
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{'\u{1F4CA}'} Efectividad de la campaña</div>
+        <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>De los que contactaste, cuántos llenaron cada formulario (cruzado por teléfono).</div>
+        {[
+          ['Contactados', nContact, 100, '#FF4D2E'],
+          ['Llenaron Form 1 (interés)', f1, pct(f1, nContact), '#FF7A4D'],
+          ['Llenaron Form 2 (registro)', f2, pct(f2, nContact), WA]
+        ].map(function (row, i) {
+          return (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                <span style={{ color: '#374151' }}>{row[0]}</span>
+                <span style={{ fontWeight: 700 }}>{row[1]}{i > 0 ? ' · ' + row[2] + '%' : ''}</span>
+              </div>
+              <div style={{ height: 8, background: '#f0f1f3', borderRadius: 999 }}>
+                <div style={{ height: '100%', width: row[2] + '%', background: row[3], borderRadius: 999 }} />
+              </div>
+            </div>
+          );
+        })}
+        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 8 }}>Totales en la app: {totales.int} interesados · {totales.reg} registrados (incluye quienes no venían de la campaña).</div>
       </div>
 
       {/* Plantilla de Meta */}
