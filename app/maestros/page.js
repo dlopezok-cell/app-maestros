@@ -53,7 +53,7 @@ export default function Maestros() {
       <div className={'tab' + (on ? ' on' : '')} onClick={function () { setPestana(props.id); window.scrollTo(0, 0); }}>
         <span className="ti" style={{ position: 'relative', display: 'inline-block' }}>
           {props.icono}
-          {props.badge > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#ff5a3c', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{props.badge > 9 ? '9+' : props.badge}</span>}
+          {props.badge > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{props.badge > 9 ? '9+' : props.badge}</span>}
         </span>
         {props.nombre}
       </div>
