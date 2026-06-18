@@ -13,6 +13,7 @@ export default function Unete() {
   const REGIONES = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'];
   const [tel, setTel] = useState('');
   const [ref, setRef] = useState('');
+  const [inf, setInf] = useState('');
   const [msg, setMsg] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [ok, setOk] = useState(false);
@@ -21,8 +22,13 @@ export default function Unete() {
     supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
       .then(function (r) { var d = r.data || []; setCats(d); if (d.length) setOficio(d[0].valor); });
     if (typeof window !== 'undefined') {
-      var q = new URLSearchParams(window.location.search).get('ref');
+      var params = new URLSearchParams(window.location.search);
+      var q = params.get('ref');
       if (q) setRef(q);
+      // Código de influencer: viene en ?inf= o en la cookie mel_ref (la deja /r/<código>).
+      var iq = params.get('inf');
+      if (!iq) { var m = document.cookie.match(/(?:^|; )mel_ref=([^;]+)/); if (m) iq = decodeURIComponent(m[1]); }
+      if (iq) setInf(iq);
     }
   }, []);
 
@@ -39,6 +45,7 @@ export default function Unete() {
       comuna: comuna.trim() || null,
       whatsapp: '+56 9 ' + n.slice(-8),
       referido_por: ref.trim() || null,
+      ref: inf.trim() || null,
     }).then(function (r) {
       setEnviando(false);
       if (r.error) { setMsg('Error: ' + r.error.message); return; }
