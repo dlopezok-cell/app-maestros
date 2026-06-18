@@ -94,13 +94,13 @@ export default function CropFoto({ src, onCancel, onUse, subiendo }) {
         <div style={{ fontSize: 12, color: '#7c8499', marginBottom: 14 }}>Arrastra con un dedo para mover y pellizca con dos dedos para acercar. Lo que quede en el círculo es lo que verán los clientes.</div>
         <div ref={stageRef}
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onWheel={wheel}
-          style={{ position: 'relative', width: VP, height: VP, maxWidth: '100%', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', background: '#eef0f5', touchAction: 'none', cursor: 'grab', boxShadow: '0 0 0 3px #ff5a3c inset' }}>
+          style={{ position: 'relative', width: VP, height: VP, maxWidth: '100%', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', background: '#eef0f5', touchAction: 'none', cursor: 'grab', boxShadow: '0 0 0 3px #2563eb inset' }}>
           <img ref={imgRef} src={src} onLoad={onLoad} draggable={false} alt="" style={{ position: 'absolute', left: geo.current.off.x, top: geo.current.off.y, width: d.w, height: d.h, maxWidth: 'none', userSelect: 'none', pointerEvents: 'none' }} />
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: '#9aa1b5', marginTop: 12 }}>{'\u{1F446} mover · \u{1F90F} pellizcar para zoom'}</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <button onClick={onCancel} disabled={subiendo} style={{ flex: 1, padding: 12, borderRadius: 12, border: '1.5px solid #ddd', background: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', color: '#5b6275' }}>Cancelar</button>
-          <button onClick={usar} disabled={subiendo} style={{ flex: 2, padding: 12, borderRadius: 12, border: 'none', background: '#ff5a3c', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: subiendo ? 0.6 : 1 }}>{subiendo ? 'Guardando...' : 'Usar foto'}</button>
+          <button onClick={usar} disabled={subiendo} style={{ flex: 2, padding: 12, borderRadius: 12, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: subiendo ? 0.6 : 1 }}>{subiendo ? 'Guardando...' : 'Usar foto'}</button>
         </div>
       </div>
     </div>

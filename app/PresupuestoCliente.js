@@ -337,7 +337,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         {subiendo && (
           <div style={{ margin: '6px 0 10px' }}>
             <div style={{ height: 8, background: '#eef0f5', borderRadius: 6, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: progreso + '%', background: 'linear-gradient(90deg,#ff8a6b,#ff5a3c)', borderRadius: 6, transition: 'width .2s' }} />
+              <div style={{ height: '100%', width: progreso + '%', background: 'linear-gradient(90deg,#22d3ee,#2563eb)', borderRadius: 6, transition: 'width .2s' }} />
             </div>
             <div style={{ fontSize: 11, color: '#7c8499', textAlign: 'right', marginTop: 3 }}>{progreso}%</div>
           </div>
@@ -350,7 +350,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         <div style={{ display: 'flex', gap: 8, padding: '0 2px 12px' }}>
           {[['activas', 'Activas'], ['pagadas', 'Pagadas']].map(function (o) {
             var on = tabMia === o[0];
-            return <button key={o[0]} onClick={function () { setTabMia(o[0]); }} style={{ border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 800, padding: '8px 16px', borderRadius: 999, background: on ? '#ff5a3c' : '#f2f3f7', color: on ? '#fff' : '#7c8499' }}>{o[1]}</button>;
+            return <button key={o[0]} onClick={function () { setTabMia(o[0]); }} style={{ border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 800, padding: '8px 16px', borderRadius: 999, background: on ? '#2563eb' : '#f2f3f7', color: on ? '#fff' : '#7c8499' }}>{o[1]}</button>;
           })}
         </div>
       )}
@@ -403,7 +403,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                   <div style={{ background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 10, padding: '9px 10px', marginTop: 8 }}>
                     <span style={{ fontSize: 13, color: '#0d7a4f', fontWeight: 800 }}>{'\u{1F4DE} ' + telBonito(rv.maestro_telefono)}</span>
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                      {presMap[rv.id] && <button onClick={function () { setChatPagado({ presupuestoId: presMap[rv.id], maestroId: rv.maestro_id, titulo: rv.maestro_nombre || nombreMaestro(rv.maestro_id), telefono: rv.maestro_telefono }); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F4AC} Chat'}</button>}
+                      {presMap[rv.id] && <button onClick={function () { setChatPagado({ presupuestoId: presMap[rv.id], maestroId: rv.maestro_id, titulo: rv.maestro_nombre || nombreMaestro(rv.maestro_id), telefono: rv.maestro_telefono }); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F4AC} Chat'}</button>}
                       <a href={'tel:+' + telCL(rv.maestro_telefono)} style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#0d9456', color: '#fff', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800 }}>{'\u{1F4DE} Llamar'}</a>
                       <a href={waHref(rv.maestro_telefono, rv.titulo || rv.descripcion, rv.id)} onClick={function () { waMarcar(rv.id); }} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: 8, padding: '7px 0', fontSize: 12, fontWeight: 800 }}>{'\u{1F4AC} WhatsApp'}</a>
                     </div>
@@ -461,23 +461,23 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                     <b style={{ fontSize: 13.5 }}>{tituloMia(s)}</b>
-                    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 7, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#fff9f0'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800, whiteSpace: 'nowrap' }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZ.' : 'ESPERANDO')}</span>
+                    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 7, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#eef4ff'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800, whiteSpace: 'nowrap' }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZ.' : 'ESPERANDO')}</span>
                   </div>
                   <div style={{ fontSize: 12, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '1px 0' }}>{s.descripcion || 'Sin descripción'}</div>
                   <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{(s.oficio ? (s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) + ' · ') : '') + fecha(s.creado_en)}</div>
                 </div>
-                {(function () { var nl = (mensajesPorPres[s.id] || []).filter(function (m) { return m.autor_rol === 'maestro' && !m.leido; }).length; return nl > 0 ? <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span> : <span style={{ color: '#c5c9d6', fontSize: 18, flexShrink: 0 }}>{'›'}</span>; })()}
+                {(function () { var nl = (mensajesPorPres[s.id] || []).filter(function (m) { return m.autor_rol === 'maestro' && !m.leido; }).length; return nl > 0 ? <span style={{ background: '#2563eb', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span> : <span style={{ color: '#c5c9d6', fontSize: 18, flexShrink: 0 }}>{'›'}</span>; })()}
               </div>
 
               {miaSel === s.id && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 250, background: '#fff', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px', paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))', borderBottom: '1px solid #eef0f5', flexShrink: 0 }}>
-                <button onClick={function () { setMiaSel(null); }} style={{ border: 'none', background: 'none', color: '#ff5a3c', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>{'‹'}</button>
+                <button onClick={function () { setMiaSel(null); }} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>{'‹'}</button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloMia(s)}</div>
                   <div style={{ fontSize: 11, color: '#9aa1b5' }}>{(s.oficio ? (s.oficio.charAt(0).toUpperCase() + s.oficio.slice(1) + ' · ') : '') + fecha(s.creado_en)}</div>
                 </div>
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 7, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#fff9f0'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800, whiteSpace: 'nowrap' }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZ.' : 'ESPERANDO')}</span>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 7, background: cerrado ? '#eef3fd' : (conMonto ? '#f2fbf6' : '#eef4ff'), color: cerrado ? '#2b4a86' : (conMonto ? '#0d9456' : '#b07a1e'), fontWeight: 800, whiteSpace: 'nowrap' }}>{cerrado ? 'PAGADO' : (conMonto ? conMonto + ' COTIZ.' : 'ESPERANDO')}</span>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 16px 24px' }}>
               {s.descripcion && <div style={{ fontSize: 13, color: '#5b6275', margin: '12px 0 2px', lineHeight: 1.5 }}>{s.descripcion}</div>}
@@ -494,7 +494,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 var ni = cotsNum.findIndex(function (x) { return x.maestro_id === mid; });
                 var numCot = ni >= 0 ? ni + 1 : null;
                 return (
-                  <div key={mid} style={{ border: '1.5px solid ' + (abierta ? '#ffd6cb' : '#eef0f5'), borderRadius: 14, padding: 12, marginTop: 8, background: '#fff' }}>
+                  <div key={mid} style={{ border: '1.5px solid ' + (abierta ? '#dbe7fb' : '#eef0f5'), borderRadius: 14, padding: 12, marginTop: 8, background: '#fff' }}>
                     {numCot && <div style={{ fontSize: 10, fontWeight: 800, color: '#D85A30', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>{'Cotización ' + numCot}</div>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar id={mid} size={38} />
@@ -509,8 +509,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
 
                     {c && c.monto && !cerrado && (
                       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                        <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
-                        <button onClick={function () { setHojaKey(abierta ? null : ck); setMsg(null); }} style={{ flex: 1.2, background: abierta ? '#fff5f2' : '#fafbfe', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{abierta ? 'Ocultar' : '\u{1F4C4} Ver cotización'}</button>
+                        <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
+                        <button onClick={function () { setHojaKey(abierta ? null : ck); setMsg(null); }} style={{ flex: 1.2, background: abierta ? '#eef4ff' : '#fafbfe', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{abierta ? 'Ocultar' : '\u{1F4C4} Ver cotización'}</button>
                       </div>
                     )}
 
@@ -563,7 +563,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                         )}
                         <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 10 }}>{'\u{1F4C5}'} Al aceptar se revela el contacto del maestro y coordinan fecha y pago directamente.</div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
+                          <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
                           <button className="gbtn" style={{ flex: 1.3, padding: 10, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { aceptarYPagar(s, c); }}>{pagando ? 'Aceptando...' : 'Aceptar'}</button>
                         </div>
                         {msg && <p style={{ fontSize: 12, fontWeight: 600, textAlign: 'center', margin: '8px 0 0', color: (msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0) ? '#b3261e' : '#0d9456' }}>{msg}</p>}
@@ -571,7 +571,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                     )}
 
                     {(!c || !c.monto) && (
-                      <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ width: '100%', marginTop: 10, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
+                      <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ width: '100%', marginTop: 10, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
                     )}
 
                     {chatKey === ck && <ChatCotizacion usuario={usuario} presupuestoId={s.id} maestroId={mid} miRol="cliente" titulo={nombreMaestro(mid)} onClose={function () { setChatKey(null); }} />}

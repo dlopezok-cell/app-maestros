@@ -29,7 +29,7 @@ export default function MisPedidos({ usuario }) {
             <div key={p.id} style={{ borderTop: '1px solid #f1f1f1', padding: '10px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontSize: 13 }}>{p.descripcion_problema || p.tipo || 'Pedido'}</b>
-                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: '#fff9f0', color: '#b07a1e', fontWeight: 800 }}>{(p.estado || '—').toUpperCase()}</span>
+                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 8, background: '#eef4ff', color: '#b07a1e', fontWeight: 800 }}>{(p.estado || '—').toUpperCase()}</span>
               </div>
               <div style={{ fontSize: 12, color: '#7c8499', marginTop: 2 }}>{(p.precio_cotizado ? plata(p.precio_cotizado) + ' · ' : '') + fecha(p.creado_en)}</div>
             </div>

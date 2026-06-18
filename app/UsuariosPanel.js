@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // Gestión de usuarios del panel: el super admin crea usuarios (correo + nombre),
 // les asigna categorías completas (Marketing, Operaciones, etc.) y entran al
 // panel con un enlace mágico por correo. Solo ven las pestañas de sus categorías.
-const ORANGE = '#FF4D2E';
+const ORANGE = '#2563eb';
 
 export default function UsuariosPanel({ categorias }) {
   const CATS = (categorias || []).filter(function (c) { return c.id !== 'resumen'; }); // resumen es base para todos
@@ -67,7 +67,7 @@ export default function UsuariosPanel({ categorias }) {
 
   return (
     <div style={{ maxWidth: 1000 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#FF7A4D,#FF4D2E)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
         <span style={{ fontSize: 22 }}>{'\u{1F464}'}</span>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800 }}>Usuarios del panel</div>

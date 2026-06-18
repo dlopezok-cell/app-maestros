@@ -217,7 +217,7 @@ export default function PresupuestosMaestro({ usuario }) {
   const topbar = { display: 'flex', alignItems: 'center', gap: 10, padding: '12px', paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))', borderBottom: '1px solid #eef0f5', background: '#fff', flexShrink: 0 };
   const scroll = { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' };
   const bottombar = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', paddingBottom: 'calc(22px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #eef0f5', background: '#fff', flexShrink: 0 };
-  const back = { border: 'none', background: 'none', color: '#ff5a3c', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' };
+  const back = { border: 'none', background: 'none', color: '#2563eb', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' };
   const lab = { fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 7 };
 
   function Chip(props) {
@@ -238,8 +238,8 @@ export default function PresupuestosMaestro({ usuario }) {
   function Badge(p) {
     var resp = yaRespondida(p);
     var txt = resp ? 'Cotizada' : (p.maestro_id ? 'PARA TI' : 'ABIERTO');
-    var bg = resp ? '#e1f5ee' : (p.maestro_id ? '#fff5f2' : '#eef4ff');
-    var col = resp ? '#0f6e56' : (p.maestro_id ? '#ff5a3c' : '#3b6ef0');
+    var bg = resp ? '#e1f5ee' : (p.maestro_id ? '#eef4ff' : '#eef4ff');
+    var col = resp ? '#0f6e56' : (p.maestro_id ? '#2563eb' : '#3b6ef0');
     return <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 7, background: bg, color: col, whiteSpace: 'nowrap' }}>{txt}</span>;
   }
 
@@ -258,7 +258,7 @@ export default function PresupuestosMaestro({ usuario }) {
     function Tab(props) {
       var on = filtro === props.id;
       return (
-        <button onClick={function () { setFiltro(props.id); }} style={{ border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 800, padding: '7px 13px', borderRadius: 999, background: on ? '#ff5a3c' : '#f2f3f7', color: on ? '#fff' : '#7c8499' }}>
+        <button onClick={function () { setFiltro(props.id); }} style={{ border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 800, padding: '7px 13px', borderRadius: 999, background: on ? '#2563eb' : '#f2f3f7', color: on ? '#fff' : '#7c8499' }}>
           {props.label}{props.n > 0 ? ' ' + props.n : ''}
         </button>
       );
@@ -314,7 +314,7 @@ export default function PresupuestosMaestro({ usuario }) {
                   <div style={{ fontSize: 10.5, color: '#9aa1b5' }}>{ofTit(p) + ' · ' + (p.comuna || 'comuna no indicada') + ' · ' + fecha(p.creado_en)}</div>
                 </div>
                 {nl > 0
-                  ? <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span>
+                  ? <span style={{ background: '#2563eb', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span>
                   : <span style={{ color: '#c5c9d6', fontSize: 20, flexShrink: 0 }}>{'›'}</span>}
               </div>
             );
@@ -371,13 +371,13 @@ export default function PresupuestosMaestro({ usuario }) {
                 )}
               </div>
             ) : (
-              <div style={{ fontSize: 12.5, color: '#8a5a00', background: '#fff7ea', border: '1px solid #ffe2b8', borderRadius: 10, padding: '10px 12px' }}>{'\u{1F512} El teléfono y la dirección aparecen cuando el pago queda confirmado.'}</div>
+              <div style={{ fontSize: 12.5, color: '#8a5a00', background: '#fff7ea', border: '1px solid #dbe7fb', borderRadius: 10, padding: '10px 12px' }}>{'\u{1F512} El teléfono y la dirección aparecen cuando el pago queda confirmado.'}</div>
             )}
           </div>
         </div>
         {rt.presupuesto_id && (
           <div style={bottombar}>
-            <button onClick={function () { setChatId(rt.presupuesto_id); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar'}</button>
+            <button onClick={function () { setChatId(rt.presupuesto_id); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar'}</button>
           </div>
         )}
         {chatId && rt.presupuesto_id && chatId === rt.presupuesto_id && <ChatCotizacion usuario={usuario} presupuestoId={rt.presupuesto_id} maestroId={usuario.id} miRol="maestro" titulo={rt.cliente_nombre || 'Cliente'} contacto={{ telefono: rt.cliente_telefono, direccion: rt.direccion }} onClose={function () { setChatId(null); }} />}
@@ -410,7 +410,7 @@ export default function PresupuestosMaestro({ usuario }) {
         </div>
 
         <div style={bottombar}>
-          <button onClick={function () { abrirChat(sel); }} style={{ flex: 1, background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + ((noLeidos[sel.id] || 0) > 0 ? ' · ' + noLeidos[sel.id] : '')}</button>
+          <button onClick={function () { abrirChat(sel); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + ((noLeidos[sel.id] || 0) > 0 ? ' · ' + noLeidos[sel.id] : '')}</button>
           {!resp && <button className="gbtn" style={{ flex: 1.4, padding: 13 }} onClick={function () { abrirCotizar(sel); }}>{'✨ Cotizar este trabajo'}</button>}
         </div>
 

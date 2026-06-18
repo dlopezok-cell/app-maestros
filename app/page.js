@@ -13,7 +13,7 @@ const ADMIN_EMAIL = 'dlopezok@gmail.com';
 // App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
 // Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
 const EMO = { gasfiteria: '\u{1F6B0}', electricidad: '⚡', cerrajeria: '\u{1F511}', pintura: '\u{1F3A8}', calefont: '\u{1F525}', limpieza: '\u{1F9F9}' };
-const GRAD = ['linear-gradient(150deg,#3b6ef0,#7fa8ff)', 'linear-gradient(150deg,#e9842f,#ffc06b)', 'linear-gradient(150deg,#11a36c,#6fe0ae)', 'linear-gradient(150deg,#7048e8,#a78bfa)', 'linear-gradient(150deg,#d6336c,#f783ac)', 'linear-gradient(150deg,#0e7490,#5eead4)'];
+const GRAD = ['linear-gradient(150deg,#3b6ef0,#7fa8ff)', 'linear-gradient(150deg,#1e40af,#ffc06b)', 'linear-gradient(150deg,#11a36c,#6fe0ae)', 'linear-gradient(150deg,#7048e8,#a78bfa)', 'linear-gradient(150deg,#d6336c,#f783ac)', 'linear-gradient(150deg,#0e7490,#5eead4)'];
 
 export default function Home() {
 const [vista, setVista] = useState('inicio');
@@ -123,7 +123,7 @@ return (
 <div className="tabbar">
 <div className={'tab' + (vista === 'inicio' || vista === 'ficha' ? ' on' : '')} onClick={function () { irTab('inicio'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
 <div className={'tab' + (vista === 'cotizar' ? ' on' : '')} onClick={function () { irTab('cotizar'); }}><span className="ti">{'➕'}</span>Cotizar</div>
-<div className={'tab' + (vista === 'mias' ? ' on' : '')} onClick={function () { irTab('mias'); }}><span className="ti" style={{ position: 'relative', display: 'inline-block' }}>{'\u{1F4CB}'}{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#ff5a3c', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}</span>Mis cotizaciones</div>
+<div className={'tab' + (vista === 'mias' ? ' on' : '')} onClick={function () { irTab('mias'); }}><span className="ti" style={{ position: 'relative', display: 'inline-block' }}>{'\u{1F4CB}'}{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}</span>Mis cotizaciones</div>
 <div className={'tab' + (vista === 'cuenta' ? ' on' : '')} onClick={function () { irTab('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
 </div>
 );
@@ -162,8 +162,8 @@ if (vista === 'acceso') return (
 </div>
 <div className="body" style={{ paddingTop: 18 }}>
 <div style={{ display: 'flex', background: '#fff', borderRadius: 14, padding: 4, marginBottom: 16, border: '1.5px solid #eee' }}>
-<button onClick={function () { setAuthTab('ingresar'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#ff5a3c' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
-<button onClick={function () { setAuthTab('crear'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#ff5a3c' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
+<button onClick={function () { setAuthTab('ingresar'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#2563eb' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
+<button onClick={function () { setAuthTab('crear'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#2563eb' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
 </div>
 <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="tucorreo@ejemplo.cl" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
 <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contraseña" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
@@ -259,7 +259,7 @@ if (vista === 'mias') return (
 <div className="darkhead"><div className="dh1">{'\u{1F4CB} Mis cotizaciones'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus solicitudes enviadas</h2><div className="dh2">Sigue el estado, chatea y agenda con los maestros</div></div>
 {pagoMsg && (
 <div className="body" style={{ paddingTop: 14, paddingBottom: 0 }}>
-<div style={{ background: pagoMsg === 'ok' ? '#f2fbf6' : '#fff9f0', border: '1px solid ' + (pagoMsg === 'ok' ? '#bce5cf' : '#ffe2b8'), borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+<div style={{ background: pagoMsg === 'ok' ? '#f2fbf6' : '#eef4ff', border: '1px solid ' + (pagoMsg === 'ok' ? '#bce5cf' : '#dbe7fb'), borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
 <span style={{ fontSize: 20 }}>{pagoMsg === 'ok' ? '✅' : pagoMsg === 'pendiente' ? '\u{23F3}' : '⚠️'}</span>
 <div style={{ flex: 1, fontSize: 13, color: pagoMsg === 'ok' ? '#0d9456' : '#b07a1e' }}>{pagoMsg === 'ok' ? '¡Pago realizado! Tu trabajo quedó agendado. El maestro lo verá en su agenda.' : pagoMsg === 'pendiente' ? 'Tu pago quedó pendiente. Te confirmaremos en cuanto se acredite.' : 'El pago no se completó. Puedes intentar agendar de nuevo.'}</div>
 <button onClick={function () { setPagoMsg(null); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}>{'✕'}</button>

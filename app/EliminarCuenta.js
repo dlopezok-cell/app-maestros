@@ -27,7 +27,7 @@ export default function EliminarCuenta(props) {
     });
   }
 
-  var card = { border: '1px solid #f1c2bd', background: '#fff6f5', borderRadius: 16, padding: 16, marginTop: 18 };
+  var card = { border: '1px solid #f1c2bd', background: '#eef4ff', borderRadius: 16, padding: 16, marginTop: 18 };
   var btnRojo = { width: '100%', background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer' };
   var btnGhost = { flex: 1, background: '#fff', color: '#41434d', border: '1.5px solid #e4e4ea', borderRadius: 12, padding: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer' };
   var inp = { width: '100%', padding: 12, borderRadius: 12, border: '1.5px solid #e4b4ae', fontSize: 14, marginTop: 10, marginBottom: 4, boxSizing: 'border-box' };

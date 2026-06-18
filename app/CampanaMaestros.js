@@ -11,7 +11,7 @@ const REGION_NOMBRE = { RM: 'Región Metropolitana' };
 const ESTADOS = { pend: 'Pendiente', sent: 'Enviado', repl: 'Respondió', ins: 'Inscrito' };
 const SGT_COLOR = { Particular: ['#E6F1FB', '#0C447C'], Empresa: ['#FAEEDA', '#854F0B'], Otros: ['#F1EFE8', '#444441'] };
 const EST_COLOR = { pend: '#6b7280', sent: '#0F6E56', repl: '#854F0B', ins: '#185FA5' };
-const ORANGE = '#FF4D2E';
+const ORANGE = '#2563eb';
 const WA = '#1D9E75';
 
 function limpiaComuna(c) {
@@ -199,7 +199,7 @@ export default function CampanaMaestros() {
 
   return (
     <div style={{ maxWidth: 1100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#FF7A4D,#FF4D2E)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
         <span style={{ fontSize: 22 }}>{'\u{1F4E3}'}</span>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800 }}>Campaña de reclutamiento</div>
@@ -212,8 +212,8 @@ export default function CampanaMaestros() {
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{'\u{1F4CA}'} Efectividad de la campaña</div>
         <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>De los que contactaste, cuántos llenaron cada formulario (cruzado por teléfono).</div>
         {[
-          ['Contactados', nContact, 100, '#FF4D2E'],
-          ['Llenaron Form 1 (interés)', f1, pct(f1, nContact), '#FF7A4D'],
+          ['Contactados', nContact, 100, '#2563eb'],
+          ['Llenaron Form 1 (interés)', f1, pct(f1, nContact), '#22d3ee'],
           ['Llenaron Form 2 (registro)', f2, pct(f2, nContact), WA]
         ].map(function (row, i) {
           return (

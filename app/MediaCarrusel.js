@@ -47,7 +47,7 @@ export default function MediaCarrusel({ items, alto }) {
       {lista.length > 1 && (
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 8, flexWrap: 'wrap' }}>
           {lista.map(function (x, k) {
-            return <div key={k} onClick={function () { setIdx(k); }} style={{ width: k === i ? 18 : 7, height: 7, borderRadius: 5, background: k === i ? '#ff5a3c' : '#cfd3df', cursor: 'pointer', transition: 'width .15s' }} />;
+            return <div key={k} onClick={function () { setIdx(k); }} style={{ width: k === i ? 18 : 7, height: 7, borderRadius: 5, background: k === i ? '#2563eb' : '#cfd3df', cursor: 'pointer', transition: 'width .15s' }} />;
           })}
         </div>
       )}

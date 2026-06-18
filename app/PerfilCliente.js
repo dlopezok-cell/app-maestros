@@ -153,7 +153,7 @@ export default function PerfilCliente({ usuario }) {
 
         {editando
           ? <button className="gbtn full" style={{ opacity: guardando ? .6 : 1 }} disabled={guardando} onClick={guardar}>Guardar perfil</button>
-          : <button className="gbtn full" style={{ background: '#fff', color: '#ff5a3c', border: '2px solid #ffd6cb', boxShadow: 'none' }} onClick={function () { setEditando(true); setMsg(null); }}>{'✏️ Editar perfil'}</button>}
+          : <button className="gbtn full" style={{ background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', boxShadow: 'none' }} onClick={function () { setEditando(true); setMsg(null); }}>{'✏️ Editar perfil'}</button>}
       </div>
     </div>
   );

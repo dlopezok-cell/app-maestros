@@ -49,13 +49,13 @@ export default function FotoPerfilMaestro({ usuario }) {
 
   return (
     <div style={card}>
-      <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#ff5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 26 }}>
+      <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 26 }}>
         {url ? <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : inicial}
       </div>
       <div style={{ flex: 1 }}>
         <b style={{ fontSize: 14 }}>Foto de perfil</b>
         <div style={{ fontSize: 12, color: '#7c8499', margin: '2px 0 8px' }}>La que ven los clientes en tu ficha. No es la foto del carnet.</div>
-        <label style={{ display: 'inline-block', background: '#ff5a3c', color: '#fff', borderRadius: 10, padding: '8px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: subiendo ? 0.6 : 1 }}>
+        <label style={{ display: 'inline-block', background: '#2563eb', color: '#fff', borderRadius: 10, padding: '8px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: subiendo ? 0.6 : 1 }}>
           {url ? 'Cambiar foto' : 'Subir foto'}
           <input type="file" accept="image/*" style={{ display: 'none' }} disabled={subiendo}
             onChange={function (e) { subir(e.target.files[0]); }} />

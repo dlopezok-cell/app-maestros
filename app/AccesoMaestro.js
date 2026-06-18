@@ -55,7 +55,7 @@ export default function AccesoMaestro() {
 
   var wrap = { minHeight: '100vh', background: 'linear-gradient(160deg,#2a2350 0%,#3a2f6e 50%,#1d1840 100%)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '46px 22px 36px', boxSizing: 'border-box', textAlign: 'center' };
   var inp = { width: '100%', padding: 13, borderRadius: 12, border: 'none', fontSize: 14, marginBottom: 9, boxSizing: 'border-box', color: '#1c1f2b' };
-  var btnP = { width: '100%', background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer', marginBottom: 9 };
+  var btnP = { width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer', marginBottom: 9 };
   var btnG = { width: '100%', background: '#fff', color: '#1c1f2b', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer' };
   var feat = { display: 'flex', alignItems: 'center', gap: 11, background: 'rgba(255,255,255,.10)', borderRadius: 12, padding: '11px 13px', textAlign: 'left', fontSize: 13.5, fontWeight: 600 };
 

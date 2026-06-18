@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 // Extrae negocios desde Google Maps (Places API) por oficio + lugar y permite
 // agregar sus teléfonos a la lista de campaña (tabla campana_contactos).
-const ORANGE = '#FF4D2E';
+const ORANGE = '#2563eb';
 const WA = '#0d9456';
 const REGIONES = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'];
 const OFICIOS_RAPIDOS = ['Gasfíter', 'Electricista', 'Cerrajero', 'Pintor', 'Carpintero', 'Maestro construcción', 'Jardinero', 'Climatización', 'Soldador', 'Vidriería', 'Mudanzas', 'Pisos / cerámica'];
@@ -75,7 +75,7 @@ export default function MapsExtractor() {
 
   return (
     <div style={{ maxWidth: 1000 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#FF7A4D,#FF4D2E)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
         <span style={{ fontSize: 22 }}>{'\u{1F5FA}\u{FE0F}'}</span>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800 }}>Extraer contactos de Google Maps</div>
@@ -111,7 +111,7 @@ export default function MapsExtractor() {
           {resultados.map(function (x) {
             var on = !!sel[x.whatsapp];
             return (
-              <div key={x.place_id} onClick={function () { toggle(x.whatsapp); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: '1px solid #f6f6f6', cursor: 'pointer', background: on ? '#fff7f5' : '#fff' }}>
+              <div key={x.place_id} onClick={function () { toggle(x.whatsapp); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: '1px solid #f6f6f6', cursor: 'pointer', background: on ? '#eef4ff' : '#fff' }}>
                 <span style={{ fontSize: 18, color: on ? WA : '#cbd5e1' }}>{on ? '☑' : '☐'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.nombre}</div>
@@ -119,7 +119,7 @@ export default function MapsExtractor() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 13, color: '#374151' }}>{x.telefono}</div>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 999, background: x.esMovil ? '#eafaf1' : '#fff3e6', color: x.esMovil ? WA : '#b07a1e' }}>{x.esMovil ? 'Celular' : 'Fijo'}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 999, background: x.esMovil ? '#eafaf1' : '#eef4ff', color: x.esMovil ? WA : '#b07a1e' }}>{x.esMovil ? 'Celular' : 'Fijo'}</span>
                 </div>
               </div>
             );

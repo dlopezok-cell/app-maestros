@@ -308,7 +308,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
           </div>
           <div style={{ padding: 18 }}>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-              <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: '#ff5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 30, flexShrink: 0 }}>
+              <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 30, flexShrink: 0 }}>
                 {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : inicial}
               </div>
               <div style={{ minWidth: 0 }}>
@@ -388,7 +388,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
           var on = i === paso, done = i < paso;
           return (
             <div key={i} onClick={function () { irPaso(i); }} style={{ flex: 1, cursor: i <= maxPaso ? 'pointer' : 'default' }}>
-              <div style={{ height: 5, borderRadius: 999, background: on ? '#ff5a3c' : done ? '#1D9E75' : '#e8e6f3' }} />
+              <div style={{ height: 5, borderRadius: 999, background: on ? '#2563eb' : done ? '#1D9E75' : '#e8e6f3' }} />
               <div style={{ fontSize: 11, marginTop: 5, color: done ? '#0F6E56' : on ? '#1c1f2b' : '#9aa1b5', fontWeight: on || done ? 700 : 500 }}>{(done ? '✓ ' : '') + s.n}</div>
             </div>
           );

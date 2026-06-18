@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 const SITE = 'https://www.maestrosenlinea.cl';
-const ORANGE = '#FF4D2E';
+const ORANGE = '#2563eb';
 
 function slug(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '').slice(0, 30);
@@ -69,7 +69,7 @@ export default function InfluencersPanel() {
 
   return (
     <div style={{ maxWidth: 1100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#FF7A4D,#FF4D2E)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
         <span style={{ fontSize: 22 }}>{'\u{1F517}'}</span>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800 }}>Influencers · códigos de seguimiento</div>

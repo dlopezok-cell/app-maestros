@@ -75,7 +75,7 @@ export default function Bienvenida({ config }) {
               <span style={{ fontSize: 22 }}>{'\u{1F6E0}'}</span>
               <span style={{ fontSize: 15, fontWeight: 800 }}>MaestrosEnLínea</span>
             </div>
-            <span style={{ background: '#fdece7', color: '#c0341a', fontSize: 11, fontWeight: 800, letterSpacing: 1.5, padding: '5px 12px', borderRadius: 999 }}>{badge}</span>
+            <span style={{ background: '#eef4ff', color: '#c0341a', fontSize: 11, fontWeight: 800, letterSpacing: 1.5, padding: '5px 12px', borderRadius: 999 }}>{badge}</span>
           </div>
 
           <div style={{ textAlign: 'center', margin: '8px 0 16px' }}>
@@ -83,15 +83,15 @@ export default function Bienvenida({ config }) {
             <p style={{ fontSize: 14.5, color: '#8a8d98', lineHeight: 1.45, margin: '9px auto 0', maxWidth: 380 }}>{subtitulo}</p>
           </div>
 
-          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: '#fff5f1', border: '1px solid #ffe1d6', minHeight: 150 }}>
+          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: '#eef4ff', border: '1px solid #dbe7fb', minHeight: 150 }}>
             {fotoUrl
               ? <img src={fotoUrl} alt="MaestrosEnLínea" style={{ width: '100%', display: 'block' }} />
               : (
                 <svg viewBox="0 0 320 168" style={{ display: 'block', width: '100%', height: 'auto' }} role="img" aria-label="Casa con videollamada y herramientas">
-                  <rect width="320" height="168" fill="#fff5f1" />
-                  <rect x="44" y="74" width="126" height="74" rx="8" fill="#ffe1d6" />
-                  <path d="M44 76 L107 36 L170 76 Z" fill="#ff8a6b" />
-                  <rect x="92" y="100" width="30" height="48" rx="4" fill="#ff5a3c" />
+                  <rect width="320" height="168" fill="#eef4ff" />
+                  <rect x="44" y="74" width="126" height="74" rx="8" fill="#dbe7fb" />
+                  <path d="M44 76 L107 36 L170 76 Z" fill="#22d3ee" />
+                  <rect x="92" y="100" width="30" height="48" rx="4" fill="#2563eb" />
                   <rect x="132" y="94" width="24" height="20" rx="4" fill="#fff" />
                   <circle cx="222" cy="70" r="46" fill="#16181f" />
                   <rect x="199" y="55" width="46" height="31" rx="6" fill="#fff" />
@@ -117,7 +117,7 @@ export default function Bienvenida({ config }) {
             {[['1', 'Busca el oficio que necesitas'], ['2', 'Manda un video y recibe presupuesto'], ['3', 'Agenda y paga protegido en la app']].map(function (p) {
               return (
                 <div key={p[0]} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 999, background: '#fdece7', color: '#c0341a', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{p[0]}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: 999, background: '#eef4ff', color: '#c0341a', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{p[0]}</div>
                   <span style={{ fontSize: 13.5, color: '#41434d' }}>{p[1]}</span>
                 </div>
               );
@@ -141,7 +141,7 @@ export default function Bienvenida({ config }) {
                 <div style={{ fontSize: 13, color: '#fff', fontWeight: 800 }}>¿Eres maestro?</div>
                 <div style={{ fontSize: 11, color: '#a9adb8' }}>Súmate gratis · 0% comisión de Fundador.</div>
               </div>
-              <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 12, fontWeight: 800, borderRadius: 10, padding: '8px 12px' }}>Quiero unirme</span>
+              <span style={{ background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 800, borderRadius: 10, padding: '8px 12px' }}>Quiero unirme</span>
             </div>
           </a>
 

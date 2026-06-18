@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 // Agente IA de WhatsApp: editar el prompt/persona, prender o apagar las respuestas
 // automáticas, probar la respuesta y ver las conversaciones que registró el webhook.
-const ORANGE = '#FF4D2E';
+const ORANGE = '#2563eb';
 const WA = '#0d9456';
 
 export default function AgenteIA() {
@@ -82,7 +82,7 @@ export default function AgenteIA() {
 
   return (
     <div style={{ maxWidth: 1000 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#FF7A4D,#FF4D2E)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
         <span style={{ fontSize: 22 }}>{'\u{1F916}'}</span>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800 }}>Agente IA de WhatsApp</div>
@@ -141,7 +141,7 @@ export default function AgenteIA() {
               var ult = h.items[h.items.length - 1];
               var on = sel === h.telefono;
               return (
-                <div key={h.telefono} onClick={function () { setSel(h.telefono); }} style={{ padding: '10px 12px', borderBottom: '1px solid #f1f1f1', cursor: 'pointer', background: on ? '#fff7f5' : '#fff' }}>
+                <div key={h.telefono} onClick={function () { setSel(h.telefono); }} style={{ padding: '10px 12px', borderBottom: '1px solid #f1f1f1', cursor: 'pointer', background: on ? '#eef4ff' : '#fff' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.nombre || ('+' + h.telefono)}</div>
                   <div style={{ fontSize: 12, color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(ult.direccion === 'out' ? 'Andrea: ' : '') + (ult.texto || '')}</div>
                 </div>

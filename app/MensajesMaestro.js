@@ -34,7 +34,7 @@ export default function MensajesMaestro({ usuario }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)', minHeight: 420 }}>
       <div style={{ background: '#1c2030', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#ff5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F6E0}'}</div>
+        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F6E0}'}</div>
         <div><div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Soporte MaestrosEnLínea</div><div style={{ color: '#9aa1b5', fontSize: 11 }}>Escríbenos cualquier duda</div></div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', background: '#f5f6fa', padding: 16 }}>
@@ -55,7 +55,7 @@ export default function MensajesMaestro({ usuario }) {
       </div>
       <div style={{ display: 'flex', gap: 8, padding: '10px 12px', borderTop: '1px solid #eee', background: '#fff', alignItems: 'center' }}>
         <input value={txt} onChange={function (e) { setTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviar(); }} placeholder="Escribe un mensaje..." style={{ flex: 1, background: '#f1f1f5', border: 'none', borderRadius: 999, padding: '11px 15px', fontSize: 14, outline: 'none' }} />
-        <button onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#ff5a3c', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
+        <button onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2563eb', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
       </div>
     </div>
   );

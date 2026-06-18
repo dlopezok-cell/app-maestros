@@ -147,8 +147,8 @@ export default function Verificacion({ usuario, onGuardado }) {
   if (!usuario || !cargado) return null;
 
   const card = { background: '#fff', borderRadius: 16, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' };
-  const btn = { background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: '11px 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer', width: '100%' };
-  const editarBtn = { background: '#fff', color: '#ff5a3c', border: '1.5px solid #ffd6cb', borderRadius: 12, padding: '9px 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer', marginTop: 12 };
+  const btn = { background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: '11px 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer', width: '100%' };
+  const editarBtn = { background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 12, padding: '9px 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer', marginTop: 12 };
   const fileBox = { display: 'block', width: '100%', padding: 12, border: '1.5px dashed #ccc', borderRadius: 12, fontSize: 13, marginBottom: 10, background: '#fafafa', cursor: 'pointer' };
 
   var estado = registro ? registro.estado : null;
@@ -163,7 +163,7 @@ export default function Verificacion({ usuario, onGuardado }) {
       </div>
     );
     if (estado === 'pendiente') return (
-      <div style={{ ...card, borderColor: '#ffe2b8', background: '#fff9f0' }}>
+      <div style={{ ...card, borderColor: '#dbe7fb', background: '#eef4ff' }}>
         <b style={{ fontSize: 14 }}>{'\u{23F3} Verificación en revisión'}</b>
         <div style={{ fontSize: 12, color: '#7c8499', marginTop: 4 }}>Recibimos tus datos. Te avisaremos en menos de 24 horas.</div>
         <button style={editarBtn} onClick={function () { setAbierto(true); setMsg(null); }}>Editar / actualizar mis datos</button>
@@ -173,7 +173,7 @@ export default function Verificacion({ usuario, onGuardado }) {
     return (
       <div style={card}>
         {estado === 'rechazado' && (
-          <div style={{ background: '#fdeeee', border: '1px solid #f5c2c2', borderRadius: 10, padding: 10, fontSize: 12, color: '#b3261e', marginBottom: 10 }}>
+          <div style={{ background: '#eef4ff', border: '1px solid #f5c2c2', borderRadius: 10, padding: 10, fontSize: 12, color: '#b3261e', marginBottom: 10 }}>
             <b>Verificación rechazada.</b>{registro && registro.notas ? ' Motivo: ' + registro.notas : ''} Vuelve a intentarlo con fotos más claras.
           </div>
         )}

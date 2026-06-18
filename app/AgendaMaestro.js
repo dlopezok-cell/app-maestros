@@ -12,7 +12,7 @@ function estadoColor(e) {
   var s = (e || '').toLowerCase();
   if (s === 'completado' || s === 'pagado') return { bg: '#e8f7ef', fg: '#0d9456' };
   if (s === 'en_camino' || s === 'confirmado' || s === 'agendado') return { bg: '#e9f1ff', fg: '#2b5fd0' };
-  if (s === 'cancelado' || s === 'rechazado') return { bg: '#fdeeee', fg: '#b3261e' };
+  if (s === 'cancelado' || s === 'rechazado') return { bg: '#eef4ff', fg: '#b3261e' };
   return { bg: '#fff7ea', fg: '#b07a1e' }; // pendiente
 }
 
@@ -62,7 +62,7 @@ export default function AgendaMaestro({ usuario }) {
 
         <div style={{ fontSize: 13, color: '#5b6275', marginBottom: 4 }}>{'\u{1F464} ' + (t.cliente_nombre || 'Cliente')}</div>
         {t.direccion && <div style={{ fontSize: 13, color: '#5b6275', marginBottom: 10 }}>{'\u{1F4CD} ' + t.direccion}</div>}
-        {!t.pagado && <div style={{ fontSize: 12, color: '#8a5a00', background: '#fff7ea', border: '1px solid #ffe2b8', borderRadius: 10, padding: '8px 10px', marginBottom: 10, lineHeight: 1.4 }}>{'\u{1F512} La dirección y el teléfono del cliente se revelan cuando pague el trabajo.'}</div>}
+        {!t.pagado && <div style={{ fontSize: 12, color: '#8a5a00', background: '#fff7ea', border: '1px solid #dbe7fb', borderRadius: 10, padding: '8px 10px', marginBottom: 10, lineHeight: 1.4 }}>{'\u{1F512} La dirección y el teléfono del cliente se revelan cuando pague el trabajo.'}</div>}
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {tel(t) && <a href={'tel:' + tel(t)} style={{ flex: 1, minWidth: 90, textAlign: 'center', textDecoration: 'none', background: '#fff', border: '1px solid #e4e4ef', borderRadius: 10, padding: '8px 0', fontSize: 12.5, fontWeight: 800, color: '#1c1f2b' }}>{'\u{1F4DE} Llamar'}</a>}
@@ -137,7 +137,7 @@ export default function AgendaMaestro({ usuario }) {
                 <button key={k} onClick={function () { setDiaSel(sel ? null : k); }}
                   style={{ aspectRatio: '1', border: sel ? '1.5px solid #7F77DD' : '1px solid #eef0f5', borderRadius: 9, background: esHoy ? '#EEEDFE' : '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                   <span style={{ fontSize: 12, fontWeight: esHoy ? 800 : 600, color: '#1c1f2b' }}>{d.getDate()}</span>
-                  {n > 0 && <span style={{ marginTop: 2, fontSize: 9, fontWeight: 800, color: '#fff', background: '#ff5a3c', borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px' }}>{n}</span>}
+                  {n > 0 && <span style={{ marginTop: 2, fontSize: 9, fontWeight: 800, color: '#fff', background: '#2563eb', borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px' }}>{n}</span>}
                 </button>
               );
             })}
@@ -173,7 +173,7 @@ export default function AgendaMaestro({ usuario }) {
           var lst = porDia[k] || [];
           return (
             <div key={k} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: k === hoyK ? '#ff5a3c' : '#7c8499', margin: '0 0 6px' }}>{DIAS[(d.getDay() + 6) % 7] + ' ' + soloFecha(d) + (k === hoyK ? ' · hoy' : '')}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: k === hoyK ? '#2563eb' : '#7c8499', margin: '0 0 6px' }}>{DIAS[(d.getDay() + 6) % 7] + ' ' + soloFecha(d) + (k === hoyK ? ' · hoy' : '')}</div>
               {lst.length ? lst.map(function (t) { return <TarjetaTrabajo key={t.id} t={t} />; })
                 : <div style={{ fontSize: 12, color: '#c2c7d4', padding: '0 0 4px 2px' }}>Sin trabajos</div>}
             </div>
