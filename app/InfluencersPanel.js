@@ -84,7 +84,7 @@ export default function InfluencersPanel() {
           <div style={{ minWidth: 170, flex: 1 }}><label style={lbl}>Nombre del influencer</label><input value={nombre} onChange={function (e) { setNombre(e.target.value); if (!codigo) setCodigo(slug(e.target.value)); }} placeholder="ej: Juana López" style={input} /></div>
           <div style={{ width: 160 }}><label style={lbl}>Código (link)</label><input value={codigo} onChange={function (e) { setCodigo(slug(e.target.value)); }} placeholder="juanalopez" style={input} /></div>
           <div style={{ width: 150 }}><label style={lbl}>Plataforma</label><select value={plataforma} onChange={function (e) { setPlataforma(e.target.value); }} style={input}>{['Instagram', 'TikTok', 'YouTube', 'Facebook', 'Otro'].map(function (p) { return <option key={p} value={p}>{p}</option>; })}</select></div>
-          <div style={{ width: 150 }}><label style={lbl}>Trae</label><select value={destino} onChange={function (e) { setDestino(e.target.value); }} style={input}><option value="maestros">Maestros</option><option value="cliente">Clientes</option></select></div>
+          <div style={{ width: 200 }}><label style={lbl}>El link lleva a</label><select value={destino} onChange={function (e) { setDestino(e.target.value); }} style={input}><option value="maestros">Inscripción maestros (/unete)</option><option value="home">Página de inicio (/)</option><option value="cliente">App cliente (/)</option></select></div>
           <button onClick={crear} style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Crear código</button>
         </div>
         {codigo && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>Link que compartirá: <b>{SITE + '/r/' + slug(codigo)}</b></div>}
@@ -96,7 +96,7 @@ export default function InfluencersPanel() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr style={{ background: '#fafafa' }}>
-              <th style={th}>Influencer</th><th style={th}>Trae</th><th style={th}>Clics</th><th style={th}>Form 1</th><th style={th}>Form 2 / Clientes</th><th style={th}>Conv.</th><th style={th}>Link</th>
+              <th style={th}>Influencer</th><th style={th}>Va a</th><th style={th}>Clics</th><th style={th}>Form 1</th><th style={th}>Form 2 / Clientes</th><th style={th}>Conv.</th><th style={th}>Link</th>
             </tr></thead>
             <tbody>
               {codigos.map(function (c) {
@@ -107,7 +107,7 @@ export default function InfluencersPanel() {
                 return (
                   <tr key={c.codigo}>
                     <td style={td}><b>{c.nombre || c.codigo}</b><div style={{ fontSize: 11, color: '#9ca3af' }}>{(c.plataforma || '') + ' · /r/' + c.codigo}</div></td>
-                    <td style={td}>{c.destino === 'cliente' ? 'Clientes' : 'Maestros'}</td>
+                    <td style={td}>{c.destino === 'cliente' ? 'App cliente' : c.destino === 'home' ? 'Inicio (/)' : 'Inscripción (/unete)'}</td>
                     <td style={td}>{cl}</td>
                     <td style={td}>{f1}</td>
                     <td style={td}>{f2}</td>
