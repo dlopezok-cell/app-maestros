@@ -100,6 +100,7 @@ export default function Admin() {
   const [hilo, setHilo] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [maestroDet, setMaestroDet] = useState(null);
+  const [verDet, setVerDet] = useState(null); // ver datos de un maestro en verificación (sin ficha)
   const [urls, setUrls] = useState({});
   const [busca, setBusca] = useState('');
   const [msg, setMsg] = useState(null);
@@ -725,13 +726,43 @@ export default function Admin() {
             <div style={{ background: '#fff9f0', border: '1px solid #ffe2b8', borderRadius: 12, padding: 12, marginBottom: 12 }}>
               <b style={{ fontSize: 13, color: '#b07a1e' }}>{'\u{23F3} ' + verifSinFicha.length + ' en verificación (aún sin ficha publicada)'}</b>
               {verifSinFicha.map(function (v) {
+                var u = urls[v.id] || {};
+                var abierto = verDet === v.id;
                 return (
-                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f4ead2', paddingTop: 8, marginTop: 8 }}>
-                    <div style={{ fontSize: 12 }}>{nombreDe(v.user_id)} <span style={{ color: '#9aa1b5' }}>{'· RUT ' + (v.rut || '—')}</span></div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { aprobar(v); }}>Aprobar</button>
-                      <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { rechazar(v); }}>Rechazar</button>
+                  <div key={v.id} style={{ borderTop: '1px solid #f4ead2', paddingTop: 8, marginTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 12 }}>{nombreDe(v.user_id)} <span style={{ color: '#9aa1b5' }}>{'· RUT ' + (v.rut || '—')}</span></div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button style={btnS} onClick={function () { setVerDet(abierto ? null : v.id); }}>{abierto ? 'Cerrar' : 'Ver datos'}</button>
+                        <button style={{ ...btnS, color: '#0d9456', borderColor: '#bce5cf' }} onClick={function () { aprobar(v); }}>Aprobar</button>
+                        <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { rechazar(v); }}>Rechazar</button>
+                      </div>
                     </div>
+                    {abierto && (
+                      <div style={{ background: '#fff', border: '1px solid #f0e6cf', borderRadius: 10, padding: 12, marginTop: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8, fontSize: 12, marginBottom: 10 }}>
+                          <div><span style={{ color: '#9aa1b5' }}>Nombre:</span> <b>{nombreDe(v.user_id)}</b></div>
+                          <div><span style={{ color: '#9aa1b5' }}>RUT:</span> <b>{v.rut || '—'}</b></div>
+                          <div><span style={{ color: '#9aa1b5' }}>Teléfono:</span> <b>{v.telefono || '—'}</b></div>
+                          <div><span style={{ color: '#9aa1b5' }}>Correo:</span> <b>{v.email || '—'}</b></div>
+                          <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#9aa1b5' }}>Dirección:</span> <b>{v.direccion || '—'}</b></div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, color: '#9aa1b5', marginBottom: 4 }}>Carnet</div>
+                            {u.carnet ? <a href={u.carnet} target="_blank" rel="noreferrer"><img src={u.carnet} alt="carnet" style={{ width: '100%', borderRadius: 8, border: '1px solid #eee' }} /></a> : <div style={{ fontSize: 12, color: '#9aa1b5' }}>Cargando…</div>}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, color: '#9aa1b5', marginBottom: 4 }}>Selfie</div>
+                            {u.selfie ? <a href={u.selfie} target="_blank" rel="noreferrer"><img src={u.selfie} alt="selfie" style={{ width: '100%', borderRadius: 8, border: '1px solid #eee' }} /></a> : <div style={{ fontSize: 12, color: '#9aa1b5' }}>Cargando…</div>}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                          <button style={{ ...btnS, background: '#0d9456', color: '#fff', border: 'none' }} onClick={function () { aprobar(v); }}>{'Aprobar ✓'}</button>
+                          <button style={{ ...btnS, color: '#b3261e', borderColor: '#f5c2c2' }} onClick={function () { rechazar(v); }}>Rechazar</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
