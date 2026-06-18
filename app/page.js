@@ -119,12 +119,36 @@ return true;
 });
 
 function Nav() {
+var AZ = '#2563eb', GR = '#9aa1b5';
+function ico(d, on) {
+return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={on ? AZ : GR} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 4px' }}>{d}</svg>;
+}
+var onIni = (vista === 'inicio' || vista === 'ficha'), onMias = (vista === 'mias'), onCta = (vista === 'cuenta');
+function tabSt(on) { return { flex: 'none', width: 64, textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: on ? AZ : GR, cursor: 'pointer' }; }
 return (
-<div className="tabbar">
-<div className={'tab' + (vista === 'inicio' || vista === 'ficha' ? ' on' : '')} onClick={function () { irTab('inicio'); }}><span className="ti">{'\u{1F3E0}'}</span>Inicio</div>
-<div className={'tab' + (vista === 'cotizar' ? ' on' : '')} onClick={function () { irTab('cotizar'); }}><span className="ti">{'➕'}</span>Cotizar</div>
-<div className={'tab' + (vista === 'mias' ? ' on' : '')} onClick={function () { irTab('mias'); }}><span className="ti" style={{ position: 'relative', display: 'inline-block' }}>{'\u{1F4CB}'}{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -5, right: -11, background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}</span>Mis cotizaciones</div>
-<div className={'tab' + (vista === 'cuenta' ? ' on' : '')} onClick={function () { irTab('cuenta'); }}><span className="ti">{'\u{1F464}'}</span>Cuenta</div>
+<div className="tabbar" style={{ alignItems: 'center', justifyContent: 'space-around' }}>
+<div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
+<div style={tabSt(onIni)} onClick={function () { irTab('inicio'); }}>
+{ico(<g><path d="M3 9.5 12 3l9 6.5" /><path d="M5 10v10h14V10" /><path d="M9.5 20v-6h5v6" /></g>, onIni)}Inicio
+</div>
+<div style={tabSt(onMias)} onClick={function () { irTab('mias'); }}>
+<span style={{ position: 'relative', display: 'inline-block' }}>
+{ico(<g><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></g>, onMias)}
+{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -4, right: 6, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}
+</span>Mis cotizaciones
+</div>
+</div>
+<div style={{ flex: 'none', width: 70, textAlign: 'center', cursor: 'pointer' }} onClick={function () { irTab('cotizar'); }}>
+<div style={{ width: 54, height: 54, margin: '-28px auto 3px', borderRadius: 18, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(37,99,235,.45)', border: '4px solid #fff' }}>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8" /><path d="M15 18h-5" /><path d="M10 6h8v4h-8V6Z" /></svg>
+</div>
+<span style={{ fontSize: 10.5, fontWeight: 800, color: '#2563eb' }}>Cotizar</span>
+</div>
+<div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
+<div style={tabSt(onCta)} onClick={function () { irTab('cuenta'); }}>
+{ico(<g><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" /></g>, onCta)}Cuenta
+</div>
+</div>
 </div>
 );
 }
