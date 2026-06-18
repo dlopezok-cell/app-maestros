@@ -30,6 +30,7 @@ export default function CampanaMaestros() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState({});
   const [enviando, setEnviando] = useState('');
+  const [lote, setLote] = useState(20); // cuántos enviar por tanda (0 = todos)
   // plantillas leídas de Meta
   const [plantillas, setPlantillas] = useState([]);
   const [plReady, setPlReady] = useState(false);
@@ -171,9 +172,10 @@ export default function CampanaMaestros() {
   async function enviarLote() {
     var tp = tmplPartes();
     if (!tp.name) { alert('Primero elige una plantilla arriba.'); return; }
-    var pendientes = lista.filter(function (c) { return getSt(c) === 'pend'; }).slice(0, 20);
+    var pendientes = lista.filter(function (c) { return getSt(c) === 'pend'; });
+    if (lote > 0) pendientes = pendientes.slice(0, lote); // 0 = todos los del filtro
     if (!pendientes.length) { alert('No hay pendientes en este filtro.'); return; }
-    if (!confirm('Se enviarán ' + pendientes.length + ' mensajes (de a uno) con la plantilla "' + tp.name + '".\n\n¿Continuar?')) return;
+    if (!confirm('Se enviarán ' + pendientes.length + ' mensajes (de a uno) con la plantilla "' + tp.name + '".\n\nTomará alrededor de ' + Math.ceil(pendientes.length * 1.5 / 60) + ' min. ¿Continuar?')) return;
     var token = await jwtAdmin();
     if (!token) { alert('Inicia sesión'); return; }
     var fallidos = 0;
@@ -275,8 +277,13 @@ export default function CampanaMaestros() {
       </div>
 
       {/* Acciones de lote */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        <button onClick={enviarLote} style={{ background: WA, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{'\u{25B6}'} Enviar pendientes (de a 20)</button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 700 }}>Enviar</span>
+        <select value={lote} onChange={function (e) { setLote(Number(e.target.value)); }} style={{ fontSize: 13, fontWeight: 700, padding: '9px 10px', border: '1px solid #e5e7eb', borderRadius: 9, background: '#fff', cursor: 'pointer' }}>
+          {[20, 50, 100, 200, 500].map(function (n) { return <option key={n} value={n}>{n} mensajes</option>; })}
+          <option value={0}>Todos los del filtro ({pend})</option>
+        </select>
+        <button onClick={enviarLote} style={{ background: WA, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{'\u{25B6}'} Enviar pendientes</button>
         <button onClick={exportar} style={{ background: '#eef2f7', color: '#334155', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Exportar avance</button>
       </div>
 
