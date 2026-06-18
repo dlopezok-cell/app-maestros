@@ -13,7 +13,7 @@ export default function Privacidad() {
 
   return (
     <main className="body" style={wrap}>
-      <a href="/" style={{ color: '#ff5a3c', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>← Volver a la app</a>
+      <a href="/" style={{ color: '#2563eb', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>← Volver a la app</a>
       <h1 style={{ fontSize: 22, margin: '14px 0 4px' }}>Política de Privacidad</h1>
       <p style={{ fontSize: 12, color: '#9aa1b5', marginTop: 0 }}>Última actualización: 15 de junio de 2026</p>
 
