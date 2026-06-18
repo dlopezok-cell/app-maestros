@@ -25,9 +25,10 @@ export async function GET(req, ctx) {
     }
   } catch (e) {}
 
+  // Usamos ?inf= (no ?ref=) para no chocar con el referido maestro→maestro de /unete.
   const url = destino === 'cliente'
-    ? SITE + '/?app=1&ref=' + encodeURIComponent(codigo)
-    : SITE + '/unete?ref=' + encodeURIComponent(codigo);
+    ? SITE + '/?app=1&inf=' + encodeURIComponent(codigo)
+    : SITE + '/unete?inf=' + encodeURIComponent(codigo);
 
   return new Response(null, {
     status: 302,
