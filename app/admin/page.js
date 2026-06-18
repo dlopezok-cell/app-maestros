@@ -399,7 +399,7 @@ export default function Admin() {
   const inp = { width: '100%', padding: 10, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 14, boxSizing: 'border-box', marginBottom: 8 };
   const btnS = { fontSize: 12, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ddd', background: '#fff', cursor: 'pointer', fontWeight: 700 };
   const tag = function (texto, tipo) {
-    const c = tipo === 'ok' ? ['#f2fbf6', '#0d9456'] : tipo === 'mal' ? ['#fdeeee', '#b3261e'] : ['#fff9f0', '#b07a1e'];
+    const c = tipo === 'ok' ? ['#f2fbf6', '#0d9456'] : tipo === 'mal' ? ['#eef4ff', '#b3261e'] : ['#eef4ff', '#b07a1e'];
     return <span style={{ background: c[0], color: c[1], borderRadius: 8, padding: '3px 9px', fontSize: 11, fontWeight: 800 }}>{texto}</span>;
   };
   const kpi = function (titulo, valor, color) {
@@ -412,7 +412,7 @@ export default function Admin() {
   if (!usuario) return (
     <main>
       <div className="darkhead" style={{ textAlign: 'center', paddingBottom: 22 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: '#ff8a6b' }}>{'\u{1F6E0} PANEL DE ADMINISTRACIÓN'}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: '#22d3ee' }}>{'\u{1F6E0} PANEL DE ADMINISTRACIÓN'}</div>
         <h2 style={{ margin: '12px 0 2px' }}>MaestrosEnLínea</h2>
         <div style={{ color: '#b9c0d4', fontSize: 13 }}>Acceso solo para el equipo</div>
       </div>
@@ -550,9 +550,9 @@ export default function Admin() {
                   const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'liberar' ? porLiberarCount : 0;
                   return (
                     <button key={s.id} onClick={function () { setSeccion(s.id); }}
-                      style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#ff5a3c' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
+                      style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#2563eb' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
                       {s.icono + ' ' + s.nombre}
-                      {badge > 0 && <span style={{ marginLeft: 5, background: on ? '#fff' : '#ff5a3c', color: on ? '#ff5a3c' : '#fff', borderRadius: 8, padding: '1px 6px', fontSize: 10 }}>{badge}</span>}
+                      {badge > 0 && <span style={{ marginLeft: 5, background: on ? '#fff' : '#2563eb', color: on ? '#2563eb' : '#fff', borderRadius: 8, padding: '1px 6px', fontSize: 10 }}>{badge}</span>}
                     </button>
                   );
                 })}
@@ -629,7 +629,7 @@ export default function Admin() {
               ? <img src={portada.foto_url} alt="" style={{ width: '100%', borderRadius: 12, marginTop: 6, maxHeight: 200, objectFit: 'cover' }} />
               : <div style={{ fontSize: 11.5, color: '#9aa1b5', marginTop: 4 }}>Sin foto: se muestra una ilustración por defecto.</div>}
 
-            <button onClick={function () { guardarPortada(); }} style={{ marginTop: 12, width: '100%', background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar portada</button>
+            <button onClick={function () { guardarPortada(); }} style={{ marginTop: 12, width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar portada</button>
             {portadaMsg && <p style={{ fontSize: 12.5, textAlign: 'center', color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', marginTop: 8 }}>{portadaMsg}</p>}
           </div>
 
@@ -670,7 +670,7 @@ export default function Admin() {
                 return (
                   <div key={i} style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#5b6275', marginBottom: 3 }}><span>{row[0]}</span><span>{row[1] + ' · ' + pct + '%'}</span></div>
-                    <div style={{ background: '#f1f1f5', borderRadius: 6, height: 10 }}><div style={{ width: pct + '%', background: '#ff5a3c', height: 10, borderRadius: 6 }} /></div>
+                    <div style={{ background: '#f1f1f5', borderRadius: 6, height: 10 }}><div style={{ width: pct + '%', background: '#2563eb', height: 10, borderRadius: 6 }} /></div>
                   </div>
                 );
               })}
@@ -725,7 +725,7 @@ export default function Admin() {
             <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
           </div>
           {verifSinFicha.length > 0 && (
-            <div style={{ background: '#fff9f0', border: '1px solid #ffe2b8', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <div style={{ background: '#eef4ff', border: '1px solid #dbe7fb', borderRadius: 12, padding: 12, marginBottom: 12 }}>
               <b style={{ fontSize: 13, color: '#b07a1e' }}>{'\u{23F3} ' + verifSinFicha.length + ' en verificación (aún sin ficha publicada)'}</b>
               {verifSinFicha.map(function (v) {
                 var u = urls[v.id] || {};
@@ -824,7 +824,7 @@ export default function Admin() {
                   </div>
                 )}
                 {vPend ? (
-                  <div style={{ background: '#fff9f0', borderRadius: 10, padding: 10 }}>
+                  <div style={{ background: '#eef4ff', borderRadius: 10, padding: 10 }}>
                     <div style={{ fontSize: 12, fontWeight: 800, color: '#b07a1e', marginBottom: 6 }}>{'Verificación pendiente · RUT ' + (vPend.rut || '—')}</div>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       {u.carnet ? <a href={u.carnet} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img src={u.carnet} alt="carnet" style={{ width: '100%', borderRadius: 8, border: '1px solid #eee' }} /></a> : <div style={{ flex: 1, fontSize: 12, color: '#9aa1b5' }}>Cargando carnet...</div>}
@@ -965,7 +965,7 @@ export default function Admin() {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     {reserva ? tag('AGENDADO', 'ok') : cots.length ? tag(cots.length + ' COTIZ', 'pend') : tag('ESPERANDO', 'pend')}
-                    <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 4 }}>{abierto ? 'Cerrar' : 'Ver timeline'}</div>
+                    <div style={{ fontSize: 11, color: '#2563eb', fontWeight: 800, marginTop: 4 }}>{abierto ? 'Cerrar' : 'Ver timeline'}</div>
                     <button onClick={function (e) { e.stopPropagation(); eliminarPedido(p); }} style={{ marginTop: 6, background: '#b3261e', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>{'\u{1F5D1} Eliminar'}</button>
                   </div>
                 </div>
@@ -983,7 +983,7 @@ export default function Admin() {
                           var cli = mm.autor_rol === 'cliente';
                           return (
                             <div key={mm.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 6 }}>
-                              <div style={{ maxWidth: '78%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 12, padding: '6px 10px', fontSize: 12.5, lineHeight: 1.4 }}>
+                              <div style={{ maxWidth: '78%', background: cli ? '#fff' : '#2563eb', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 12, padding: '6px 10px', fontSize: 12.5, lineHeight: 1.4 }}>
                                 <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 800, marginBottom: 1 }}>{cli ? 'Cliente' : 'Maestro'}</div>
                                 {mm.texto || (mm.foto_url ? '\u{1F4F7} foto' : '')}
                               </div>
@@ -1020,13 +1020,13 @@ export default function Admin() {
                 var nl = hs.filter(function (x) { return x.autor === 'maestro' && !x.leido; }).length;
                 var on = chatMaestro === mid;
                 return (
-                  <div key={mid} onClick={function () { abrirChatMaestro(mid); }} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px 12px', borderBottom: '1px solid #f4f4f7', cursor: 'pointer', background: on ? '#fff4f1' : '#fff' }}>
+                  <div key={mid} onClick={function () { abrirChatMaestro(mid); }} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px 12px', borderBottom: '1px solid #f4f4f7', cursor: 'pointer', background: on ? '#eef4ff' : '#fff' }}>
                     <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#7F77DD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{nombreDe(mid).charAt(0).toUpperCase()}</div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700 }}>{nombreDe(mid)}</div>
                       <div style={{ fontSize: 11, color: '#9aa1b5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ult ? ult.texto : 'Sin mensajes'}</div>
                     </div>
-                    {nl > 0 && <span style={{ background: '#ff5a3c', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: 999, padding: '0 6px' }}>{nl}</span>}
+                    {nl > 0 && <span style={{ background: '#2563eb', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: 999, padding: '0 6px' }}>{nl}</span>}
                   </div>
                 );
               })}
@@ -1042,14 +1042,14 @@ export default function Admin() {
                       var out = m.autor === 'admin';
                       return (
                         <div key={m.id} style={{ display: 'flex', justifyContent: out ? 'flex-end' : 'flex-start', marginBottom: 7 }}>
-                          <div style={{ maxWidth: '78%', background: out ? '#ff5a3c' : '#fff', color: out ? '#fff' : '#1c1f2b', border: out ? 'none' : '1px solid #eee', borderRadius: 12, padding: '7px 10px', fontSize: 13, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>
+                          <div style={{ maxWidth: '78%', background: out ? '#2563eb' : '#fff', color: out ? '#fff' : '#1c1f2b', border: out ? 'none' : '1px solid #eee', borderRadius: 12, padding: '7px 10px', fontSize: 13, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>
                         </div>
                       );
                     })}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input value={chatTxt} onChange={function (e) { setChatTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarSoporte(); }} placeholder="Escribe al maestro..." style={{ flex: 1, padding: 10, border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13 }} />
-                    <button onClick={enviarSoporte} style={{ background: '#ff5a3c', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Enviar</button>
+                    <button onClick={enviarSoporte} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Enviar</button>
                   </div>
                 </div>
               )}
@@ -1078,7 +1078,7 @@ export default function Admin() {
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <span style={{ background: '#eef0f5', color: '#5b6275', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>{h.msgs.length}</span>
                     <div style={{ fontSize: 10.5, color: '#9aa1b5', marginTop: 4 }}>{fecha(ultimo.creado_en)}</div>
-                    <div style={{ fontSize: 11, color: '#ff5a3c', fontWeight: 800, marginTop: 2 }}>{abierto ? 'Cerrar' : 'Ver chat'}</div>
+                    <div style={{ fontSize: 11, color: '#2563eb', fontWeight: 800, marginTop: 2 }}>{abierto ? 'Cerrar' : 'Ver chat'}</div>
                   </div>
                 </div>
                 {abierto && (
@@ -1088,7 +1088,7 @@ export default function Admin() {
                       const cli = m.autor_rol === 'cliente';
                       return (
                         <div key={m.id} style={{ display: 'flex', justifyContent: cli ? 'flex-start' : 'flex-end', marginBottom: 8 }}>
-                          <div style={{ maxWidth: '75%', background: cli ? '#fff' : '#ff5a3c', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 14, padding: '8px 11px' }}>
+                          <div style={{ maxWidth: '75%', background: cli ? '#fff' : '#2563eb', color: cli ? '#1c1f2b' : '#fff', border: cli ? '1px solid #eee' : 'none', borderRadius: 14, padding: '8px 11px' }}>
                             <div style={{ fontSize: 10, opacity: 0.75, fontWeight: 800, marginBottom: 2 }}>{cli ? nombreDe(p.cliente_id) : nombreDe(h.maestro_id)}</div>
                             {m.foto_url && <img src={m.foto_url} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: m.texto ? 6 : 0, display: 'block' }} />}
                             {m.texto && <div style={{ fontSize: 13.5, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{m.texto}</div>}
