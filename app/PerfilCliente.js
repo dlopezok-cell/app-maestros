@@ -5,6 +5,17 @@ import { supabase } from '../lib/supabase';
 // Perfil del cliente: datos de contacto + ubicacion (mapa con pin arrastrable
 // y autocompletado de direcciones via OpenStreetMap/Photon). Sin "Mis pedidos"
 // (eso vive en su propia pagina). Modo ver / editar.
+
+// Código de influencer: lo deja /r/<código> en ?inf= o en la cookie mel_ref (30 días).
+function refInfluencer() {
+  try {
+    if (typeof window === 'undefined') return null;
+    var iq = new URLSearchParams(window.location.search).get('inf');
+    if (!iq) { var m = document.cookie.match(/(?:^|; )mel_ref=([^;]+)/); if (m) iq = decodeURIComponent(m[1]); }
+    return iq ? String(iq).trim() : null;
+  } catch (e) { return null; }
+}
+
 export default function PerfilCliente({ usuario }) {
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -91,7 +102,7 @@ export default function PerfilCliente({ usuario }) {
     if (!nombre.trim()) { setMsg('Ingresa tu nombre'); return; }
     setGuardando(true);
     setMsg('Guardando...');
-    supabase.from('perfiles').upsert({
+    var perfilRow = {
       id: usuario.id,
       rol: 'cliente',
       nombre: nombre.trim(),
@@ -100,7 +111,9 @@ export default function PerfilCliente({ usuario }) {
       comuna: comuna.trim() || null,
       lat: lat,
       lng: lng,
-    }, { onConflict: 'id' }).then(function (r) {
+    };
+    var _inf = refInfluencer(); if (_inf) perfilRow.ref = _inf; // código de influencer (solo si viene)
+    supabase.from('perfiles').upsert(perfilRow, { onConflict: 'id' }).then(function (r) {
       if (r.error) { setMsg('Error: ' + r.error.message); setGuardando(false); return; }
       setMsg('Perfil guardado ✓');
       setGuardando(false);

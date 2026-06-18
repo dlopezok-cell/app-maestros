@@ -10,6 +10,16 @@ import { supabase } from '../lib/supabase';
 //   3) Trabajos   -> galería de fotos
 // Identidad obligatoria para publicar. Si ya está registrado, se ve el resumen.
 
+// Código de influencer: lo deja /r/<código> en ?inf= o en la cookie mel_ref (30 días).
+function refInfluencer() {
+  try {
+    if (typeof window === 'undefined') return null;
+    var iq = new URLSearchParams(window.location.search).get('inf');
+    if (!iq) { var m = document.cookie.match(/(?:^|; )mel_ref=([^;]+)/); if (m) iq = decodeURIComponent(m[1]); }
+    return iq ? String(iq).trim() : null;
+  } catch (e) { return null; }
+}
+
 const REGIONES = {
   'Arica y Parinacota': ['Arica','Camarones','Putre','General Lagos'],
   'Tarapacá': ['Iquique','Alto Hospicio','Pozo Almonte','Camiña','Colchane','Huara','Pica'],
@@ -192,7 +202,9 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
       function subirC() { if (!carnetFile) return Promise.resolve(); carnetPath = uid + '/carnet.jpg'; return supabase.storage.from('verificaciones').upload(carnetPath, carnetFile, { upsert: true }).then(function (r) { if (r.error) throw new Error('al subir el carnet: ' + r.error.message); }); }
       function subirS() { if (!selfieFile) return Promise.resolve(); selfiePath = uid + '/selfie.jpg'; return supabase.storage.from('verificaciones').upload(selfiePath, selfieFile, { upsert: true }).then(function (r) { if (r.error) throw new Error('al subir la selfie: ' + r.error.message); }); }
       // Aseguramos que exista la fila de perfil (rol es obligatorio) antes de publicar la ficha.
-      return supabase.from('perfiles').upsert({ id: uid, nombre: nombre.trim(), lat: lat, lng: lng, rol: 'maestro' }, { onConflict: 'id' }).then(function (rp) {
+      var perfilRow = { id: uid, nombre: nombre.trim(), lat: lat, lng: lng, rol: 'maestro' };
+      var _inf = refInfluencer(); if (_inf) perfilRow.ref = _inf; // código de influencer (solo si viene), no sobrescribe si no hay
+      return supabase.from('perfiles').upsert(perfilRow, { onConflict: 'id' }).then(function (rp) {
         if (rp.error) throw new Error('al guardar tu perfil: ' + rp.error.message);
         return subirC();
       }).then(subirS).then(function () {
