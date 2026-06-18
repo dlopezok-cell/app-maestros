@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import CampanaMaestros from '../CampanaMaestros';
 import InfluencersPanel from '../InfluencersPanel';
 import UsuariosPanel from '../UsuariosPanel';
+import MapsExtractor from '../MapsExtractor';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -22,6 +23,7 @@ const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen', cat: 'resumen' },
   { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'marketing' },
   { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña', cat: 'marketing' },
+  { id: 'extraer', icono: '\u{1F5FA}\u{FE0F}', nombre: 'Extraer de Maps', cat: 'marketing' },
   { id: 'influencers', icono: '\u{1F517}', nombre: 'Influencers', cat: 'marketing' },
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads', cat: 'marketing' },
   { id: 'interesados', icono: '\u{1F9F0}', nombre: 'Maestros interesados', cat: 'marketing' },
@@ -1259,6 +1261,7 @@ export default function Admin() {
         </div>
       )}
     {seccion === 'campana' && <CampanaMaestros />}
+      {seccion === 'extraer' && <MapsExtractor />}
       {seccion === 'influencers' && <InfluencersPanel />}
       {seccion === 'usuarios' && esSuper && <UsuariosPanel categorias={CATEGORIAS} />}
       </main>
