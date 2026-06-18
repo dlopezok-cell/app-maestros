@@ -76,10 +76,10 @@ export default function Unete() {
       <h1 style={{ fontSize: 24, fontWeight: 900, margin: '10px 0 6px' }}>¡Quedaste inscrito!</h1>
       <p style={{ fontSize: 14.5, color: '#6b7184', lineHeight: 1.5, margin: '0 auto 18px', maxWidth: 360 }}>Te contactaremos por WhatsApp para activar tu cuenta de <b>Maestro Fundador</b> antes del lanzamiento. Eres de los primeros 🚀</p>
       <a href="/maestros" style={{ textDecoration: 'none', display: 'block', marginBottom: 12 }}>
-        <div style={{ background: 'linear-gradient(150deg,#ff6a3d,#ff4d2e)', color: '#fff', borderRadius: 14, padding: 15, fontWeight: 800, fontSize: 15, boxShadow: '0 8px 20px rgba(255,90,60,.3)' }}>Completar mi ficha ahora →</div>
+        <div style={{ background: 'linear-gradient(150deg,#22d3ee,#2563eb)', color: '#fff', borderRadius: 14, padding: 15, fontWeight: 800, fontSize: 15, boxShadow: '0 8px 20px rgba(255,90,60,.3)' }}>Completar mi ficha ahora →</div>
       </a>
       <p style={{ fontSize: 11.5, color: '#9aa1b5', margin: '0 0 18px' }}>O hazlo después cuando te contactemos. Toma ~3 minutos: foto, dirección y verificación.</p>
-      <div style={{ background: '#fff7ef', border: '1px solid #ffe1c2', borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
+      <div style={{ background: '#eef4ff', border: '1px solid #dbe7fb', borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>{'\u{1F381}'} Gana invitando a otros maestros</div>
         <div style={{ fontSize: 12.5, color: '#6b5a3a', lineHeight: 1.45 }}>Comparte tu invitación: por cada maestro que se sume con tu nombre, los dos ganan beneficios de fundador.</div>
       </div>
@@ -118,7 +118,7 @@ export default function Unete() {
             <option value="Otro">Otro</option>
           </select>
           {oficio === 'Otro' && (
-            <input value={oficioOtro} onChange={function (e) { setOficioOtro(e.target.value); }} placeholder="Especifica tu oficio (ej: Cerrajería)" autoFocus style={{ ...inp, border: '1.5px solid #ff5a3c' }} />
+            <input value={oficioOtro} onChange={function (e) { setOficioOtro(e.target.value); }} placeholder="Especifica tu oficio (ej: Cerrajería)" autoFocus style={{ ...inp, border: '1.5px solid #2563eb' }} />
           )}
           <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Tu región</label>
           <select value={comuna} onChange={function (e) { setComuna(e.target.value); }} style={{ ...inp, marginTop: 4, color: comuna ? '#16181f' : '#9aa1b5' }}>
@@ -133,7 +133,7 @@ export default function Unete() {
           <input value={ref} onChange={function (e) { setRef(e.target.value); }} placeholder="¿Quién te invitó? (opcional)" style={inp} />
 
           {msg && <p style={{ fontSize: 13, color: msg.indexOf('Error') >= 0 || msg.indexOf('Escribe') >= 0 ? '#b3261e' : '#0d9456', margin: '2px 0 8px' }}>{msg}</p>}
-          <button onClick={enviar} disabled={enviando} style={{ width: '100%', background: 'linear-gradient(150deg,#ff6a3d,#ff4d2e)', color: '#fff', border: 'none', borderRadius: 14, padding: 15, fontWeight: 800, fontSize: 15, cursor: 'pointer', opacity: enviando ? 0.6 : 1, boxShadow: '0 8px 20px rgba(255,90,60,.3)' }}>{enviando ? 'Enviando...' : 'Quiero sumarme como Fundador'}</button>
+          <button onClick={enviar} disabled={enviando} style={{ width: '100%', background: 'linear-gradient(150deg,#22d3ee,#2563eb)', color: '#fff', border: 'none', borderRadius: 14, padding: 15, fontWeight: 800, fontSize: 15, cursor: 'pointer', opacity: enviando ? 0.6 : 1, boxShadow: '0 8px 20px rgba(255,90,60,.3)' }}>{enviando ? 'Enviando...' : 'Quiero sumarme como Fundador'}</button>
           <p style={{ fontSize: 11, color: '#9aa1b5', textAlign: 'center', marginTop: 10 }}>Gratis. Te contactamos por WhatsApp para activarte.</p>
         </div>
       </div>
