@@ -401,7 +401,10 @@ export default function EmbudoMaestros(props) {
                       <textarea value={borrador} onChange={function (e) { setBorrador(e.target.value); }} placeholder="Escribe un mensaje…" rows={2} style={{ flex: 1, fontSize: 13, border: '1px solid #e4e4ef', borderRadius: 10, padding: '8px 10px', resize: 'vertical', fontFamily: 'inherit' }} />
                       <button onClick={enviar} disabled={enviando} style={{ width: 40, height: 40, borderRadius: '50%', background: '#0d9456', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>➤</button>
                     </div>
-                    <div style={{ fontSize: 9.5, color: '#b8bdcb', marginTop: 6 }}>⏱ Dentro de 24h respondes libre. Fuera de la ventana, WhatsApp puede exigir una plantilla aprobada.</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
+                      <a href={'https://wa.me/' + norm56(selTel) + (borrador ? '?text=' + encodeURIComponent(borrador) : '')} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 700, color: '#0d9456', background: '#e8f7ef', border: '1px solid #bfe6cf', borderRadius: 9, padding: '5px 10px', textDecoration: 'none' }}>{'\u{1F4F1} Abrir en WhatsApp Web ↗'}</a>
+                      <span style={{ fontSize: 9.5, color: '#b8bdcb', flex: 1, minWidth: 120 }}>Si pasaron más de 24h y el envío directo falla, usa este botón para escribirle desde tu WhatsApp.</span>
+                    </div>
                   </div>
                 </div>
               )}
