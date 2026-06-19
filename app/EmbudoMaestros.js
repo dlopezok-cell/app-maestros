@@ -241,7 +241,7 @@ export default function EmbudoMaestros(props) {
             <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.nombre}</div>
             <div style={{ fontSize: 10.5, color: '#8a90a2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.sub}</div>
           </div>
-          {card.tipo !== 'contacto' && card.tipo !== 'thread' && <button title="Ver ficha" style={iconBtn} onClick={function () { abrirFicha(card); }}>👁</button>}
+          {card.tipo === 'maestro' && <button title="Ver ficha" style={iconBtn} onClick={function () { abrirFicha(card); }}>👁</button>}
           <button title="WhatsApp" style={waBtn} onClick={function () { irAInbox(card); }}>💬</button>
         </div>
         {st && st.id === 'porverif' && (
