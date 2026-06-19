@@ -56,6 +56,9 @@ export default function EmbudoMaestros(props) {
   var [verSusp, setVerSusp] = useState(false);
   var [ficha, setFicha] = useState(null);      // card seleccionada para ver ficha
   var [fichaUrls, setFichaUrls] = useState({});
+  var [editNombre, setEditNombre] = useState(false);
+  var [nombreVal, setNombreVal] = useState('');
+  var [guardandoNombre, setGuardandoNombre] = useState(false);
   var [selTel, setSelTel] = useState(null);     // inbox: teléfono seleccionado
   var [borrador, setBorrador] = useState('');
   var [enviando, setEnviando] = useState(false);
@@ -188,6 +191,22 @@ export default function EmbudoMaestros(props) {
     setFicha(null);
   }
   function reactivarCard(card) { if (card.m && onReactivar) onReactivar(card.m); }
+  function guardarNombre() {
+    var nuevo = (nombreVal || '').trim();
+    if (!nuevo) { setAviso('El nombre no puede quedar vacío.'); return; }
+    var id = ficha && (ficha.m ? ficha.m.id : (ficha.p ? ficha.p.id : null));
+    if (!id) { setEditNombre(false); return; }
+    setGuardandoNombre(true);
+    Promise.all([
+      supabase.from('maestros').update({ nombre: nuevo }).eq('id', id),
+      supabase.from('perfiles').update({ nombre: nuevo }).eq('id', id),
+    ]).then(function () {
+      setGuardandoNombre(false); setEditNombre(false);
+      setFicha(Object.assign({}, ficha, { nombre: nuevo, m: ficha.m ? Object.assign({}, ficha.m, { nombre: nuevo }) : ficha.m }));
+      setAviso('Nombre actualizado ✓');
+      if (onRecargar) onRecargar();
+    }).catch(function () { setGuardandoNombre(false); setAviso('No se pudo actualizar el nombre.'); });
+  }
   function pedirDeNuevo(card) {
     var v = card.v; if (!v) return;
     supabase.from('verificaciones').update({ estado: 'pendiente', notas: null, revisado_at: null }).eq('id', v.id)
@@ -446,7 +465,19 @@ export default function EmbudoMaestros(props) {
               <span onClick={function () { setFicha(null); }} style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,.92)', color: '#16294f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}>✕</span>
             </div>
             <div style={{ padding: '16px 16px 4px' }}>
-              <div style={{ fontSize: 21, fontWeight: 800, color: '#16294f' }}>{ficha.nombre}</div>
+              {!editNombre && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 21, fontWeight: 800, color: '#16294f', minWidth: 0, wordBreak: 'break-word' }}>{ficha.nombre}</div>
+                  {m && <span title="Editar nombre" onClick={function () { setNombreVal(ficha.nombre); setEditNombre(true); }} style={{ flex: '0 0 auto', cursor: 'pointer', color: '#2563eb', fontSize: 16 }}>✎</span>}
+                </div>
+              )}
+              {editNombre && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input value={nombreVal} onChange={function (e) { setNombreVal(e.target.value); }} style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 700, color: '#16294f', border: '1px solid #cfe0ff', borderRadius: 8, padding: '7px 9px' }} />
+                  <button onClick={guardarNombre} disabled={guardandoNombre} style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', background: '#2563eb', border: 'none', borderRadius: 8, padding: '7px 11px', cursor: 'pointer' }}>{guardandoNombre ? '...' : 'Guardar'}</button>
+                  <button onClick={function () { setEditNombre(false); }} style={{ fontSize: 14, color: '#9aa1b5', background: '#fff', border: '1px solid #e4e4ef', borderRadius: 8, padding: '7px 10px', cursor: 'pointer' }}>✕</button>
+                </div>
+              )}
               <div style={{ fontSize: 13.5, color: '#9aa1b5', marginTop: 2 }}>{ofs || ficha.sub}</div>
               <div style={{ display: 'flex', gap: 8, margin: '12px 0', flexWrap: 'wrap' }}>
                 {m && m.verificado && <span style={{ background: '#f3f4f8', borderRadius: 14, padding: '7px 11px', fontSize: 11.5, fontWeight: 700, color: '#3b4156' }}>{'\u{1F6E1} Identidad verificada'}</span>}

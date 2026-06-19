@@ -250,6 +250,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   function avanzar(n) { if (n > maxPaso) setMaxPaso(n); setPaso(n); setErr(null); window.scrollTo(0, 0); }
   function irPaso(n) { if (n <= maxPaso) { setPaso(n); setErr(null); } }
 
+  function pareceWeb(t) { return /(https?:\/\/|www\.|\.(cl|com|net|org|io|co|app|cc|biz|info|me|tv|store|shop)\b)/i.test(t || ''); }
   function next1() {
     var e = [];
     if (!nombre.trim()) e.push('nombre');
@@ -259,6 +260,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
     if (!(verif && verif.carnet_path) && !carnetFile) e.push('foto del carnet');
     if (!(verif && verif.selfie_path) && !selfieFile) e.push('selfie');
     if (e.length) { setErr('Falta: ' + e.join(', ') + '.'); return; }
+    if (pareceWeb(nombre)) { setErr('El nombre no puede ser una página web 🙏 Pon tu nombre o el de tu taller, por ejemplo: \"Cerrajería Security\" o \"Juan Pérez\". Así los clientes te encuentran más fácil.'); return; }
     setGuardando(true); setErr(null);
     guardarIdentidad().then(function () { setGuardando(false); avanzar(1); })
       .catch(function (ex) { setGuardando(false); setErr('Error ' + ex.message); });
