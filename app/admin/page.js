@@ -392,7 +392,7 @@ export default function Admin() {
       .then(function (r) { if (r.error) { setMsg(r.error.message); return; } setChatTxt(''); cargarTodo(); });
   }
 
-  const wrap = { maxWidth: 920, margin: '0 auto', padding: 16 };
+  const wrap = { maxWidth: 1150, margin: '0 auto', padding: 16 };
   const card = { background: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, border: '1.5px solid #eee' };
   const th = { textAlign: 'left', fontWeight: 700, padding: '6px 6px', color: '#7c8499', fontSize: 12 };
   const td = { padding: '8px 6px', fontSize: 13, borderTop: '1px solid #f1f1f1' };
@@ -529,6 +529,7 @@ export default function Admin() {
 
   return (
     <main style={wrap}>
+      <style>{`body{max-width:100% !important}@media (max-width:640px){.tcards thead{display:none}.tcards,.tcards tbody,.tcards tr{display:block;width:100%}.tcards tr{border:1px solid #e7ebf2;border-radius:12px;margin:0 0 10px;padding:8px 12px;background:#fff}.tcards td{display:block;border:none !important;padding:5px 0 !important;font-size:13px}.tcards td[data-l]{display:flex;justify-content:space-between;gap:12px;align-items:center}.tcards td[data-l]::before{content:attr(data-l);color:#9aa1b5;font-weight:600;font-size:12px}}`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>{'\u{1F6E0} Panel de administración'}</h2>
@@ -771,19 +772,19 @@ export default function Admin() {
             </div>
           )}
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+            <table className="tcards" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead><tr><th style={th}>Nombre</th><th style={th}>Oficio</th><th style={th}>Rating</th><th style={th}>Trabajos</th><th style={th}>Cotiz.</th><th style={th}>Reservas</th><th style={th}>Estado</th><th style={th}>Acción</th></tr></thead>
               <tbody>
                 {maestrosFiltrados.map(function (m) {
                   return (
                     <tr key={m.id}>
-                      <td style={td}>{nombreDe(m.id)}</td>
-                      <td style={{ ...td, color: '#7c8499' }}>{m.oficio}</td>
-                      <td style={td}>{'★ ' + (m.rating_promedio || '—')}</td>
-                      <td style={td}>{m.total_trabajos || 0}</td>
-                      <td style={td}>{cotizPorM[m.id] || 0}</td>
-                      <td style={td}>{reservasPorM[m.id] || 0}</td>
-                      <td style={td}>{m.suspendido ? tag('SUSPENDIDO', 'mal') : m.verificado ? tag('VERIFICADO', 'ok') : tag('SIN VERIF', 'pend')}</td>
+                      <td data-l="Nombre" style={td}>{nombreDe(m.id)}</td>
+                      <td data-l="Oficio" style={{ ...td, color: '#7c8499' }}>{m.oficio}</td>
+                      <td data-l="Rating" style={td}>{'★ ' + (m.rating_promedio || '—')}</td>
+                      <td data-l="Trabajos" style={td}>{m.total_trabajos || 0}</td>
+                      <td data-l="Cotiz." style={td}>{cotizPorM[m.id] || 0}</td>
+                      <td data-l="Reservas" style={td}>{reservasPorM[m.id] || 0}</td>
+                      <td data-l="Estado" style={td}>{m.suspendido ? tag('SUSPENDIDO', 'mal') : m.verificado ? tag('VERIFICADO', 'ok') : tag('SIN VERIF', 'pend')}</td>
                       <td style={td}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button style={btnS} onClick={function () { setMaestroDet(maestroDet === m.id ? null : m.id); }}>{maestroDet === m.id ? 'Cerrar' : 'Ver perfil'}</button>
@@ -860,17 +861,17 @@ export default function Admin() {
               <input value={busca} onChange={function (e) { setBusca(e.target.value); }} placeholder="Buscar..." style={{ padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 10, fontSize: 13, width: 180 }} />
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+              <table className="tcards" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
                 <thead><tr><th style={th}>Nombre</th><th style={th}>Teléfono</th><th style={th}>Pedidos</th><th style={th}>Reservas</th><th style={th}>Registrado</th><th style={th}>Acción</th></tr></thead>
                 <tbody>
                   {filtrados.map(function (p) {
                     return (
                       <tr key={p.id}>
-                        <td style={td}>{p.nombre || '—'}</td>
-                        <td style={{ ...td, color: '#7c8499' }}>{p.telefono || '—'}</td>
-                        <td style={td}>{pedidosPorC[p.id] || 0}</td>
-                        <td style={td}>{reservasPorC[p.id] || 0}</td>
-                        <td style={{ ...td, color: '#9aa1b5' }}>{fecha(p.creado_en)}</td>
+                        <td data-l="Nombre" style={td}>{p.nombre || '—'}</td>
+                        <td data-l="Teléfono" style={{ ...td, color: '#7c8499' }}>{p.telefono || '—'}</td>
+                        <td data-l="Pedidos" style={td}>{pedidosPorC[p.id] || 0}</td>
+                        <td data-l="Reservas" style={td}>{reservasPorC[p.id] || 0}</td>
+                        <td data-l="Registrado" style={{ ...td, color: '#9aa1b5' }}>{fecha(p.creado_en)}</td>
                         <td style={td}><button style={{ ...btnS, color: '#fff', background: '#b3261e', border: 'none' }} onClick={function () { eliminarCliente(p); }}>Eliminar</button></td>
                       </tr>
                     );
