@@ -112,6 +112,7 @@ function buscar(texto) { setBuscado((texto || '').trim()); irTab('cotizar'); }
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
 var lista = maestros.filter(function (m) {
 if (m.suspendido) return false;
+if (!m.verificado) return false;
 if (oficio && oficiosM(m).indexOf(oficio) < 0) return false;
 if (q.trim()) {
 var t = (nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + (Array.isArray(m.comunas) ? m.comunas.join(' ') : (m.comunas || '')) + ' ' + (m.descripcion || '')).toLowerCase();
