@@ -7,6 +7,7 @@ import CookieBanner from './CookieBanner';
 import Bienvenida from './Bienvenida';
 import EliminarCuenta from './EliminarCuenta';
 import HomeCliente from './HomeCliente';
+import MensajesCliente from './MensajesCliente';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -304,8 +305,8 @@ if (vista === 'mias') return (
 if (vista === 'mensajes') return (
 <main>
 <div className="darkhead"><div className="dh1">{'\u{1F4AC} Mensajes'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus conversaciones</h2><div className="dh2">Chatea con los maestros que te cotizaron</div></div>
-<div style={{ paddingBottom: 90 }}>
-<PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="lista" />
+<div style={{ paddingBottom: 90, minHeight: 300 }}>
+<MensajesCliente usuario={usuario} maestros={maestrosFlat} />
 </div>
 <Nav />
 </main>
