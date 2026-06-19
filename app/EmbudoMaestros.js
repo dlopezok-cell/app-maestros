@@ -227,7 +227,7 @@ export default function EmbudoMaestros(props) {
   // ---- estilos ----
   var wrapTab = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, border: '1px solid #e4e4ef', borderRadius: 10, padding: '7px 13px', cursor: 'pointer', background: '#fff', color: '#5b6275' };
   var wrapTabOn = Object.assign({}, wrapTab, { background: '#eef4ff', color: '#16294f', borderColor: '#cfe0ff' });
-  var colBox = { flex: '1 0 168px', minWidth: 0, background: '#f6f8fc', border: '1px solid #eef1f7', borderRadius: 14, padding: 10 };
+  var colBox = { flex: '1 0 192px', minWidth: 0, background: '#f6f8fc', border: '1px solid #eef1f7', borderRadius: 14, padding: 10 };
   var cardBox = { background: '#fff', border: '1px solid #eef1f7', borderRadius: 10, padding: 9, marginBottom: 7 };
   var waBtn = { flex: '0 0 auto', width: 27, height: 27, borderRadius: 8, background: '#e8f7ef', color: '#0d9456', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' };
   var iconBtn = { flex: '0 0 auto', width: 27, height: 27, borderRadius: 8, background: '#fff', color: '#2563eb', border: '1px solid #e4e4ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' };
@@ -278,7 +278,7 @@ export default function EmbudoMaestros(props) {
                     <span style={{ marginLeft: 'auto', fontSize: 11, background: '#fff', border: '1px solid #eef1f7', borderRadius: 20, padding: '1px 7px' }}>{lista.length}</span>
                   </div>
                   <div style={{ fontSize: 9.5, color: '#9aa1b5', marginBottom: 5 }}>{s.sub}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9.5, color: '#5b6275', background: '#fff', border: '1px solid #eef1f7', borderRadius: 8, padding: '3px 6px', marginBottom: 7 }}>📝 {s.tpl}</div>
+                  <div title="Plantilla de esta columna · toca para editar" onClick={function () { setVista('plantillas'); }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9.5, color: '#5b6275', background: '#fff', border: '1px solid #eef1f7', borderRadius: 8, padding: '3px 6px', marginBottom: 7, cursor: 'pointer' }}>📝 {s.tpl}<span style={{ marginLeft: 'auto', opacity: .5 }}>✎</span></div>
                   {lista.length === 0 && <div style={{ fontSize: 10.5, color: '#b8bdcb', textAlign: 'center', padding: 6 }}>Vacío</div>}
                   {lista.slice(0, 25).map(function (card) { return <Card key={card.key} card={card} st={s} />; })}
                   {lista.length > 25 && <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'center' }}>{'+' + (lista.length - 25) + ' más'}</div>}
