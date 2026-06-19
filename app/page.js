@@ -51,7 +51,7 @@ if (pg) { setPagoMsg(pg); setVista('mias'); window.history.replaceState({}, '', 
 }
 supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
 .then(function (r) { setCats(r.data || []); });
-supabase.from('maestros').select('id, nombre, oficio, oficios, descripcion, rating_promedio, total_trabajos, galeria, precio_videollamada, precio_visita, comunas, region, verificado, suspendido')
+supabase.from('maestros').select('id, nombre, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comunas, region, verificado, suspendido')
 .then(function (r) { setMaestros(r.data || []); });
 supabase.from('resenas').select('maestro_id, estrellas, comentario, creado_en')
 .then(function (r) { setResenas(r.data || []); });
