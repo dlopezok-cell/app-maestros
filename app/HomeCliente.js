@@ -205,7 +205,7 @@ export default function HomeCliente(props) {
                   <div key={m.id} className="hc-prom" onClick={function () { onMaestro(m); }}>
                     <div className="hc-mphoto">{f ? <img src={f} alt="" /> : nombreM(m).charAt(0).toUpperCase()}</div>
                     <div className="hc-mname">{nombreM(m)}</div>
-                    <div className="hc-mspec">{oficiosM(m).map(ofNombre).join(' · ') || 'Maestro'}</div>
+                    <div className="hc-mspec">{(function(){var a=oficiosM(m).map(ofNombre);return a.slice(0,3).join(' · ') + (a.length>3?' +'+(a.length-3):'');})() || 'Maestro'}</div>
                     {m.verificado && <span className="hc-mbadge">{ICON.check}Verificado</span>}
                   </div>
                 );
