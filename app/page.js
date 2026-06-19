@@ -102,7 +102,7 @@ function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
 
 function abrirFicha(m) { setSel(m); setGIdx(-1); setVista('ficha'); window.scrollTo(0, 0); }
 function irTab(v) {
-if ((v === 'cotizar' || v === 'cuenta' || v === 'mias') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
+if ((v === 'cotizar' || v === 'cuenta' || v === 'mias' || v === 'mensajes') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
 setVista(v); window.scrollTo(0, 0);
 }
 function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
@@ -123,19 +123,16 @@ var AZ = '#2563eb', GR = '#9aa1b5';
 function ico(d, on) {
 return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={on ? AZ : GR} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 4px' }}>{d}</svg>;
 }
-var onIni = (vista === 'inicio' || vista === 'ficha'), onMias = (vista === 'mias'), onCta = (vista === 'cuenta');
-function tabSt(on) { return { flex: 'none', width: 64, textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: on ? AZ : GR, cursor: 'pointer' }; }
+var onIni = (vista === 'inicio' || vista === 'ficha'), onMias = (vista === 'mias'), onMsg = (vista === 'mensajes'), onCta = (vista === 'cuenta');
+function tabSt(on) { return { flex: 'none', width: 62, textAlign: 'center', fontSize: 10, fontWeight: 700, color: on ? AZ : GR, cursor: 'pointer' }; }
 return (
-<div className="tabbar" style={{ alignItems: 'center', justifyContent: 'space-around' }}>
+<div className="tabbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
 <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
 <div style={tabSt(onIni)} onClick={function () { irTab('inicio'); }}>
 {ico(<g><path d="M3 9.5 12 3l9 6.5" /><path d="M5 10v10h14V10" /><path d="M9.5 20v-6h5v6" /></g>, onIni)}Inicio
 </div>
 <div style={tabSt(onMias)} onClick={function () { irTab('mias'); }}>
-<span style={{ position: 'relative', display: 'inline-block' }}>
-{ico(<g><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></g>, onMias)}
-{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -4, right: 6, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}
-</span>Mis cotizaciones
+{ico(<g><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></g>, onMias)}Cotizaciones
 </div>
 </div>
 <div style={{ flex: 'none', width: 70, textAlign: 'center', cursor: 'pointer' }} onClick={function () { irTab('cotizar'); }}>
@@ -145,6 +142,12 @@ return (
 <span style={{ fontSize: 10.5, fontWeight: 800, color: '#2563eb' }}>Cotizar</span>
 </div>
 <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
+<div style={tabSt(onMsg)} onClick={function () { irTab('mensajes'); }}>
+<span style={{ position: 'relative', display: 'inline-block' }}>
+{ico(<g><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></g>, onMsg)}
+{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -4, right: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}
+</span>Mensajes
+</div>
 <div style={tabSt(onCta)} onClick={function () { irTab('cuenta'); }}>
 {ico(<g><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" /></g>, onCta)}Cuenta
 </div>
@@ -280,7 +283,7 @@ if (vista === 'cotizar') return (
 // ---- MIS COTIZACIONES (seguimiento de lo enviado) ----
 if (vista === 'mias') return (
 <main>
-<div className="darkhead"><div className="dh1">{'\u{1F4CB} Mis cotizaciones'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus solicitudes enviadas</h2><div className="dh2">Sigue el estado, chatea y agenda con los maestros</div></div>
+<div className="darkhead"><div className="dh1">{'\u{1F4CB} Cotizaciones'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus solicitudes enviadas</h2><div className="dh2">Sigue el estado, chatea y agenda con los maestros</div></div>
 {pagoMsg && (
 <div className="body" style={{ paddingTop: 14, paddingBottom: 0 }}>
 <div style={{ background: pagoMsg === 'ok' ? '#f2fbf6' : '#eef4ff', border: '1px solid ' + (pagoMsg === 'ok' ? '#bce5cf' : '#dbe7fb'), borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -297,6 +300,16 @@ if (vista === 'mias') return (
 </main>
 );
 
+
+if (vista === 'mensajes') return (
+<main>
+<div className="darkhead"><div className="dh1">{'\u{1F4AC} Mensajes'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus conversaciones</h2><div className="dh2">Chatea con los maestros que te cotizaron</div></div>
+<div style={{ paddingBottom: 90 }}>
+<PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="lista" />
+</div>
+<Nav />
+</main>
+);
 // ---- CUENTA ----
 if (vista === 'cuenta') return (
 <main>
