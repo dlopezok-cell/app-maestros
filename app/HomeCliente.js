@@ -51,13 +51,14 @@ var CSS = `
 .hc-cat{flex:none;width:62px;text-align:center;font-size:11px;font-weight:700;color:#3a4654;cursor:pointer}
 .hc-cat .hc-circle{width:60px;height:60px;border-radius:50%;background:var(--azul-claro);display:flex;align-items:center;justify-content:center;margin:0 auto 7px;font-size:27px}
 .hc-cat.on .hc-circle{background:#e2f7fb;box-shadow:0 0 0 2px var(--cyan) inset}
-.hc-proj{position:relative;border-radius:18px;overflow:hidden;margin-top:12px;height:152px;cursor:pointer;box-shadow:0 8px 20px rgba(14,26,56,.18)}
+.hc-proj{position:relative;border-radius:18px;overflow:hidden;margin-top:12px;height:162px;cursor:pointer;box-shadow:0 8px 20px rgba(14,26,56,.18)}
 .hc-proj img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.hc-proj .hc-veil{position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,20,48,.94) 0%,rgba(14,26,56,.80) 42%,rgba(14,26,56,.10) 100%)}
-.hc-proj .hc-bc{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;padding:18px;max-width:225px}
+.hc-proj .hc-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,26,56,0) 28%,rgba(14,26,56,.5) 60%,rgba(10,20,48,.93) 100%)}
+.hc-proj .hc-bc{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:16px 18px}
 .hc-proj .hc-ptitle{font-size:20px;display:block;color:#fff;font-weight:800;line-height:1.16}
-.hc-proj .hc-desc{font-size:12.5px;color:#cdd9ef;margin-top:6px;line-height:1.35}
-.hc-proj .hc-go{font-size:13px;font-weight:800;color:#22d3ee;white-space:nowrap;margin-top:12px;display:inline-block}
+.hc-proj .hc-prow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:5px}
+.hc-proj .hc-desc{font-size:12.5px;color:#dfe7f5;line-height:1.3;flex:1}
+.hc-proj .hc-go{font-size:13px;font-weight:800;color:#22d3ee;white-space:nowrap;flex:none}
 .hc-hscroll{display:flex;gap:10px;overflow-x:auto;margin-top:11px;padding-bottom:4px}
 .hc-hscroll::-webkit-scrollbar{height:0}
 .hc-prom{min-width:128px;border:1px solid var(--linea);border-radius:16px;padding:13px 11px;text-align:center;background:#fff;cursor:pointer}
@@ -180,17 +181,17 @@ export default function HomeCliente(props) {
         <div className="hc-proj" onClick={onCotizar}>
           <img src={FOTO_COCINA} alt="" />
           <div className="hc-veil"></div>
-          <div className="hc-bc"><b className="hc-ptitle">Remodela tu cocina</b><div className="hc-desc">Diseño + instalación con maestros verificados</div><span className="hc-go">Cotizar ›</span></div>
+          <div className="hc-bc"><b className="hc-ptitle">Remodela tu cocina</b><div className="hc-prow"><span className="hc-desc">Diseño + instalación con maestros verificados</span><span className="hc-go">Cotizar ›</span></div></div>
         </div>
         <div className="hc-proj" onClick={onCotizar}>
           <img src={FOTO_BANO} alt="" />
           <div className="hc-veil"></div>
-          <div className="hc-bc"><b className="hc-ptitle">Remodela tu baño</b><div className="hc-desc">Renovación completa, lista en pocos días</div><span className="hc-go">Cotizar ›</span></div>
+          <div className="hc-bc"><b className="hc-ptitle">Remodela tu baño</b><div className="hc-prow"><span className="hc-desc">Renovación completa, lista en pocos días</span><span className="hc-go">Cotizar ›</span></div></div>
         </div>
         <div className="hc-proj" onClick={onCotizar}>
           <img src={FOTO_PINTURA} alt="" />
           <div className="hc-veil"></div>
-          <div className="hc-bc"><b className="hc-ptitle">Mantención del hogar</b><div className="hc-desc">Arreglos y mejoras con maestros verificados</div><span className="hc-go">Cotizar ›</span></div>
+          <div className="hc-bc"><b className="hc-ptitle">Mantención del hogar</b><div className="hc-prow"><span className="hc-desc">Arreglos y mejoras con maestros verificados</span><span className="hc-go">Cotizar ›</span></div></div>
         </div>
       </div>
 
