@@ -227,7 +227,7 @@ export default function EmbudoMaestros(props) {
   // ---- estilos ----
   var wrapTab = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, border: '1px solid #e4e4ef', borderRadius: 10, padding: '7px 13px', cursor: 'pointer', background: '#fff', color: '#5b6275' };
   var wrapTabOn = Object.assign({}, wrapTab, { background: '#eef4ff', color: '#16294f', borderColor: '#cfe0ff' });
-  var colBox = { flex: '0 0 178px', background: '#f6f8fc', border: '1px solid #eef1f7', borderRadius: 14, padding: 10 };
+  var colBox = { flex: '1 0 140px', minWidth: 0, background: '#f6f8fc', border: '1px solid #eef1f7', borderRadius: 14, padding: 10 };
   var cardBox = { background: '#fff', border: '1px solid #eef1f7', borderRadius: 10, padding: 9, marginBottom: 7 };
   var waBtn = { flex: '0 0 auto', width: 27, height: 27, borderRadius: 8, background: '#e8f7ef', color: '#0d9456', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' };
   var iconBtn = { flex: '0 0 auto', width: 27, height: 27, borderRadius: 8, background: '#fff', color: '#2563eb', border: '1px solid #e4e4ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' };
