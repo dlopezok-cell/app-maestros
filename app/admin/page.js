@@ -6,6 +6,7 @@ import InfluencersPanel from '../InfluencersPanel';
 import UsuariosPanel from '../UsuariosPanel';
 import MapsExtractor from '../MapsExtractor';
 import AgenteIA from '../AgenteIA';
+import EmbudoMaestros from '../EmbudoMaestros';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -37,6 +38,7 @@ const SECCIONES = [
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas', cat: 'operaciones' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos', cat: 'finanzas' },
   { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar', cat: 'finanzas' },
+  { id: 'embudo', icono: '\u{1F5C2}\u{FE0F}', nombre: 'Embudo', cat: 'comunidad' },
   { id: 'maestros', icono: '\u{1F477}', nombre: 'Maestros', cat: 'comunidad' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes', cat: 'comunidad' },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas', cat: 'comunidad' },
@@ -1317,6 +1319,7 @@ export default function Admin() {
           {resenas.length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5' }}>Sin reseñas todavía</p>}
         </div>
       )}
+    {seccion === 'embudo' && <EmbudoMaestros maestros={maestros} perfiles={perfiles} verifs={verifs} interesados={interesados} onAprobarMaestro={aprobarMaestro} onRechazar={rechazar} onReactivar={function (m) { suspender(m, false); }} onRecargar={cargarTodo} />}
     {seccion === 'campana' && <CampanaMaestros />}
       {seccion === 'extraer' && <MapsExtractor />}
       {seccion === 'agenteia' && <AgenteIA />}
