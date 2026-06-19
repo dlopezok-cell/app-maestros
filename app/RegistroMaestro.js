@@ -261,9 +261,22 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
     if (!(verif && verif.selfie_path) && !selfieFile) e.push('selfie');
     if (e.length) { setErr('Falta: ' + e.join(', ') + '.'); return; }
     if (pareceWeb(nombre)) { setErr('El nombre no puede ser una página web 🙏 Pon tu nombre o el de tu taller, por ejemplo: \"Cerrajería Security\" o \"Juan Pérez\". Así los clientes te encuentran más fácil.'); return; }
-    setGuardando(true); setErr(null);
-    guardarIdentidad().then(function () { setGuardando(false); avanzar(1); })
-      .catch(function (ex) { setGuardando(false); setErr('Error ' + ex.message); });
+    function proceder() {
+      setGuardando(true); setErr(null);
+      guardarIdentidad().then(function () { setGuardando(false); avanzar(1); })
+        .catch(function (ex) { setGuardando(false); setErr('Error ' + ex.message); });
+    }
+    if (!avatarUrl) {
+      setGuardando(true); setErr(null);
+      supabase.from('perfiles').select('avatar_url').eq('id', usuario.id).maybeSingle().then(function (r) {
+        setGuardando(false);
+        var url = r.data && r.data.avatar_url;
+        if (url) { setAvatarUrl(url); proceder(); }
+        else { setErr('Falta tu foto de perfil 🙏 Súbela arriba, en la cabecera (tu foto redonda). Es la que ven los clientes.'); }
+      }).catch(function () { setGuardando(false); setErr('No pudimos verificar tu foto de perfil. Inténtalo de nuevo.'); });
+      return;
+    }
+    proceder();
   }
   function next2() {
     var e = [];
