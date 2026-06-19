@@ -23,13 +23,12 @@ const TODAS_CATS = CATEGORIAS.map(function (c) { return c.id; });
 
 const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen', cat: 'resumen' },
-  { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'marketing' },
+  { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados', cat: 'resumen' },
   { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña', cat: 'marketing' },
   { id: 'extraer', icono: '\u{1F5FA}\u{FE0F}', nombre: 'Extraer de Maps', cat: 'marketing' },
   { id: 'agenteia', icono: '\u{1F916}', nombre: 'Agente IA', cat: 'marketing' },
   { id: 'influencers', icono: '\u{1F517}', nombre: 'Influencers', cat: 'marketing' },
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads', cat: 'marketing' },
-  { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados', cat: 'marketing' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos', cat: 'operaciones' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas', cat: 'operaciones' },
   { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes', cat: 'operaciones' },
@@ -38,9 +37,10 @@ const SECCIONES = [
   { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar', cat: 'finanzas' },
   { id: 'embudo', icono: '\u{1F5C2}\u{FE0F}', nombre: 'Embudo', cat: 'comunidad' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes', cat: 'comunidad' },
-  { id: 'resenas', icono: '⭐', nombre: 'Reseñas', cat: 'comunidad' },
+  { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'config' },
   { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos', cat: 'config' },
   { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios', cat: 'config', soloSuper: true },
+  { id: 'resenas', icono: '⭐', nombre: 'Reseñas', cat: 'config' },
 ];
 
 // Primera sección visible según las categorías permitidas.
