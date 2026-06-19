@@ -428,72 +428,82 @@ export default function EmbudoMaestros(props) {
         </div>
       )}
 
-      {ficha && (
-        <div onClick={function () { setFicha(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16, zIndex: 9999, overflowY: 'auto' }}>
-          <div onClick={function (e) { e.stopPropagation(); }} style={{ width: '100%', maxWidth: 440, background: '#fff', borderRadius: 16, overflow: 'hidden', marginTop: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid #eef1f7' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 800 }}>{ficha.nombre}</div>
-                <div style={{ fontSize: 11.5, color: '#8a90a2' }}>{ficha.sub}</div>
-              </div>
-              <span style={{ fontSize: 18, color: '#9aa1b5', cursor: 'pointer' }} onClick={function () { setFicha(null); }}>✕</span>
+      {ficha && (function () {
+        var m = ficha.m;
+        var cap = function (s) { s = (s || '').toString(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; };
+        var ofs = m ? (Array.isArray(m.oficios) && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : [])).map(cap).join(' · ') : '';
+        var gal = (m && Array.isArray(m.galeria)) ? m.galeria : [];
+        var foto = m && m.foto_url;
+        var inicial = (ficha.nombre || '?').charAt(0).toUpperCase();
+        return (
+        <div onClick={function () { setFicha(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16, zIndex: 9999, overflowY: 'auto' }}>
+          <div onClick={function (e) { e.stopPropagation(); }} style={{ width: '100%', maxWidth: 430, background: '#fff', borderRadius: 18, overflow: 'hidden', marginTop: 16, marginBottom: 24 }}>
+            <div style={{ position: 'relative', height: 210, background: 'linear-gradient(135deg,#16294f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {foto ? <img alt="" src={foto} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 70, color: '#fff', fontWeight: 800 }}>{inicial}</span>}
+              <span onClick={function () { setFicha(null); }} style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,.92)', color: '#16294f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}>✕</span>
             </div>
-            <div style={{ padding: 14, maxHeight: 360, overflowY: 'auto' }}>
-              {(fichaUrls.carnet || fichaUrls.selfie) && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 10.5, color: '#9aa1b5', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Verificación de identidad</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {fichaUrls.carnet && <a href={fichaUrls.carnet} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img alt="Carnet" src={fichaUrls.carnet} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 8, border: '1px solid #eef1f7' }} /></a>}
-                    {fichaUrls.selfie && <a href={fichaUrls.selfie} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img alt="Selfie" src={fichaUrls.selfie} style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 8, border: '1px solid #eef1f7' }} /></a>}
+            <div style={{ padding: '16px 16px 4px' }}>
+              <div style={{ fontSize: 21, fontWeight: 800, color: '#16294f' }}>{ficha.nombre}</div>
+              <div style={{ fontSize: 13.5, color: '#9aa1b5', marginTop: 2 }}>{ofs || ficha.sub}</div>
+              <div style={{ display: 'flex', gap: 8, margin: '12px 0', flexWrap: 'wrap' }}>
+                {m && m.verificado && <span style={{ background: '#f3f4f8', borderRadius: 14, padding: '7px 11px', fontSize: 11.5, fontWeight: 700, color: '#3b4156' }}>{'\u{1F6E1} Identidad verificada'}</span>}
+                {m && Array.isArray(m.comunas) && m.comunas.length > 0 && <span style={{ background: '#f3f4f8', borderRadius: 14, padding: '7px 11px', fontSize: 11.5, fontWeight: 700, color: '#3b4156' }}>{'\u{1F4CD} ' + m.comunas.join(', ')}</span>}
+                {m && !m.suspendido && <span style={{ background: '#e9faf1', color: '#0d9456', borderRadius: 14, padding: '7px 11px', fontSize: 11.5, fontWeight: 700 }}>{'● Disponible'}</span>}
+                {m && m.suspendido && <span style={{ background: '#fdecec', color: '#b3261e', borderRadius: 14, padding: '7px 11px', fontSize: 11.5, fontWeight: 700 }}>{'● Suspendido'}</span>}
+              </div>
+              {m && (m.precio_visita || m.precio_videollamada) ? (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  {m.precio_videollamada ? <span style={{ fontSize: 12, color: '#16294f', background: '#eef4ff', borderRadius: 12, padding: '5px 10px', fontWeight: 700 }}>{'Diagnóstico $' + Number(m.precio_videollamada).toLocaleString('es-CL')}</span> : null}
+                  {m.precio_visita ? <span style={{ fontSize: 12, color: '#16294f', background: '#eef4ff', borderRadius: 12, padding: '5px 10px', fontWeight: 700 }}>{'Visita $' + Number(m.precio_visita).toLocaleString('es-CL')}</span> : null}
+                </div>
+              ) : null}
+              {m && m.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, color: '#2b2f3a', margin: '12px 0' }}>{m.descripcion}</p>}
+              {gal.length > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#16294f', margin: '10px 0 8px' }}>{'\u{1F4F8} Trabajos realizados'}</div>
+                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                    {gal.map(function (u, i) { return <a key={i} href={u} target="_blank" rel="noreferrer"><img alt="" src={u} style={{ height: 120, borderRadius: 12, flexShrink: 0 }} /></a>; })}
                   </div>
                 </div>
               )}
-              <div style={{ fontSize: 10.5, color: '#9aa1b5', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Datos</div>
-              <table style={{ width: '100%', fontSize: 12.5, marginBottom: 14 }}>
-                <tbody>
-                  <tr><td style={{ color: '#8a90a2', padding: '3px 0' }}>RUT</td><td style={{ textAlign: 'right' }}>{(ficha.v && ficha.v.rut) || '—'}</td></tr>
-                  <tr><td style={{ color: '#8a90a2', padding: '3px 0' }}>Teléfono</td><td style={{ textAlign: 'right' }}>{ficha.telefono || (ficha.v && ficha.v.telefono) || '—'}</td></tr>
-                  <tr><td style={{ color: '#8a90a2', padding: '3px 0' }}>Correo</td><td style={{ textAlign: 'right' }}>{(ficha.v && ficha.v.email) || '—'}</td></tr>
-                  {ficha.m && <tr><td style={{ color: '#8a90a2', padding: '3px 0' }}>Comuna</td><td style={{ textAlign: 'right' }}>{(Array.isArray(ficha.m.comunas) ? ficha.m.comunas.join(', ') : ficha.m.comunas) || (ficha.m.region || '—')}</td></tr>}
-                  {ficha.m && <tr><td style={{ color: '#8a90a2', padding: '3px 0' }}>Experiencia</td><td style={{ textAlign: 'right' }}>{ficha.m.anos_experiencia ? (ficha.m.anos_experiencia + ' años') : '—'}</td></tr>}
-                </tbody>
-              </table>
-              {ficha.m && (
-                <div>
-                  <div style={{ fontSize: 10.5, color: '#9aa1b5', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Oficios y precios</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                    {(Array.isArray(ficha.m.oficios) ? ficha.m.oficios : [ficha.m.oficio]).filter(Boolean).map(function (o, i) { return <span key={i} style={{ fontSize: 11, background: '#f3f5f9', borderRadius: 20, padding: '3px 10px' }}>{o}</span>; })}
-                    {ficha.m.precio_visita ? <span style={{ fontSize: 11, background: '#f3f5f9', borderRadius: 20, padding: '3px 10px' }}>{'Visita $' + Number(ficha.m.precio_visita).toLocaleString('es-CL')}</span> : null}
-                    {ficha.m.precio_videollamada ? <span style={{ fontSize: 11, background: '#f3f5f9', borderRadius: 20, padding: '3px 10px' }}>{'Videollamada $' + Number(ficha.m.precio_videollamada).toLocaleString('es-CL')}</span> : null}
-                  </div>
-                  {ficha.m.descripcion && <div style={{ fontSize: 12, color: '#5b6275', lineHeight: 1.6, marginBottom: 14 }}>{ficha.m.descripcion}</div>}
-                  {Array.isArray(ficha.m.galeria) && ficha.m.galeria.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 10.5, color: '#9aa1b5', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Galería de trabajos</div>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {ficha.m.galeria.slice(0, 6).map(function (g, i) { return <a key={i} href={g} target="_blank" rel="noreferrer"><img alt="Trabajo" src={g} style={{ width: 70, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #eef1f7' }} /></a>; })}
-                      </div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#16294f', margin: '14px 0 6px' }}>{'⭐ Reseñas'}</div>
+              <p style={{ fontSize: 13, color: '#9aa1b5', margin: 0 }}>Aún sin reseñas. Se mostrarán acá cuando los clientes lo califiquen.</p>
+
+              {(fichaUrls.carnet || fichaUrls.selfie || (ficha.v && ficha.v.rut)) && (
+                <div style={{ marginTop: 16, background: '#f8fafc', border: '1px solid #eef1f7', borderRadius: 12, padding: 12 }}>
+                  <div style={{ fontSize: 11, color: '#9aa1b5', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>{'\u{1F6E1} Revisión de identidad (solo admin)'}</div>
+                  {(fichaUrls.carnet || fichaUrls.selfie) && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                      {fichaUrls.carnet && <a href={fichaUrls.carnet} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img alt="Carnet" src={fichaUrls.carnet} style={{ width: '100%', height: 88, objectFit: 'cover', borderRadius: 8, border: '1px solid #eef1f7' }} /></a>}
+                      {fichaUrls.selfie && <a href={fichaUrls.selfie} target="_blank" rel="noreferrer" style={{ flex: 1 }}><img alt="Selfie" src={fichaUrls.selfie} style={{ width: '100%', height: 88, objectFit: 'cover', borderRadius: 8, border: '1px solid #eef1f7' }} /></a>}
                     </div>
                   )}
+                  <div style={{ fontSize: 12, color: '#5b6275', lineHeight: 1.7 }}>
+                    <div>{'RUT: '}<b>{(ficha.v && ficha.v.rut) || '—'}</b></div>
+                    <div>{'Teléfono: '}<b>{ficha.telefono || (ficha.v && ficha.v.telefono) || '—'}</b></div>
+                    <div>{'Correo: '}<b>{(ficha.v && ficha.v.email) || '—'}</b></div>
+                  </div>
                 </div>
               )}
-              {!ficha.m && !fichaUrls.carnet && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Esta persona todavía no completó su ficha ni subió verificación. Contáctala por WhatsApp para avanzar.</div>}
+              {!m && !fichaUrls.carnet && <div style={{ fontSize: 13, color: '#9aa1b5', marginTop: 12 }}>Esta persona todavía no completó su ficha pública. Contáctala por WhatsApp para que termine su registro.</div>}
+              <div style={{ height: 6 }} />
             </div>
-            <div style={{ display: 'flex', gap: 8, padding: '12px 14px', borderTop: '1px solid #eef1f7' }}>
-              <button style={{ flex: '0 0 auto', width: 40, background: '#e8f7ef', color: '#0d9456', border: 'none', borderRadius: 10, fontSize: 16, cursor: 'pointer' }} onClick={function () { irAInbox(ficha); }}>💬</button>
-              {ficha.m && !ficha.m.verificado && !ficha.m.suspendido && (
-                <button style={{ flex: 1, fontSize: 13, color: '#b3261e', background: '#fff', border: '1px solid #f3c9c9', borderRadius: 10, padding: 9, cursor: 'pointer' }} onClick={function () { rechazarCard(ficha); }}>✕ Rechazar</button>
+            <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid #eef1f7' }}>
+              <button style={{ flex: '0 0 auto', width: 44, background: '#e8f7ef', color: '#0d9456', border: 'none', borderRadius: 12, fontSize: 17, cursor: 'pointer' }} onClick={function () { irAInbox(ficha); }}>{'\u{1F4AC}'}</button>
+              {m && !m.verificado && !m.suspendido && (
+                <button style={{ flex: 1, fontSize: 13, color: '#b3261e', background: '#fff', border: '1px solid #f3c9c9', borderRadius: 12, padding: 10, cursor: 'pointer' }} onClick={function () { rechazarCard(ficha); }}>{'✕ Rechazar'}</button>
               )}
-              {ficha.m && !ficha.m.verificado && !ficha.m.suspendido && (
-                <button style={{ flex: 1.4, fontSize: 13, fontWeight: 700, color: '#fff', background: '#0d9456', border: 'none', borderRadius: 10, padding: 9, cursor: 'pointer' }} onClick={function () { aprobarCard(ficha); }}>✓ Aprobar</button>
+              {m && !m.verificado && !m.suspendido && (
+                <button style={{ flex: 1.5, fontSize: 13, fontWeight: 700, color: '#fff', background: '#0d9456', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }} onClick={function () { aprobarCard(ficha); }}>{'✓ Aprobar'}</button>
               )}
-              {ficha.m && ficha.m.suspendido && (
-                <button style={{ flex: 1.4, fontSize: 13, fontWeight: 700, color: '#0d9456', background: '#fff', border: '1px solid #bfe6cf', borderRadius: 10, padding: 9, cursor: 'pointer' }} onClick={function () { reactivarCard(ficha); setFicha(null); }}>↻ Reactivar</button>
+              {m && m.suspendido && (
+                <button style={{ flex: 1.5, fontSize: 13, fontWeight: 700, color: '#0d9456', background: '#fff', border: '1px solid #bfe6cf', borderRadius: 12, padding: 10, cursor: 'pointer' }} onClick={function () { reactivarCard(ficha); setFicha(null); }}>{'↻ Reactivar'}</button>
               )}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
