@@ -51,7 +51,7 @@ if (pg) { setPagoMsg(pg); setVista('mias'); window.history.replaceState({}, '', 
 }
 supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
 .then(function (r) { setCats(r.data || []); });
-supabase.from('maestros').select('id, nombre, oficio, oficios, descripcion, rating_promedio, total_trabajos, foto_url, galeria, precio_videollamada, precio_visita, comuna, region, verificado')
+supabase.from('maestros').select('id, nombre, oficio, oficios, descripcion, rating_promedio, total_trabajos, galeria, precio_videollamada, precio_visita, comunas, region, verificado, suspendido')
 .then(function (r) { setMaestros(r.data || []); });
 supabase.from('resenas').select('maestro_id, estrellas, comentario, creado_en')
 .then(function (r) { setResenas(r.data || []); });
@@ -111,9 +111,10 @@ function buscar(texto) { setBuscado((texto || '').trim()); irTab('cotizar'); }
 
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
 var lista = maestros.filter(function (m) {
+if (m.suspendido) return false;
 if (oficio && oficiosM(m).indexOf(oficio) < 0) return false;
 if (q.trim()) {
-var t = (nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + (m.comuna || '') + ' ' + (m.descripcion || '')).toLowerCase();
+var t = (nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + (Array.isArray(m.comunas) ? m.comunas.join(' ') : (m.comunas || '')) + ' ' + (m.descripcion || '')).toLowerCase();
 if (t.indexOf(q.toLowerCase()) < 0) return false;
 }
 return true;
@@ -221,7 +222,7 @@ return (
 <div className="dmeta">{ofs || 'Maestro'}</div>
 <div className="dbadges">
 {sel.verificado && <span className="dbadge">{'\u{1F6E1} Identidad verificada'}</span>}
-{sel.comuna && <span className="dbadge">{'\u{1F4CD} ' + sel.comuna}</span>}
+{Array.isArray(sel.comunas) && sel.comunas.length > 0 && <span className="dbadge">{'\u{1F4CD} ' + sel.comunas.join(', ')}</span>}
 <span className="dbadge g">{'● Disponible'}</span>
 </div>
 {sel.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, color: '#2b2f3a', margin: '12px 0' }}>{sel.descripcion}</p>}
