@@ -509,6 +509,7 @@ export default function Admin() {
   const perfMaestros = perfiles.filter(function (p) { return p.rol === 'maestro'; });
   const maestroIds = {}; maestros.forEach(function (m) { maestroIds[m.id] = true; });
   const sinFicha = perfMaestros.filter(function (p) { return !maestroIds[p.id]; });
+  const sinFichaResto = sinFicha.filter(function (p) { var v = verifs.find(function (x) { return x.user_id === p.id; }); return !v || v.estado !== 'pendiente'; });
 
   // hilos de conversación
   const presById = {};
@@ -766,6 +767,28 @@ export default function Admin() {
                         </div>
                       </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {sinFichaResto.length > 0 && (
+            <div style={{ background: '#fff8ee', border: '1px solid #f0e6cf', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <b style={{ fontSize: 13, color: '#b07a1e' }}>{'\u{1F4DD} ' + sinFichaResto.length + ' registrados sin ficha completa'}</b>
+              <div style={{ fontSize: 11.5, color: '#9aa1b5', margin: '3px 0 6px' }}>Crearon su cuenta como maestro pero no completaron oficios/precios, por eso no aparecen en el directorio. Contactalos para que terminen su registro.</div>
+              {sinFichaResto.map(function (p) {
+                var v = verifs.find(function (x) { return x.user_id === p.id; }) || null;
+                var est = v ? v.estado : null;
+                var color = est === 'aprobado' ? '#0d9456' : est === 'rechazado' ? '#b3261e' : '#9aa1b5';
+                var etiqueta = est === 'aprobado' ? 'VERIF. APROBADA' : est === 'rechazado' ? 'VERIF. RECHAZADA' : 'SIN VERIFICACIÓN';
+                var contacto = [v && v.telefono, v && v.email].filter(Boolean).join('  \u00b7  ') || 'Sin contacto registrado';
+                return (
+                  <div key={p.id} style={{ borderTop: '1px solid #f4ead2', paddingTop: 7, marginTop: 7, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12.5 }}>
+                      <b>{p.nombre || (p.id ? p.id.slice(0, 8) : 'Sin nombre')}</b>
+                      <span style={{ color: color, fontWeight: 800, fontSize: 10.5, marginLeft: 8 }}>{etiqueta}</span>
+                      <div style={{ fontSize: 11.5, color: '#7c8499', marginTop: 2 }}>{contacto}</div>
+                    </div>
                   </div>
                 );
               })}
