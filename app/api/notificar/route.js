@@ -19,7 +19,7 @@ function plantilla(titulo, cuerpoHtml, cta, ctaUrl) {
     '<div style="border:1px solid #eee;border-top:none;border-radius:0 0 14px 14px;padding:22px">' +
     '<h2 style="margin:0 0 10px;font-size:18px">' + titulo + '</h2>' +
     cuerpoHtml +
-    (cta ? '<p style="margin-top:18px"><a href="' + ctaUrl + '" style="background:#ff5a3c;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block">' + cta + '</a></p>' : '') +
+    (cta ? '<p style="margin-top:18px"><a href="' + ctaUrl + '" style="background:#2563eb;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block">' + cta + '</a></p>' : '') +
     '<p style="margin-top:18px;font-size:12px;color:#9aa1b5">Recibes este correo porque tienes una cuenta en MaestrosEnLínea.</p>' +
     '</div></div>'
   );
