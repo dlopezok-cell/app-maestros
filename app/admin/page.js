@@ -35,6 +35,7 @@ const SECCIONES = [
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas', cat: 'operaciones' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos', cat: 'finanzas' },
   { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar', cat: 'finanzas' },
+  { id: 'comision', icono: '\u{1F4B8}', nombre: 'Comisión', cat: 'finanzas' },
   { id: 'embudo', icono: '\u{1F5C2}\u{FE0F}', nombre: 'Embudo', cat: 'comunidad' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes', cat: 'comunidad' },
   { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'config' },
@@ -83,7 +84,7 @@ export default function Admin() {
   const [pagos, setPagos] = useState([]);
   const [porLiberar, setPorLiberar] = useState([]);
   const [liberandoId, setLiberandoId] = useState(null);
-  const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO' });
+  const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO', comision_pct: 0 });
   const [portadaMsg, setPortadaMsg] = useState(null);
   const [interesados, setInteresados] = useState([]);
   const [resenas, setResenas] = useState([]);
@@ -593,6 +594,20 @@ export default function Admin() {
       )}
 
       {/* ---------------- PORTADA (home on/off) ---------------- */}
+      {seccion === 'comision' && (
+        <div style={card}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 18 }}>{'\u{1F4B8}'} Comisión de la plataforma</h2>
+          <p style={{ fontSize: 13, color: '#7c8499', margin: '0 0 14px', lineHeight: 1.5 }}>Porcentaje que se suma a cada cotización. Lo paga el cliente y el maestro recibe su precio completo. Se calcula sobre la mano de obra. Déjalo en 0% durante la marcha blanca; cuando está en 0 no aparece ninguna línea de comisión.</p>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Porcentaje (%)</label>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6, maxWidth: 240 }}>
+            <input type="number" min="0" max="40" step="0.5" value={portada.comision_pct == null ? 0 : portada.comision_pct} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { comision_pct: v }); }); }} style={{ flex: 1, padding: 11, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 15, boxSizing: 'border-box' }} />
+            <span style={{ fontSize: 18, fontWeight: 800, color: '#1c2230' }}>%</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#7c8499', margin: '8px 0 14px' }}>{'Ejemplo: mano de obra $10.000 con ' + (Number(portada.comision_pct) || 0) + '% \u2192 comisión ' + plata(Math.round(10000 * ((Number(portada.comision_pct) || 0) / 100)))}</div>
+          <button onClick={function () { guardarPortada({ comision_pct: Number(portada.comision_pct) || 0 }); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 24px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar</button>
+          {portadaMsg && <span style={{ marginLeft: 12, fontSize: 13, color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456' }}>{portadaMsg}</span>}
+        </div>
+      )}
       {seccion === 'portada' && (
         <div>
           <div style={{ ...card, background: portada.portada_activa ? 'linear-gradient(160deg,#16181f,#2a2d3a)' : '#fff', color: portada.portada_activa ? '#fff' : '#1c1f2b', border: portada.portada_activa ? 'none' : '1px solid #eef0f5' }}>
