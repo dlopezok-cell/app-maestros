@@ -27,6 +27,9 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   const [direcciones, setDirecciones] = useState([]);
   const [dirSel, setDirSel] = useState(null);
   const [dirOpen, setDirOpen] = useState(false);
+  const [dirAdd, setDirAdd] = useState(false);
+  const [dAdd, setDAdd] = useState({ titulo: '', direccion: '', comuna: '', lat: null, lng: null });
+  const [dirAddMsg, setDirAddMsg] = useState(null);
   const [chatKey, setChatKey] = useState(null);
   const [hojaKey, setHojaKey] = useState(null);     // cotización abierta (hoja)
   const [miaSel, setMiaSel] = useState(null);       // solicitud expandida en la lista
@@ -44,6 +47,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   const [fijarFecha, setFijarFecha] = useState('');
   const grabarRef = useRef(null);
   const subirRef = useRef(null);
+  const addDirRef = useRef(null);
 
   function cargarReservas() {
     if (!usuario) return;
@@ -291,32 +295,69 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     );
   }
 
+  useEffect(function () {
+    if (!dirAdd) return;
+    var key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    function attach() {
+      if (!addDirRef.current || addDirRef.current._ac || !(window.google && window.google.maps && window.google.maps.places)) return;
+      var ac = new window.google.maps.places.Autocomplete(addDirRef.current, { componentRestrictions: { country: 'cl' }, fields: ['formatted_address', 'address_components', 'geometry'] });
+      addDirRef.current._ac = ac;
+      ac.addListener('place_changed', function () {
+        var pl = ac.getPlace(); var nd = {};
+        if (pl.formatted_address) nd.direccion = pl.formatted_address;
+        if (pl.geometry && pl.geometry.location) { nd.lat = pl.geometry.location.lat(); nd.lng = pl.geometry.location.lng(); }
+        var comps = pl.address_components || [], com = '';
+        comps.forEach(function (cc) { if (cc.types.indexOf('administrative_area_level_3') >= 0 && !com) com = cc.long_name; if (cc.types.indexOf('locality') >= 0 && !com) com = cc.long_name; });
+        if (com) nd.comuna = com;
+        setDAdd(function (prev) { return Object.assign({}, prev, nd); });
+      });
+    }
+    if (window.google && window.google.maps && window.google.maps.places) { attach(); return; }
+    if (!key) return;
+    var existing = document.getElementById('gmaps-sdk');
+    if (existing) { var iv = setInterval(function () { if (window.google && window.google.maps && window.google.maps.places) { clearInterval(iv); attach(); } }, 250); return function () { clearInterval(iv); }; }
+    var sc = document.createElement('script'); sc.id = 'gmaps-sdk'; sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&libraries=places&language=es&region=CL'; sc.async = true; sc.onload = attach; document.head.appendChild(sc);
+  }, [dirAdd]);
+
+  function guardarNuevaDir() {
+    var d = dAdd || {};
+    if (!(d.direccion || '').trim()) { setDirAddMsg('Escribe la dirección.'); return; }
+    var fila = { user_id: usuario.id, titulo: (d.titulo || '').trim() || 'Dirección', direccion: d.direccion.trim(), comuna: (d.comuna || '').trim() || null, lat: d.lat, lng: d.lng };
+    if (direcciones.length === 0) fila.principal = true;
+    supabase.from('direcciones').insert(fila).select().single().then(function (r) {
+      if (r.error) { setDirAddMsg('Error: ' + r.error.message); return; }
+      var nueva = r.data;
+      setDirecciones(function (prev) { return prev.concat([nueva]); });
+      setDirSel(nueva); setDirAdd(false); setDirOpen(false); setDAdd({ titulo: '', direccion: '', comuna: '', lat: null, lng: null }); setDirAddMsg(null);
+    });
+  }
+
   return (
     <div className="body" style={{ paddingTop: 18 }}>
       {soloCrear && (
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F3A5} Pide un presupuesto por video'}</b>
-        <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Graba un video corto mostrando el problema. Los maestros lo revisan y te mandan su cotización para que elijas.</div>
-        <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.45, marginBottom: 12 }}>{'\u{1F4A1}'} Aquí <b>creas</b> una solicitud nueva. Para ver y comparar las cotizaciones que recibas, entra a <b>Mis cotizaciones</b>.</div>
+        <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.5, margin: '10px 0 14px' }}>{'\u{1F4A1}'} Graba un video corto del problema y recibe cotizaciones de los maestros.</div>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿Dónde es el trabajo?</label>
         {(function () {
           var activa = dirSel || (direcciones[0] || null);
-          if (!activa && (!perfil || !perfil.direccion)) {
-            return <div style={{ ...inp, marginTop: 4, marginBottom: 12, color: '#9aa1b5', fontSize: 12.5 }}>Agrega una dirección en tu perfil (pestaña Cuenta) para que el maestro sepa dónde es.</div>;
-          }
-          var d = activa || { titulo: 'Mi dirección', direccion: perfil.direccion, comuna: perfil.comuna };
+          var d = activa || (perfil && perfil.direccion ? { titulo: 'Mi dirección', direccion: perfil.direccion, comuna: perfil.comuna } : null);
           return (
             <div style={{ marginTop: 4, marginBottom: 12 }}>
-              <div onClick={function () { if (direcciones.length > 1) setDirOpen(!dirOpen); }} style={{ border: '1.5px solid #ddd', borderRadius: 12, padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 9, cursor: direcciones.length > 1 ? 'pointer' : 'default', background: '#fff' }}>
-                <span style={{ fontSize: 18 }}>{'\u{1F4CD}'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: '#16294f' }}>{(d.titulo || 'Dirección') + (activa && activa.principal ? ' · Principal' : '')}</div>
-                  <div style={{ fontSize: 11.5, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.direccion}{d.comuna ? (' · ' + d.comuna) : ''}</div>
+              {d ? (
+                <div onClick={function () { setDirOpen(!dirOpen); }} style={{ border: '1.5px solid #ddd', borderRadius: 12, padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', background: '#fff' }}>
+                  <span style={{ fontSize: 18 }}>{'\u{1F4CD}'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: '#16294f' }}>{(d.titulo || 'Dirección') + (activa && activa.principal ? ' · Principal' : '')}</div>
+                    <div style={{ fontSize: 11.5, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.direccion}{d.comuna ? (' · ' + d.comuna) : ''}</div>
+                  </div>
+                  <span style={{ fontSize: 12, color: '#2563eb', fontWeight: 800, whiteSpace: 'nowrap' }}>Cambiar ▾</span>
                 </div>
-                {direcciones.length > 1 && <span style={{ fontSize: 12, color: '#2563eb', fontWeight: 800, whiteSpace: 'nowrap' }}>Cambiar ▾</span>}
-              </div>
-              {dirOpen && direcciones.length > 1 && (
+              ) : (
+                <div onClick={function () { setDirAdd(true); setDirOpen(false); }} style={{ border: '1.5px dashed #cbd0dd', borderRadius: 12, padding: 12, textAlign: 'center', color: '#2563eb', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: '#fafbfe' }}>{'\u{1F4CD} Agregar dirección'}</div>
+              )}
+              {dirOpen && (
                 <div style={{ border: '1.5px solid #eef1f7', borderRadius: 12, marginTop: 6, overflow: 'hidden' }}>
                   {direcciones.map(function (x) {
                     var sel = activa && activa.id === x.id;
@@ -327,6 +368,20 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                       </div>
                     );
                   })}
+                  <div onClick={function () { setDirAdd(true); setDirOpen(false); }} style={{ padding: '11px 12px', borderTop: '1px solid #f3f4f8', cursor: 'pointer', color: '#2563eb', fontSize: 12.5, fontWeight: 800 }}>{'+ Agregar otra dirección'}</div>
+                </div>
+              )}
+              {dirAdd && (
+                <div style={{ border: '1.5px solid #dbe7fb', borderRadius: 12, padding: 12, marginTop: 6, background: '#fafcff' }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#16294f', marginBottom: 8 }}>Nueva dirección</div>
+                  <input value={dAdd.titulo} onChange={function (e) { setDAdd(Object.assign({}, dAdd, { titulo: e.target.value })); }} placeholder="Título (ej: Casa, Trabajo)" maxLength={30} style={{ ...inp, marginBottom: 8 }} />
+                  <input ref={addDirRef} value={dAdd.direccion} onChange={function (e) { setDAdd(Object.assign({}, dAdd, { direccion: e.target.value })); }} placeholder="Dirección (escribe y elige de la lista)" autoComplete="off" style={{ ...inp, marginBottom: 8 }} />
+                  <input value={dAdd.comuna} onChange={function (e) { setDAdd(Object.assign({}, dAdd, { comuna: e.target.value })); }} placeholder="Comuna" style={{ ...inp, marginBottom: 8 }} />
+                  {dirAddMsg && <div style={{ fontSize: 12, color: dirAddMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', marginBottom: 8 }}>{dirAddMsg}</div>}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="gbtn" style={{ flex: 1.4 }} onClick={guardarNuevaDir}>Guardar</button>
+                    <button type="button" onClick={function () { setDirAdd(false); setDirAddMsg(null); }} style={{ flex: 1, background: '#fff', color: '#5b6275', border: '1.5px solid #e4e4ef', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+                  </div>
                 </div>
               )}
             </div>
