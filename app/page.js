@@ -28,6 +28,7 @@ const [sel, setSel] = useState(null);
 const [fichaDesde, setFichaDesde] = useState('inicio');
 const [perfilCli, setPerfilCli] = useState(null);
 const [chatConsulta, setChatConsulta] = useState(null);
+const [maestroDirigido, setMaestroDirigido] = useState(null);
 const [orden, setOrden] = useState('cerca');
 const [gIdx, setGIdx] = useState(-1);
 const [destinoLogin, setDestinoLogin] = useState('cuenta');
@@ -113,6 +114,7 @@ function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
 function abrirFicha(m) { setFichaDesde(vista === 'resultados' ? 'resultados' : 'inicio'); setSel(m); setGIdx(-1); setVista('ficha'); window.scrollTo(0, 0); }
 function irTab(v) {
 if ((v === 'cotizar' || v === 'cuenta' || v === 'mias' || v === 'mensajes') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
+if (v === 'cotizar') setMaestroDirigido(null);
 setVista(v); window.scrollTo(0, 0);
 }
 function conversar(m) {
@@ -125,7 +127,7 @@ setChatConsulta({ presupuestoId: r2.data.id, maestroId: m.id, titulo: nombreM(m)
 });
 });
 }
-function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
+function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setMaestroDirigido(m || null); setVista('cotizar'); window.scrollTo(0, 0); }
 function buscar(texto) { setQ((texto || '')); setBuscado((texto || '').trim()); setVista('resultados'); window.scrollTo(0, 0); }
 
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, oficios: m.oficios, descripcion: m.descripcion, region: m.region, comunas: m.comunas, verificado: m.verificado, suspendido: m.suspendido, rating: m.rating_promedio || '—' }; });
@@ -362,7 +364,7 @@ if (vista === 'cotizar') return (
 <main>
 <div className="darkhead"><div className="dh1">{'➕ Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
 <div style={{ paddingBottom: 90 }}>
-<PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="crear" descripcionInicial={buscado} />
+<PresupuestoCliente usuario={usuario} maestros={maestrosFlat} modo="crear" descripcionInicial={buscado} maestroDirigido={maestroDirigido} />
 </div>
 <Nav />
 </main>

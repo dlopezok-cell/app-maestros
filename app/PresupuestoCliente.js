@@ -10,11 +10,12 @@ var MAX_ARCHIVOS = 6;
 // Presupuesto por video: el cliente graba/sube un video del problema y lo manda a
 // los maestros del oficio. Recibe cotizaciones, las compara como hojas claras,
 // ACEPTA Y PAGA una (sin fecha). La fecha se coordina después por la app/WhatsApp.
-export default function PresupuestoCliente({ usuario, maestros, modo, descripcionInicial }) {
+export default function PresupuestoCliente({ usuario, maestros, modo, descripcionInicial, maestroDirigido }) {
   var soloCrear = modo !== 'lista';
   var soloLista = modo === 'lista';
   const [cats, setCats] = useState([]);
   const [oficio, setOficio] = useState('');
+  const [aQuien, setAQuien] = useState('solo');
   const [otroTexto, setOtroTexto] = useState('');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -91,6 +92,12 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         if (data.length) setOficio(function (prev) { return prev || data[0].slug; });
       });
   }, []);
+
+  useEffect(function () {
+    if (maestroDirigido && maestroDirigido.oficio) { setOficio(maestroDirigido.oficio); }
+    setAQuien('solo');
+    // eslint-disable-next-line
+  }, [maestroDirigido && maestroDirigido.id]);
 
   // Precarga la descripción desde la búsqueda del inicio (si vino texto).
   useEffect(function () {
@@ -190,6 +197,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
       if (!idsOtro.length) { setMsg('Aún no tenemos maestros para "' + termOtro + '". Prueba con otra palabra o elige una especialidad de la lista.'); return; }
       destinatarios = idsOtro;
     }
+    else if (maestroDirigido && aQuien === 'solo') { destinatarios = [maestroDirigido.id]; }
     setSubiendo(true);
     setProgreso(0);
     setMsg('Comprimiendo y subiendo...');
@@ -424,6 +432,22 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
           <input value={otroTexto} onChange={function (e) { setOtroTexto(e.target.value); }} placeholder="Escribe el servicio (ej: Flete, mudanza)" maxLength={40} style={{ ...inp, marginTop: 4 }} />
         )}
 
+        {maestroDirigido && (
+          <div style={{ margin: '10px 0 2px' }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿A quién le pides?</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+              <button type="button" onClick={function () { setAQuien('solo'); }} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer', background: aQuien === 'solo' ? '#eef4ff' : '#fff', border: aQuien === 'solo' ? '2px solid #2563eb' : '1.5px solid #e4e4ef' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#1c2230' }}>{'Solo a ' + (maestroDirigido.nombre || 'este maestro')}</div>
+                <div style={{ fontSize: 11.5, color: '#7c8499', marginTop: 1 }}>Le llega únicamente a este maestro</div>
+              </button>
+              <button type="button" onClick={function () { setAQuien('todos'); }} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer', background: aQuien === 'todos' ? '#eef4ff' : '#fff', border: aQuien === 'todos' ? '2px solid #2563eb' : '1.5px solid #e4e4ef' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#1c2230' }}>También a otros maestros</div>
+                <div style={{ fontSize: 11.5, color: '#7c8499', marginTop: 1 }}>Recibe varias cotizaciones para comparar</div>
+              </button>
+            </div>
+          </div>
+        )}
+
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Título</label>
         <input value={titulo} onChange={function (e) { setTitulo(e.target.value); }} placeholder="Ej: Fuga bajo el lavaplatos" maxLength={60} style={{ ...inp, marginTop: 4 }} />
         <div style={{ fontSize: 11, color: '#9aa1b5', margin: '2px 0 4px' }}>Un título corto para tu solicitud (lo verán los maestros).</div>
@@ -456,7 +480,9 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
           </div>
         )}
 
-        <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px', margin: '4px 0 10px', lineHeight: 1.45 }}>{'\u{1F4E2}'} Tu solicitud se enviará a todos los maestros de <b>{cats.filter(function (c) { return c.slug === oficio; }).map(function (c) { return c.valor; })[0] || 'la especialidad'}</b>. Te llegarán varias cotizaciones para que elijas.</div>
+        <div style={{ fontSize: 11.5, color: '#5b6275', background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px', margin: '4px 0 10px', lineHeight: 1.45 }}>{(maestroDirigido && aQuien === 'solo')
+          ? <span>{'\u{1F4E2}'} Tu solicitud le llegará <b>solo a {maestroDirigido.nombre || 'este maestro'}</b>.</span>
+          : <span>{'\u{1F4E2}'} Tu solicitud se enviará a todos los maestros de <b>{cats.filter(function (c) { return c.slug === oficio; }).map(function (c) { return c.valor; })[0] || 'la especialidad'}</b>. Te llegarán varias cotizaciones para que elijas.</span>}</div>
 
         {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
         {subiendo && (
