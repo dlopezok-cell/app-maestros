@@ -47,6 +47,8 @@ export async function POST(req) {
     const query = p.oficio + ' en ' + p.comuna + ', Chile';
     const ts = await fetch(BASE + '/textsearch/json?query=' + encodeURIComponent(query) + '&language=es&region=cl&key=' + encodeURIComponent(key));
     const tsd = await ts.json();
+    const gStatus = tsd.status || 'SIN_STATUS';
+    const gError = tsd.error_message || null;
     const places = (tsd.results || []).slice(0, 20);
 
     const rows = []; const vistos = {};
@@ -69,7 +71,7 @@ export async function POST(req) {
       } catch (e) { /* salta */ }
     }
     if (rows.length) await sb.from('captacion_cola').insert(rows);
-    return Response.json({ ok: true, encolados: rows.length }, { status: 200 });
+    return Response.json({ ok: true, encolados: rows.length, google_status: gStatus, google_error: gError, encontrados: places.length }, { status: 200 });
   } catch (e) {
     return Response.json({ error: String(e && e.message ? e.message : e) }, { status: 200 });
   }
