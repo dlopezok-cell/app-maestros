@@ -47,7 +47,7 @@ export default function PresupuestosMaestro({ usuario }) {
         var filt = data.filter(function (p) {
           if (p.estado === 'agendado' || p.estado === 'cerrado') return false;
           if (p.maestro_id === usuario.id) return true;
-          return p.maestro_id == null && oficios.indexOf(p.oficio) >= 0;
+          return p.maestro_id == null && (oficios.indexOf(p.oficio) >= 0 || (Array.isArray(p.destinatarios) && p.destinatarios.indexOf(usuario.id) >= 0));
         });
         setItems(filt);
         setCargado(true);

@@ -116,7 +116,7 @@ setVista(v); window.scrollTo(0, 0);
 function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
 function buscar(texto) { setQ((texto || '')); setBuscado((texto || '').trim()); setVista('resultados'); window.scrollTo(0, 0); }
 
-var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
+var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, oficios: m.oficios, descripcion: m.descripcion, region: m.region, comunas: m.comunas, verificado: m.verificado, suspendido: m.suspendido, rating: m.rating_promedio || '—' }; });
 function _norm(x) { return (x || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 function coincideBusqueda(texto, q) {
   var T = _norm(texto), Q = _norm(q).trim();

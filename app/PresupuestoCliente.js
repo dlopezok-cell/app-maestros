@@ -15,6 +15,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   var soloLista = modo === 'lista';
   const [cats, setCats] = useState([]);
   const [oficio, setOficio] = useState('');
+  const [otroTexto, setOtroTexto] = useState('');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [archivos, setArchivos] = useState([]);
@@ -159,10 +160,36 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     setArchivos(function (p) { return p.filter(function (x, k) { return k !== i; }); });
   }
 
+  function _normP(x) { return (x || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function maestrosOtroMatch(term) {
+    var words = _normP(term).split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    return (maestros || []).filter(function (m) {
+      if (m.suspendido) return false;
+      if (m.verificado === false) return false;
+      var ofs = (m.oficios && m.oficios.length ? m.oficios : (m.oficio ? [m.oficio] : []));
+      var names = ofs.map(function (sl) { var c = cats.find(function (x) { return x.slug === sl; }); return c ? c.valor : sl; });
+      var txt = _normP(ofs.join(' ') + ' ' + names.join(' ') + ' ' + (m.descripcion || ''));
+      var tw = txt.split(/[^a-z0-9]+/).filter(Boolean);
+      return words.every(function (w) {
+        if (w.length < 3) return txt.indexOf(w) >= 0;
+        return tw.some(function (t) { if (t.indexOf(w) >= 0 || w.indexOf(t) >= 0) return true; var n = Math.min(t.length, w.length), k = 0; while (k < n && t[k] === w[k]) k++; return k >= 4; });
+      });
+    }).map(function (m) { return m.id; });
+  }
   function enviar() {
     if (!usuario) { setMsg('Inicia sesión para pedir un presupuesto'); return; }
     if (!archivos.length) { setMsg('Agrega al menos un video o foto del problema'); return; }
     if (!descripcion.trim()) { setMsg('Cuéntanos brevemente qué necesitas'); return; }
+    var esOtro = oficio === '__otro__';
+    var termOtro = (otroTexto || '').trim();
+    var destinatarios = null;
+    if (esOtro) {
+      if (!termOtro) { setMsg('Escribe qué servicio necesitas (ej: Flete).'); return; }
+      var idsOtro = maestrosOtroMatch(termOtro);
+      if (!idsOtro.length) { setMsg('Aún no tenemos maestros para "' + termOtro + '". Prueba con otra palabra o elige una especialidad de la lista.'); return; }
+      destinatarios = idsOtro;
+    }
     setSubiendo(true);
     setProgreso(0);
     setMsg('Comprimiendo y subiendo...');
@@ -195,7 +222,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
       function guardar(tituloFinal) {
         var fila = {
           cliente_id: usuario.id,
-          oficio: oficio,
+          oficio: esOtro ? termOtro.toLowerCase() : oficio,
+          destinatarios: destinatarios,
           descripcion: descripcion.trim(),
           titulo: tituloFinal || null,
           cliente_nombre: primerNombre,
@@ -221,7 +249,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         guardar(tituloManual);
       } else {
         // Si el cliente no puso título, lo genera la IA de respaldo a partir de la descripción.
-        fetch('/api/titulo-ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oficio: oficio, descripcion: descripcion.trim() }) })
+        fetch('/api/titulo-ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oficio: esOtro ? termOtro : oficio, descripcion: descripcion.trim() }) })
           .then(function (r) { return r.json(); })
           .catch(function () { return {}; })
           .then(function (tj) { guardar(tj && tj.titulo ? tj.titulo : null); });
@@ -390,7 +418,11 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Especialidad</label>
         <select value={oficio} onChange={function (e) { setOficio(e.target.value); }} style={{ ...inp, marginTop: 4 }}>
           {cats.map(function (c) { return <option key={c.slug} value={c.slug}>{c.valor}</option>; })}
+          <option value="__otro__">Otro (especifícalo)</option>
         </select>
+        {oficio === '__otro__' && (
+          <input value={otroTexto} onChange={function (e) { setOtroTexto(e.target.value); }} placeholder="Escribe el servicio (ej: Flete, mudanza)" maxLength={40} style={{ ...inp, marginTop: 4 }} />
+        )}
 
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Título</label>
         <input value={titulo} onChange={function (e) { setTitulo(e.target.value); }} placeholder="Ej: Fuga bajo el lavaplatos" maxLength={60} style={{ ...inp, marginTop: 4 }} />
