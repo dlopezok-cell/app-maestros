@@ -8,6 +8,7 @@ import MapsExtractor from '../MapsExtractor';
 import AgenteIA from '../AgenteIA';
 import EmbudoMaestros from '../EmbudoMaestros';
 import CaptacionPanel from '../CaptacionPanel';
+import PlantillasMeta from '../PlantillasMeta';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -29,6 +30,7 @@ const SECCIONES = [
   { id: 'extraer', icono: '\u{1F5FA}\u{FE0F}', nombre: 'Extraer de Maps', cat: 'marketing' },
   { id: 'agenteia', icono: '\u{1F916}', nombre: 'Agente IA', cat: 'marketing' },
   { id: 'captacion', icono: '\u{1F3AF}', nombre: 'Captaci\u00f3n auto', cat: 'marketing' },
+  { id: 'plantillas', icono: '\u{1F4DD}', nombre: 'Plantillas WA', cat: 'marketing' },
   { id: 'influencers', icono: '\u{1F517}', nombre: 'Influencers', cat: 'marketing' },
   { id: 'leads', icono: '\u{1F9F2}', nombre: 'Leads', cat: 'marketing' },
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos', cat: 'operaciones' },
@@ -1370,6 +1372,7 @@ export default function Admin() {
     {seccion === 'campana' && <CampanaMaestros />}
       {seccion === 'extraer' && <MapsExtractor />}
       {seccion === 'captacion' && <CaptacionPanel />}
+      {seccion === 'plantillas' && <PlantillasMeta />}
       {seccion === 'agenteia' && <AgenteIA />}
       {seccion === 'influencers' && <InfluencersPanel />}
       {seccion === 'usuarios' && esSuper && <UsuariosPanel categorias={CATEGORIAS} />}
