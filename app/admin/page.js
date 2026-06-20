@@ -965,7 +965,7 @@ export default function Admin() {
                   {items.length === 0 && <span style={{ fontSize: 12, color: '#9aa1b5' }}>Sin ítems todavía</span>}
                   {items.map(function (c) {
                     return (
-                      <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 999, fontSize: 12.5, background: '#fff', border: '1px solid #e0e0ec', color: '#3C3489' }}>
+                      <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 999, fontSize: 12.5, background: '#fff', border: '1px solid #e0e0ec', color: '#2563eb' }}>
                         {c.valor}
                         <button onClick={function () { quitarCatalogo(c); }} style={{ border: 'none', background: 'none', color: '#b3261e', fontWeight: 800, fontSize: 14, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
                       </span>
