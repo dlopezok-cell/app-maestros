@@ -64,11 +64,17 @@ export default function EmbudoMaestros(props) {
   var [enviando, setEnviando] = useState(false);
   var [aviso, setAviso] = useState(null);
   var [tpls, setTpls] = useState(TPL_DEFAULT);
+  var [metaTpls, setMetaTpls] = useState([]);
+  var [cargandoMeta, setCargandoMeta] = useState(false);
+  var [metaErr, setMetaErr] = useState(null);
+  var [metaAsign, setMetaAsign] = useState({});
 
   useEffect(function () {
     try { var raw = localStorage.getItem('embudo_plantillas'); if (raw) setTpls(Object.assign({}, TPL_DEFAULT, JSON.parse(raw))); } catch (e) {}
     cargarWa();
     cargarContactos();
+    try { var rm = localStorage.getItem('embudo_meta_asign'); if (rm) setMetaAsign(JSON.parse(rm)); } catch (e) {}
+    cargarMeta();
   }, []);
 
   function cargarWa() {
@@ -238,6 +244,21 @@ export default function EmbudoMaestros(props) {
     }).catch(function () { setEnviando(false); setAviso('No se pudo enviar.'); });
   }
 
+  function cargarMeta() {
+    setCargandoMeta(true); setMetaErr(null);
+    supabase.auth.getSession().then(function (sn) {
+      var token = sn && sn.data && sn.data.session ? sn.data.session.access_token : '';
+      return fetch('/api/wa-templates', { headers: { Authorization: 'Bearer ' + token } });
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      setCargandoMeta(false);
+      if (d && d.ok) setMetaTpls(d.templates || []);
+      else setMetaErr((d && d.error) || 'No se pudieron cargar las plantillas de Meta.');
+    }).catch(function () { setCargandoMeta(false); setMetaErr('Error de conexión con Meta.'); });
+  }
+  function guardarAsign(stageTpl, val) {
+    var n = Object.assign({}, metaAsign); if (val) n[stageTpl] = val; else delete n[stageTpl]; setMetaAsign(n);
+    try { localStorage.setItem('embudo_meta_asign', JSON.stringify(n)); } catch (e) {}
+  }
   function guardarTpl(name, texto) {
     var n = Object.assign({}, tpls); n[name] = texto; setTpls(n);
     try { localStorage.setItem('embudo_plantillas', JSON.stringify(n)); } catch (e) {}
@@ -435,6 +456,40 @@ export default function EmbudoMaestros(props) {
       {vista === 'plantillas' && (
         <div>
           <div style={{ fontSize: 11.5, color: '#5b6275', marginBottom: 10 }}>Una plantilla por columna. {'{{1}}'} = nombre del maestro. Se usan al tocar 💬 en una tarjeta y como atajos en el inbox. (Se guardan en este navegador por ahora.)</div>
+
+          <div style={{ background: '#f6f8fc', border: '1px solid #eef1f7', borderRadius: 14, padding: 13, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#16294f' }}>{'\u{1F4F2} Plantillas de Meta (frío >24h)'}</span>
+              <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#2563eb', background: '#eef4ff', border: '1px solid #cfe0ff', borderRadius: 9, padding: '6px 11px', textDecoration: 'none' }}>+ Crear nueva en Facebook ↗</a>
+              <button onClick={cargarMeta} style={{ fontSize: 12, fontWeight: 700, color: '#5b6275', background: '#fff', border: '1px solid #e4e4ef', borderRadius: 9, padding: '6px 10px', cursor: 'pointer' }}>↻ Actualizar</button>
+            </div>
+            <div style={{ fontSize: 11.5, color: '#8a90a2', marginBottom: 10 }}>Para escribir en frío (más de 24h) WhatsApp obliga a usar una plantilla aprobada por Meta. Créalas en Facebook; al aprobarse aparecen acá y las asignas a cada columna.</div>
+            {cargandoMeta && <div style={{ fontSize: 12, color: '#9aa1b5' }}>Cargando plantillas de Meta…</div>}
+            {metaErr && <div style={{ fontSize: 12, color: '#b3261e', background: '#fdecec', border: '1px solid #f3c9c9', borderRadius: 9, padding: '7px 10px' }}>{metaErr}</div>}
+            {!cargandoMeta && !metaErr && (function () {
+              var aprob = metaTpls.filter(function (t) { return t.status === 'APPROVED'; });
+              if (aprob.length === 0) return <div style={{ fontSize: 12, color: '#9aa1b5' }}>Aún no hay plantillas aprobadas. Crea una en Facebook y toca Actualizar.</div>;
+              return (
+                <div>
+                  {STAGES.map(function (s2) {
+                    var key = s2.tpl;
+                    return (
+                      <div key={s2.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: '1px solid #eef1f7' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: s2.color, flex: '0 0 auto' }}></span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#16294f', flex: '0 0 110px' }}>{s2.nombre}</span>
+                        <select value={metaAsign[key] || ''} onChange={function (e) { guardarAsign(key, e.target.value); }} style={{ flex: 1, minWidth: 0, fontSize: 12.5, border: '1px solid #e4e4ef', borderRadius: 8, padding: '6px 8px', background: '#fff' }}>
+                          <option value="">— sin plantilla de Meta —</option>
+                          {aprob.map(function (t) { var v = t.name + '|' + t.language; return <option key={v} value={v}>{t.name + ' (' + t.language + ')'}</option>; })}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#16294f', margin: '4px 0 8px' }}>{'\u{1F4DD} Mensajes rápidos (dentro de 24h)'}</div>
           {STAGES.map(function (s) {
             return (
               <div key={s.id} style={{ border: '1px solid #eef1f7', borderRadius: 12, padding: '10px 12px', marginBottom: 9 }}>
