@@ -247,6 +247,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
           if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
           setMsg('¡Listo! Tu solicitud fue enviada ✓');
+          try { fetch('/api/captar-maestros', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: r.data.id }) }).catch(function () {}); } catch (e) {}
           setTitulo(''); setDescripcion(''); setArchivos([]);
           setSubiendo(false);
           cargarSolicitudes();
