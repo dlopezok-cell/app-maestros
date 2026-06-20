@@ -97,8 +97,8 @@ export default function Unete() {
             <span style={{ fontSize: 15, fontWeight: 800 }}>MaestrosEnLínea</span>
           </div>
 
-          <div style={{ background: 'linear-gradient(150deg,#1f2547,#3a2a6b)', color: '#fff', borderRadius: 20, padding: '22px 18px', marginBottom: 18, textAlign: 'center' }}>
-            <span style={{ display: 'inline-block', background: '#ffd23c', color: '#2a2350', fontWeight: 900, fontSize: 10.5, padding: '4px 11px', borderRadius: 20, letterSpacing: .5 }}>MAESTRO FUNDADOR</span>
+          <div style={{ background: 'linear-gradient(150deg,#13224a,#0a1430)', color: '#fff', borderRadius: 20, padding: '22px 18px', marginBottom: 18, textAlign: 'center' }}>
+            <span style={{ display: 'inline-block', background: '#ffd23c', color: '#0e1a38', fontWeight: 900, fontSize: 10.5, padding: '4px 11px', borderRadius: 20, letterSpacing: .5 }}>MAESTRO FUNDADOR</span>
             <h1 style={{ fontSize: 24, fontWeight: 900, margin: '12px 0 6px', lineHeight: 1.15 }}>Recibe trabajos sin pagar publicidad</h1>
             <p style={{ fontSize: 13.5, opacity: .9, lineHeight: 1.5, margin: 0 }}>Súmate gratis antes del lanzamiento. Los primeros maestros entran con <b>0% de comisión</b> y el sello <b>Fundador</b>.</p>
           </div>
