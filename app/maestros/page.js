@@ -65,6 +65,18 @@ export default function Maestros() {
       {pestana === 'perfil' && (
         <div>
           <CabeceraMaestro usuario={usuario} />
+          <div className="body" style={{ paddingTop: 12, paddingBottom: 0 }}>
+            <a href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, background: '#0f1320', borderRadius: 16, padding: '14px 15px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 11, background: 'rgba(255,255,255,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Cambiar a modo Cliente</div>
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.6)' }}>Busca y contrata maestros</div>
+              </div>
+              <span style={{ color: '#fff', fontSize: 20 }}>{'\u203A'}</span>
+            </a>
+          </div>
           <ComunicadosBanner segmento="maestros" />
           <Verificacion usuario={usuario} />
           <GaleriaMaestro usuario={usuario} />
@@ -92,10 +104,10 @@ export default function Maestros() {
       {pestana === 'ganancias' && <div style={{ paddingBottom: 90 }}><GananciasMaestro usuario={usuario} /></div>}
 
       <div className="tabbar">
-        <Tab id="perfil" icono={'\u{1F6E0}'} nombre="Perfil" />
-        <Tab id="solicitudes" icono={'\u{1F4CB}'} nombre="Cotizaciones" badge={noLeidos} />
-        <Tab id="agenda" icono={'\u{1F4C5}'} nombre="Agenda" />
-        <Tab id="ganancias" icono={'\u{1F4B0}'} nombre="Ganancias" />
+        <Tab id="perfil" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><path d="M20 21a8 8 0 1 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>} nombre="Perfil" />
+        <Tab id="solicitudes" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>} nombre="Cotizaciones" badge={noLeidos} />
+        <Tab id="agenda" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></svg>} nombre="Agenda" />
+        <Tab id="ganancias" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>} nombre="Ganancias" />
       </div>
     </main>
   );
