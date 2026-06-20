@@ -87,6 +87,15 @@ var s = rs.reduce(function (a, x) { return a + (x.estrellas || 0); }, 0);
 return { avg: Math.round(s / rs.length * 10) / 10, n: rs.length };
 }
 
+function recuperar() {
+var em = (email || '').trim();
+if (em.indexOf('@') < 1) { setAuthMsg('Escribe tu correo arriba y vuelve a tocar "¿Olvidaste tu contraseña?".'); return; }
+setAuthMsg('Enviando correo de recuperación...');
+supabase.auth.resetPasswordForEmail(em, { redirectTo: (typeof window !== 'undefined' ? window.location.origin : '') + '/recuperar' }).then(function (r) {
+if (r.error) setAuthMsg('Error: ' + r.error.message);
+else setAuthMsg('Te enviamos un correo para recuperar tu contraseña. Ábrelo y sigue el enlace.');
+});
+}
 function entrar() {
 setAuthMsg('Procesando...');
 var fn = authTab === 'ingresar'
@@ -283,6 +292,7 @@ if (vista === 'acceso') return (
 </div>
 <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="tucorreo@ejemplo.cl" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
 <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contraseña" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
+{authTab === 'ingresar' && <div style={{ textAlign: 'right', margin: '-4px 0 10px' }}><button onClick={recuperar} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', padding: 0 }}>¿Olvidaste tu contraseña?</button></div>}
 {authMsg && <p style={{ fontSize: 13, color: authMsg.indexOf('correo') >= 0 ? '#0d9456' : '#b3261e', margin: '2px 0 8px' }}>{authMsg}</p>}
 <button className="gbtn full" onClick={entrar}>{authTab === 'ingresar' ? 'Ingresar' : 'Crear cuenta'}</button>
 <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '8px 0' }}>o</div>

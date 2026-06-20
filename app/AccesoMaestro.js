@@ -49,6 +49,15 @@ export default function AccesoMaestro() {
     supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
   }
 
+  function recuperar() {
+    var em = (email || '').trim();
+    if (em.indexOf('@') < 1) { setMsg('Escribe tu correo arriba y vuelve a tocar "¿Olvidaste tu contraseña?".'); return; }
+    setMsg('Enviando correo de recuperación...');
+    supabase.auth.resetPasswordForEmail(em, { redirectTo: (typeof window !== 'undefined' ? window.location.origin : '') + '/recuperar' }).then(function (r) {
+      if (r.error) setMsg('Error: ' + r.error.message);
+      else setMsg('Te enviamos un correo para recuperar tu contraseña. Ábrelo y sigue el enlace.');
+    });
+  }
   function conApple() {
     supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: window.location.href } });
   }
@@ -95,6 +104,7 @@ export default function AccesoMaestro() {
           )}
           <input value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="Correo" type="email" style={inp} />
           <input value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contraseña" type="password" style={inp} />
+          {modo === 'entrar' && <div style={{ textAlign: 'right', margin: '-2px 0 8px' }}><button onClick={recuperar} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', padding: 0 }}>¿Olvidaste tu contraseña?</button></div>}
 
           {msg && <p style={{ fontSize: 12.5, color: '#b3261e', margin: '2px 0 10px', textAlign: 'left' }}>{msg}</p>}
 
