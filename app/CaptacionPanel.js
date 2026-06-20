@@ -10,6 +10,7 @@ export default function CaptacionPanel() {
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
   const [enviando, setEnviando] = useState({});
+  const [abiertos, setAbiertos] = useState({});
 
   function cargar() {
     setCargando(true);
@@ -91,20 +92,26 @@ export default function CaptacionPanel() {
       <div style={{ fontSize: 13, fontWeight: 800, color: '#16294f', margin: '4px 0 10px' }}>{'Cola de captación' + (cargando ? ' (cargando...)' : '')}</div>
       {!cargando && claves.length === 0 && <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 13.5, padding: '34px 14px', lineHeight: 1.6 }}>Aún no hay maestros encolados. Cuando un cliente deje un pedido (con la captación encendida), aparecerán aquí.</div>}
 
-      {claves.map(function (k) {
+      {claves.map(function (k, idx) {
         var g = grupos[k];
         var pend = g.filter(function (r) { return r.estado === 'pendiente'; });
         var g0 = g[0];
+        var abierto = (abiertos[k] !== undefined) ? abiertos[k] : (idx === 0);
         return (
           <div key={k} style={card}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#16294f', textTransform: 'capitalize' }}>{(g0.oficio || 'pedido') + (g0.comuna ? (' · ' + g0.comuna) : '')}</div>
-                <div style={{ fontSize: 11.5, color: '#9aa1b5' }}>{g.length + ' encontrados · ' + pend.length + ' pendientes'}</div>
+            <div onClick={function () { setAbiertos(function (p) { var cur = (p[k] !== undefined) ? p[k] : (idx === 0); var o = Object.assign({}, p); o[k] = !cur; return o; }); }} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
+              <div style={{ display: 'flex', gap: 9, minWidth: 0, flex: 1 }}>
+                <span style={{ fontSize: 12, color: '#9aa1b5', marginTop: 3, flexShrink: 0, transition: '.15s', transform: abierto ? 'rotate(90deg)' : 'none' }}>{'\u25B6'}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#16294f', textTransform: 'capitalize' }}>{(g0.oficio || 'pedido') + (g0.comuna ? (' · ' + g0.comuna) : '')}</div>
+                  {g0.pedido_texto && <div style={{ fontSize: 12.5, color: '#5b6275', fontStyle: 'italic', margin: '2px 0 3px', lineHeight: 1.35 }}>{'\u201C' + g0.pedido_texto + '\u201D'}</div>}
+                  <div style={{ fontSize: 11, color: '#9aa1b5' }}>{g.length + ' encontrados · ' + pend.length + ' pendientes'}</div>
+                </div>
               </div>
-              {pend.length > 0 && <button onClick={function () { enviar(pend.map(function (r) { return r.id; })); }} style={{ flexShrink: 0, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'Enviar a los ' + pend.length}</button>}
+              {pend.length > 0 && <button onClick={function (e) { e.stopPropagation(); enviar(pend.map(function (r) { return r.id; })); }} style={{ flexShrink: 0, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'Enviar a los ' + pend.length}</button>}
             </div>
-            {g.map(function (r) {
+            {abierto && <div style={{ marginTop: 8 }} />}
+            {abierto && g.map(function (r) {
               var est = r.estado;
               var ec = est === 'enviado' ? chip('#e1f5ee', '#0f6e56') : est === 'error' ? chip('#fcebeb', '#a32d2d') : est === 'descartado' ? chip('#f1efe8', '#5f5e5a') : chip('#fef3d6', '#854f0b');
               var et = est === 'enviado' ? 'Enviado' : est === 'error' ? 'Error' : est === 'descartado' ? 'Descartado' : 'Pendiente';
