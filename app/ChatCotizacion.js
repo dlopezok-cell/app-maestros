@@ -78,6 +78,11 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
     out = out.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '•••');
     out = out.replace(/@[a-z0-9_.]{2,}/gi, '•••');
     out = out.replace(/[+(]?\d[\d\s().\-]{6,}\d/g, function (m) { return m.replace(/\D/g, '').length >= 8 ? '•••' : m; });
+    out = out.replace(/\b(whats?app|whatsap|wsapp|wsp|wasap|wpp)\b/gi, '•••');
+    out = out.replace(/\b(llámame|llamame|contáctame|contactame|escríbeme|escribeme)\b/gi, '•••');
+    out = out.replace(/\bmi\s+(fono|celular|número|numero|wsp|whats?app|teléfono|telefono)\b/gi, '•••');
+    out = out.replace(/\+\s*5\s*6\b/g, '•••');
+    out = out.replace(/\b((?:cero|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)(?:[\s,.\-]+(?:cero|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)){2,})\b/gi, '•••');
     return out;
   }
 

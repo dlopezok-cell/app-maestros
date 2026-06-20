@@ -8,6 +8,7 @@ import Bienvenida from './Bienvenida';
 import EliminarCuenta from './EliminarCuenta';
 import HomeCliente from './HomeCliente';
 import MensajesCliente from './MensajesCliente';
+import ChatCotizacion from './ChatCotizacion';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -26,6 +27,7 @@ const [oficio, setOficio] = useState(null);
 const [sel, setSel] = useState(null);
 const [fichaDesde, setFichaDesde] = useState('inicio');
 const [perfilCli, setPerfilCli] = useState(null);
+const [chatConsulta, setChatConsulta] = useState(null);
 const [orden, setOrden] = useState('cerca');
 const [gIdx, setGIdx] = useState(-1);
 const [destinoLogin, setDestinoLogin] = useState('cuenta');
@@ -112,6 +114,16 @@ function abrirFicha(m) { setFichaDesde(vista === 'resultados' ? 'resultados' : '
 function irTab(v) {
 if ((v === 'cotizar' || v === 'cuenta' || v === 'mias' || v === 'mensajes') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
 setVista(v); window.scrollTo(0, 0);
+}
+function conversar(m) {
+if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; }
+supabase.from('presupuestos').select('id').eq('cliente_id', usuario.id).eq('es_consulta', true).contains('destinatarios', [m.id]).limit(1).maybeSingle().then(function (r) {
+if (r.data && r.data.id) { setChatConsulta({ presupuestoId: r.data.id, maestroId: m.id, titulo: nombreM(m) }); return; }
+supabase.from('presupuestos').insert({ cliente_id: usuario.id, oficio: (m.oficio || 'consulta'), titulo: 'Consulta', descripcion: 'Consulta directa', maestro_id: null, destinatarios: [m.id], es_consulta: true, estado: 'abierto', archivos: [] }).select('id').single().then(function (r2) {
+if (r2.error) return;
+setChatConsulta({ presupuestoId: r2.data.id, maestroId: m.id, titulo: nombreM(m) });
+});
+});
 }
 function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
 function buscar(texto) { setQ((texto || '')); setBuscado((texto || '').trim()); setVista('resultados'); window.scrollTo(0, 0); }
@@ -295,12 +307,16 @@ return (
 <div className="p1">{plata(sel.precio_videollamada)} <span style={{ fontWeight: 400, fontSize: 12, color: '#7c8499' }}>diagnóstico</span></div>
 <div className="p2">primera vez gratis</div>
 </div>
+<button onClick={function () { conversar(sel); }} style={{ background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', borderRadius: 12, fontWeight: 800, fontSize: 13, padding: '0 13px', cursor: 'pointer', marginRight: 8, whiteSpace: 'nowrap' }}>{'💬 Conversar'}</button>
 <button className="gbtn" onClick={function () { pedir(sel); }}>{'Pedir presupuesto'}</button>
 </div>
 {gIdx >= 0 && gal[gIdx] && (
 <div onClick={function () { setGIdx(-1); }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,.93)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
 <img src={gal[gIdx]} alt="" style={{ maxWidth: '92vw', maxHeight: '85vh', borderRadius: 12, objectFit: 'contain' }} />
 </div>
+)}
+{chatConsulta && (
+<ChatCotizacion usuario={usuario} presupuestoId={chatConsulta.presupuestoId} maestroId={chatConsulta.maestroId} miRol="cliente" titulo={chatConsulta.titulo} onClose={function () { setChatConsulta(null); }} />
 )}
 <Nav />
 </main>

@@ -208,7 +208,7 @@ export default function PresupuestosMaestro({ usuario }) {
   function waMarcar(key) { try { window.localStorage.setItem('wa1_' + key, '1'); } catch (e) {} }
   function mediaDe(p) { return (p.archivos && p.archivos.length) ? p.archivos : (p.video_url ? [{ url: p.video_url, tipo: 'video' }] : []); }
   function yaRespondida(p) { return (p.cotizaciones || []).length > 0; }
-  function ofTit(p) { return (p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1); }
+  function ofTit(p) { if (p && p.es_consulta) return 'Consulta'; return (p.oficio || 'servicio').charAt(0).toUpperCase() + (p.oficio || '').slice(1); }
   function tituloDe(p) { return (p && p.titulo && p.titulo.trim()) ? p.titulo : ofTit(p); }
   function clienteDe(p) { return (p && p.cliente_nombre && p.cliente_nombre.trim()) ? p.cliente_nombre.trim() : 'Cliente'; }
 
