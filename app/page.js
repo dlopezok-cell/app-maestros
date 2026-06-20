@@ -110,13 +110,30 @@ function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso
 function buscar(texto) { setBuscado((texto || '').trim()); irTab('cotizar'); }
 
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
+function _norm(x) { return (x || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function coincideBusqueda(texto, q) {
+  var T = _norm(texto), Q = _norm(q).trim();
+  if (!Q) return true;
+  if (T.indexOf(Q) >= 0) return true;
+  var tw = T.split(/[^a-z0-9]+/).filter(Boolean);
+  var qw = Q.split(/[^a-z0-9]+/).filter(Boolean);
+  return qw.every(function (w) {
+    if (w.length < 3) return T.indexOf(w) >= 0;
+    return tw.some(function (t) {
+      if (t.indexOf(w) >= 0 || w.indexOf(t) >= 0) return true;
+      var n = Math.min(t.length, w.length), k = 0;
+      while (k < n && t[k] === w[k]) k++;
+      return k >= 4;
+    });
+  });
+}
 var lista = maestros.filter(function (m) {
 if (m.suspendido) return false;
 if (!m.verificado) return false;
 if (oficio && oficiosM(m).indexOf(oficio) < 0) return false;
 if (q.trim()) {
-var t = (nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + (Array.isArray(m.comunas) ? m.comunas.join(' ') : (m.comunas || '')) + ' ' + (m.descripcion || '')).toLowerCase();
-if (t.indexOf(q.toLowerCase()) < 0) return false;
+var t = nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + oficiosM(m).join(' ') + ' ' + (Array.isArray(m.comunas) ? m.comunas.join(' ') : (m.comunas || '')) + ' ' + (m.region || '') + ' ' + (m.descripcion || '');
+if (!coincideBusqueda(t, q)) return false;
 }
 return true;
 });
