@@ -146,6 +146,28 @@ export default function CampanaMaestros() {
   function params() {
     return (vars || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
   }
+  function tmplSel() {
+    var tp = tmplPartes();
+    return plantillas.filter(function (t) { return t.name === tp.name; })[0] || null;
+  }
+  function nVarsBody() {
+    var t = tmplSel();
+    if (!t || !Array.isArray(t.components)) return 0;
+    var body = t.components.filter(function (x) { return (x.type || '').toUpperCase() === 'BODY'; })[0];
+    if (!body || !body.text) return 0;
+    var m = body.text.match(/\{\{\s*\d+\s*\}\}/g);
+    return m ? m.length : 0;
+  }
+  function paramsPara(c) {
+    var n = nVarsBody();
+    var manual = params();
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var v = (manual[i] != null && String(manual[i]).trim()) ? String(manual[i]).trim() : ((c && c.n) ? c.n : 'maestro');
+      out.push(v);
+    }
+    return out;
+  }
   async function enviarAPI(c, token) {
     try {
       var tk = token || (await jwtAdmin());
@@ -155,11 +177,13 @@ export default function CampanaMaestros() {
       var r = await fetch('/api/wa-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk },
-        body: JSON.stringify({ to: c.w, template: tp.name, lang: tp.lang, params: params() })
+        body: JSON.stringify({ to: c.w, template: tp.name, lang: tp.lang, params: paramsPara(c) })
       });
       var d = await r.json();
       if (d.ok) { marcar(c.w, 'sent'); return { ok: true }; }
-      return { ok: false, error: d.error || '?' };
+      var err = d.error || '?';
+      if (/132000|number of parameters|does not match/i.test(err)) err = 'Falta una variable en la plantilla "' + tp.name + '". Escríbela en el campo "Variables" (arriba) y reintenta.';
+      return { ok: false, error: err };
     } catch (e) { return { ok: false, error: e.message }; }
   }
   async function enviarUno(c) {
@@ -175,7 +199,8 @@ export default function CampanaMaestros() {
     var pendientes = lista.filter(function (c) { return getSt(c) === 'pend'; });
     if (lote > 0) pendientes = pendientes.slice(0, lote); // 0 = todos los del filtro
     if (!pendientes.length) { alert('No hay pendientes en este filtro.'); return; }
-    if (!confirm('Se enviarán ' + pendientes.length + ' mensajes (de a uno) con la plantilla "' + tp.name + '".\n\nTomará alrededor de ' + Math.ceil(pendientes.length * 1.5 / 60) + ' min. ¿Continuar?')) return;
+    var avisoVar = nVarsBody() > 0 ? ('\n\nLa plantilla usa ' + nVarsBody() + ' variable(s): la {{1}} se envía con el nombre del contacto.' + (params().length < (nVarsBody() - 1) ? ' \u26A0\uFE0F Si tiene más variables, complétalas en "Variables".' : '')) : '';
+    if (!confirm('Se enviarán ' + pendientes.length + ' mensajes (de a uno) con la plantilla "' + tp.name + '".' + avisoVar + '\n\nTomará alrededor de ' + Math.ceil(pendientes.length * 1.5 / 60) + ' min. ¿Continuar?')) return;
     var token = await jwtAdmin();
     if (!token) { alert('Inicia sesión'); return; }
     var fallidos = 0;
@@ -250,6 +275,7 @@ export default function CampanaMaestros() {
           <div style={{ width: 200 }}>
             <label style={lbl}>Variables (si la plantilla tiene)</label>
             <input value={vars} onChange={function (e) { cambiarVars(e.target.value); }} placeholder="(vacío)" style={input} />
+            <div style={{ fontSize: 10.5, color: '#9ca3af', marginTop: 4, lineHeight: 1.35 }}>{nVarsBody() > 0 ? ('Esta plantilla usa ' + nVarsBody() + ' variable(s). La {{1}} se rellena con el nombre del contacto automáticamente.') : (tmplSel() ? 'Esta plantilla no usa variables.' : '')}</div>
           </div>
           <button onClick={cargarPlantillas} title="Recargar plantillas" style={{ background: '#eef2f7', color: '#334155', border: 'none', borderRadius: 9, padding: '9px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{'\u{21BB}'}</button>
         </div>
