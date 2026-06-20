@@ -25,7 +25,7 @@ export async function GET(req) {
     const user = ures && ures.data ? ures.data.user : null;
     if (!user || user.email !== ADMIN_EMAIL) return Response.json({ error: 'No autorizado' }, { status: 401 });
 
-    const url = GRAPH + '/' + WABA_ID + '/message_templates?fields=name,language,status,category&limit=250&access_token=' + encodeURIComponent(token);
+    const url = GRAPH + '/' + WABA_ID + '/message_templates?fields=name,language,status,category,components&limit=250&access_token=' + encodeURIComponent(token);
     const r = await fetch(url);
     const data = await r.json();
     if (!r.ok) {
@@ -33,7 +33,7 @@ export async function GET(req) {
       return Response.json({ error: m }, { status: 200 });
     }
     const items = (data.data || []).map(function (t) {
-      return { name: t.name, language: t.language, status: t.status, category: t.category };
+      return { name: t.name, language: t.language, status: t.status, category: t.category, components: t.components || [] };
     });
     return Response.json({ ok: true, templates: items }, { status: 200 });
   } catch (e) {
