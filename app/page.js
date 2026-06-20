@@ -24,6 +24,7 @@ const [maestros, setMaestros] = useState([]);
 const [cats, setCats] = useState([]);
 const [oficio, setOficio] = useState(null);
 const [sel, setSel] = useState(null);
+const [fichaDesde, setFichaDesde] = useState('inicio');
 const [gIdx, setGIdx] = useState(-1);
 const [destinoLogin, setDestinoLogin] = useState('cuenta');
 const [authTab, setAuthTab] = useState('ingresar');
@@ -101,7 +102,7 @@ function oficiosM(m) { return m.oficios && m.oficios.length ? m.oficios : (m.ofi
 function ofNombre(slug) { var c = cats.filter(function (x) { return x.slug === slug; })[0]; return c ? c.valor : (slug || ''); }
 function plata(n) { return '$' + (n || 0).toLocaleString('es-CL'); }
 
-function abrirFicha(m) { setSel(m); setGIdx(-1); setVista('ficha'); window.scrollTo(0, 0); }
+function abrirFicha(m) { setFichaDesde(vista === 'resultados' ? 'resultados' : 'inicio'); setSel(m); setGIdx(-1); setVista('ficha'); window.scrollTo(0, 0); }
 function irTab(v) {
 if ((v === 'cotizar' || v === 'cuenta' || v === 'mias' || v === 'mensajes') && !usuario) { setDestinoLogin(v); setVista('acceso'); window.scrollTo(0, 0); return; }
 setVista(v); window.scrollTo(0, 0);
@@ -132,7 +133,7 @@ if (m.suspendido) return false;
 if (!m.verificado) return false;
 if (oficio && oficiosM(m).indexOf(oficio) < 0) return false;
 if (q.trim()) {
-var t = nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + oficiosM(m).join(' ') + ' ' + (Array.isArray(m.comunas) ? m.comunas.join(' ') : (m.comunas || '')) + ' ' + (m.region || '') + ' ' + (m.descripcion || '');
+var t = nombreM(m) + ' ' + oficiosM(m).map(ofNombre).join(' ') + ' ' + oficiosM(m).join(' ') + ' ' + (Array.isArray(m.comunas) ? m.comunas.join(' ') : (m.comunas || ''));
 if (!coincideBusqueda(t, q)) return false;
 }
 return true;
@@ -233,7 +234,7 @@ return (
 <main>
 <div className="dhero" style={{ background: GRAD[(nombreM(sel).charCodeAt(0) || 0) % 6], display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
 {fotoM(sel) ? <img src={fotoM(sel)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 60, color: '#fff', fontWeight: 800 }}>{nombreM(sel).charAt(0).toUpperCase()}</span>}
-<button className="dback" onClick={function () { setVista('inicio'); }}>{'←'}</button>
+<button className="dback" onClick={function () { setVista(fichaDesde || 'inicio'); }}>{'←'}</button>
 </div>
 <div className="dsheet">
 <h2>{nombreM(sel)}</h2>
