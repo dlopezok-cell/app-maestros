@@ -39,6 +39,7 @@ const SECCIONES = [
   { id: 'embudo', icono: '\u{1F5C2}\u{FE0F}', nombre: 'Embudo', cat: 'comunidad' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes', cat: 'comunidad' },
   { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'config' },
+  { id: 'lanzamiento', icono: '\u{1F680}', nombre: 'Lanzamiento', cat: 'config' },
   { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos', cat: 'config' },
   { id: 'usuarios', icono: '\u{1F464}', nombre: 'Usuarios', cat: 'config', soloSuper: true },
   { id: 'resenas', icono: '⭐', nombre: 'Reseñas', cat: 'config' },
@@ -84,7 +85,7 @@ export default function Admin() {
   const [pagos, setPagos] = useState([]);
   const [porLiberar, setPorLiberar] = useState([]);
   const [liberandoId, setLiberandoId] = useState(null);
-  const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO', comision_pct: 0 });
+  const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO', comision_pct: 0, prelanzamiento: true, aviso_titulo: 'Estamos por lanzar', aviso_texto: 'Ya puedes crear tu cuenta y explorar c\u00f3mo funciona. \u00a1S\u00e9 de los primeros!' });
   const [portadaMsg, setPortadaMsg] = useState(null);
   const [interesados, setInteresados] = useState([]);
   const [resenas, setResenas] = useState([]);
@@ -606,6 +607,38 @@ export default function Admin() {
           <div style={{ fontSize: 12, color: '#7c8499', margin: '8px 0 14px' }}>{'Ejemplo: mano de obra $10.000 con ' + (Number(portada.comision_pct) || 0) + '% \u2192 comisión ' + plata(Math.round(10000 * ((Number(portada.comision_pct) || 0) / 100)))}</div>
           <button onClick={function () { guardarPortada({ comision_pct: Number(portada.comision_pct) || 0 }); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 24px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar</button>
           {portadaMsg && <span style={{ marginLeft: 12, fontSize: 13, color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456' }}>{portadaMsg}</span>}
+        </div>
+      )}
+      {seccion === 'lanzamiento' && (
+        <div>
+          <div style={{ ...card, background: portada.prelanzamiento ? 'linear-gradient(160deg,#0e1a38,#13224a)' : '#fff', color: portada.prelanzamiento ? '#fff' : '#1c1f2b', border: portada.prelanzamiento ? 'none' : '1px solid #eef0f5' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <b style={{ fontSize: 15 }}>{'\u{1F680} Modo prelanzamiento'}</b>
+                <div style={{ fontSize: 12.5, color: portada.prelanzamiento ? 'rgba(255,255,255,.8)' : '#7c8499', marginTop: 4, lineHeight: 1.45 }}>
+                  {portada.prelanzamiento
+                    ? 'ENCENDIDO: el home muestra el aviso y los pedidos de los clientes NO le llegan a los maestros (se guardan en espera).'
+                    : 'APAGADO: app lanzada. El aviso no aparece y los maestros reciben todos los pedidos.'}
+                </div>
+              </div>
+              <button onClick={function () { var nuevo = !portada.prelanzamiento; setPortada(function (p) { return Object.assign({}, p, { prelanzamiento: nuevo }); }); guardarPortada({ prelanzamiento: nuevo }); }} style={{ flexShrink: 0, position: 'relative', width: 64, height: 34, borderRadius: 20, border: 'none', cursor: 'pointer', background: portada.prelanzamiento ? '#f59e0b' : '#cfd3df' }}>
+                <span style={{ position: 'absolute', top: 4, left: portada.prelanzamiento ? 34 : 4, width: 26, height: 26, borderRadius: '50%', background: '#fff', transition: '.15s' }} />
+              </button>
+            </div>
+          </div>
+          <div style={card}>
+            <b style={{ fontSize: 14 }}>Texto del aviso (popup del home)</b>
+            <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Lo que ven los visitantes mientras el modo est\u00e9 encendido. Pueden inscribirse igual.</div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>T\u00edtulo</label>
+            <input style={inp} value={portada.aviso_titulo || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { aviso_titulo: v }); }); }} />
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Texto</label>
+            <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={portada.aviso_texto || ''} onChange={function (e) { var v = e.target.value; setPortada(function (p) { return Object.assign({}, p, { aviso_texto: v }); }); }} />
+            <button onClick={function () { guardarPortada(); }} style={{ marginTop: 4, width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar texto</button>
+          </div>
+          {portada.prelanzamiento && (
+            <button onClick={function () { if (!window.confirm('\u00bfLanzar la app? El aviso desaparece y TODOS los pedidos acumulados pasan a verse por los maestros.')) return; setPortada(function (p) { return Object.assign({}, p, { prelanzamiento: false }); }); guardarPortada({ prelanzamiento: false }); }} style={{ width: '100%', background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', border: 'none', borderRadius: 14, padding: 15, fontWeight: 800, fontSize: 15.5, cursor: 'pointer' }}>{'\u{1F680} Lanzar app ahora'}</button>
+          )}
+          {portadaMsg && <p style={{ fontSize: 12.5, textAlign: 'center', color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', marginTop: 8 }}>{portadaMsg}</p>}
         </div>
       )}
       {seccion === 'portada' && (
