@@ -70,6 +70,7 @@ export default function PlantillasMeta() {
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F4DD} Crear plantilla de WhatsApp'}</b>
         <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 12px', lineHeight: 1.45 }}>Se envía a Meta para aprobación (~24-48 h). Usa {'{{1}}'}, {'{{2}}'}… para partes variables (ej: nombre, comuna).</div>
+        <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', background: '#fff', color: '#2563eb', border: '1.5px solid #2563eb', borderRadius: 10, padding: '7px 13px', fontWeight: 800, fontSize: 12.5, marginBottom: 12 }}>{'\u2197 Abrir WhatsApp Manager en Meta'}</a>
 
         <label style={lbl}>Nombre (sin espacios, minúsculas)</label>
         <input style={inp} value={nombre} placeholder="invitacion_maestro" onChange={function (e) { setNombre(e.target.value); }} />
