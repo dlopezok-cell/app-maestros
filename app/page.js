@@ -274,7 +274,7 @@ return (
 <span className="dbadge g">{'● Disponible'}</span>
 </div>
 <div style={{ display: 'flex', gap: 10, margin: '14px 0 6px' }}>
-<button onClick={function () { conversar(sel); }} aria-label="Conversar" style={{ flex: '0 0 auto', width: 52, height: 48, background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', borderRadius: 12, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'💬'}</button>
+<button onClick={function () { conversar(sel); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', padding: '14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>{'💬 Conversar'}</button>
 <button className="gbtn" style={{ flex: 1 }} onClick={function () { pedir(sel); }}>{'Pedir presupuesto'}</button>
 </div>
 {sel.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, color: '#2b2f3a', margin: '12px 0' }}>{sel.descripcion}</p>}
