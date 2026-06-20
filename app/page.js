@@ -33,6 +33,7 @@ const [orden, setOrden] = useState('cerca');
 const [gIdx, setGIdx] = useState(-1);
 const [destinoLogin, setDestinoLogin] = useState('cuenta');
 const [authTab, setAuthTab] = useState('ingresar');
+const [rolPre, setRolPre] = useState(null);
 const [email, setEmail] = useState('');
 const [pass, setPass] = useState('');
 const [authMsg, setAuthMsg] = useState(null);
@@ -236,12 +237,46 @@ if (portada && portada.portada_activa && !esAdmin && !esApp) return <Bienvenida 
 // ---- ACCESO (login del cliente) ----
 if (vista === 'acceso') return (
 <main>
+{!rolPre ? (
+<div>
+<div className="darkhead" style={{ textAlign: 'center', paddingBottom: 20 }}>
+<div className="dh1">{'\u{1F44B} Bienvenido'}</div>
+<h2 style={{ margin: '8px 0 2px' }}>¿Cómo quieres empezar?</h2>
+<div className="dh2">Elige una opción. Podrás cambiarla después.</div>
+</div>
+<div className="body" style={{ paddingTop: 18 }}>
+<button onClick={function () { setRolPre('cliente'); setAuthMsg(null); }} style={{ width: '100%', textAlign: 'left', background: '#fff', border: '2px solid #2563eb', borderRadius: 16, padding: 15, display: 'flex', alignItems: 'center', gap: 13, marginBottom: 12, cursor: 'pointer' }}>
+<div style={{ width: 46, height: 46, borderRadius: 13, background: '#e6f1fb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#185fa5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+</div>
+<div style={{ flex: 1 }}>
+<div style={{ fontSize: 15, fontWeight: 800, color: '#1c1f2b' }}>Busco un maestro</div>
+<div style={{ fontSize: 12, color: '#7c8499', marginTop: 1 }}>Cotiza y agenda servicios para tu hogar</div>
+</div>
+<span style={{ color: '#c5cad6', fontSize: 20 }}>{'\u203A'}</span>
+</button>
+<a href="/maestros" style={{ textDecoration: 'none', boxSizing: 'border-box', width: '100%', textAlign: 'left', background: '#fff', border: '1.5px solid #eee', borderRadius: 16, padding: 15, display: 'flex', alignItems: 'center', gap: 13, cursor: 'pointer' }}>
+<div style={{ width: 46, height: 46, borderRadius: 13, background: '#e1f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#0f6e56" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L3 18l3 3 6.5-6.5a4 4 0 0 0 5.2-5.2l-2.4 2.4-2.1-.6-.6-2.1z" /></svg>
+</div>
+<div style={{ flex: 1 }}>
+<div style={{ fontSize: 15, fontWeight: 800, color: '#1c1f2b' }}>Quiero trabajar como maestro</div>
+<div style={{ fontSize: 12, color: '#7c8499', marginTop: 1 }}>Recibe trabajos y envía cotizaciones</div>
+</div>
+<span style={{ color: '#c5cad6', fontSize: 20 }}>{'\u203A'}</span>
+</a>
+<button onClick={function () { setVista('inicio'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 14 }}>Volver al inicio</button>
+</div>
+</div>
+) : (
+<div>
 <div className="darkhead" style={{ textAlign: 'center', paddingBottom: 20 }}>
 <div className="dh1">{'\u{1F44B} Tu cuenta'}</div>
 <h2 style={{ margin: '8px 0 2px' }}>Ingresa o crea tu cuenta</h2>
 <div className="dh2">Para pedir presupuestos y agendar</div>
 </div>
 <div className="body" style={{ paddingTop: 18 }}>
+<button onClick={function () { setRolPre(null); setAuthMsg(null); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 12 }}>{'\u2190 Cambiar'}</button>
 <div style={{ display: 'flex', background: '#fff', borderRadius: 14, padding: 4, marginBottom: 16, border: '1.5px solid #eee' }}>
 <button onClick={function () { setAuthTab('ingresar'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'ingresar' ? '#2563eb' : '#fff', color: authTab === 'ingresar' ? '#fff' : '#7c8499' }}>Ingresar</button>
 <button onClick={function () { setAuthTab('crear'); setAuthMsg(null); }} style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: authTab === 'crear' ? '#2563eb' : '#fff', color: authTab === 'crear' ? '#fff' : '#7c8499' }}>Crear cuenta</button>
@@ -255,6 +290,8 @@ if (vista === 'acceso') return (
 <button className="gbtn full" style={{ background: '#000', color: '#fff', border: 'none', boxShadow: 'none', marginTop: 9 }} onClick={conApple}>{'\u{F8FF} Continuar con Apple'}</button>
 <button onClick={function () { setVista('inicio'); }} style={{ background: 'none', border: 'none', color: '#9aa1b5', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%', marginTop: 10 }}>Volver al inicio</button>
 </div>
+</div>
+)}
 <Nav />
 </main>
 );
