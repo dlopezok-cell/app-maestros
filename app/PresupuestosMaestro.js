@@ -8,6 +8,7 @@ var INCLUYE_OPC = ['Materiales', 'Mano de obra', 'Visita técnica', 'Retiro de e
 var VALIDEZ_OPC = ['15 días', '30 días'];
 var GARANTIA_OPC = ['Sin garantía', '1 mes', '2 meses', '3 meses'];
 var IVA = 0.19;
+var COMISION = 0.15;
 
 // Vista del maestro: LISTA de solicitudes -> DETALLE a pantalla completa -> CONSTRUCTOR
 // de cotización a pantalla completa (barra fija Total + Enviar). Validez y garantía van
@@ -135,12 +136,13 @@ export default function PresupuestosMaestro({ usuario }) {
       if (!inc.length) inc = incluye;
       var net = its.reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0);
       var iv = Math.round(net * IVA);
+      var com = Math.round(net * COMISION);
       setPropuestaIA({
         items: its, incluye: inc,
         descripcion: (d && d.descripcion) ? d.descripcion : '',
         validez: parseValidez(d && d.condiciones) || validez,
         garantia: parseGarantia(d && d.condiciones) || garantia,
-        neto: net, iva: iv, total: net + iv,
+        neto: net, iva: iv, comision: com, total: net + iv + com,
       });
     }).catch(function () { setGenerando(false); setMsg('No se pudo redactar con IA. Inténtalo de nuevo.'); });
   }
@@ -164,7 +166,8 @@ export default function PresupuestosMaestro({ usuario }) {
 
   function neto() { return lineas.reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0); }
   function ivaMonto() { return Math.round(neto() * IVA); }
-  function total() { return neto() + ivaMonto(); }
+  function comisionMonto() { return Math.round(neto() * COMISION); }
+  function total() { return neto() + ivaMonto() + comisionMonto(); }
 
   function responder(p) {
     var n = neto();
@@ -175,7 +178,7 @@ export default function PresupuestosMaestro({ usuario }) {
     var detalle = {
       items: lineas.filter(function (x) { return x.desc && Number(x.valor) > 0; }),
       incluye: incluye, validez: validez, garantia: garantia, condiciones: cond,
-      neto: n, iva: ivaMonto(), modo: modo, descripcion: (descripcion || '').trim(),
+      neto: n, iva: ivaMonto(), comision: comisionMonto(), modo: modo, descripcion: (descripcion || '').trim(),
     };
     supabase.from('cotizaciones').insert({
       presupuesto_id: p.id,
@@ -449,8 +452,10 @@ export default function PresupuestosMaestro({ usuario }) {
             <div style={{ background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: '10px 12px', marginBottom: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#7c8499', marginBottom: 3 }}><span>Neto</span><span>{plata(neto())}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#7c8499' }}><span>IVA (19%)</span><span>{plata(ivaMonto())}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#2563eb' }}><span>Comisión MaestrosEnLínea (15%)</span><span>{plata(comisionMonto())}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid #e7eaf1', marginTop: 7, paddingTop: 7 }}><span style={{ fontSize: 13, fontWeight: 800 }}>Total al cliente</span><span style={{ fontSize: 20, fontWeight: 800 }}>{plata(total())}</span></div>
-              <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 2 }}>Todos los valores incluyen IVA</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#0d9456', marginTop: 5 }}><span>Tú recibes</span><span style={{ fontWeight: 800 }}>{plata(neto() + ivaMonto())}</span></div>
+              <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 2 }}>Incluye IVA y comisión MaestrosEnLínea</div>
             </div>
 
             <div style={lab}>Incluye</div>
@@ -515,6 +520,7 @@ export default function PresupuestosMaestro({ usuario }) {
                 })}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499', marginTop: 8 }}><span>Neto</span><span>{plata(propuestaIA.neto)}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#7c8499' }}><span>IVA (19%)</span><span>{plata(propuestaIA.iva)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#2563eb' }}><span>Comisión MaestrosEnLínea (15%)</span><span>{plata(propuestaIA.comision || 0)}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', background: '#f7f9fc', borderRadius: 9, padding: '8px 11px', marginTop: 7 }}><span style={{ fontSize: 13, fontWeight: 800 }}>Total</span><span style={{ fontSize: 19, fontWeight: 800 }}>{plata(propuestaIA.total)}</span></div>
 
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#7c8499', textTransform: 'uppercase', letterSpacing: 0.4, margin: '14px 0 4px' }}>Trabajo a realizar</div>
