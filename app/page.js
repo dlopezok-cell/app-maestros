@@ -15,7 +15,7 @@ const ADMIN_EMAIL = 'dlopezok@gmail.com';
 // App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
 // Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
 const EMO = { gasfiteria: '\u{1F6B0}', electricidad: '⚡', cerrajeria: '\u{1F511}', pintura: '\u{1F3A8}', calefont: '\u{1F525}', limpieza: '\u{1F9F9}' };
-const GRAD = ['linear-gradient(150deg,#3b6ef0,#7fa8ff)', 'linear-gradient(150deg,#1e40af,#ffc06b)', 'linear-gradient(150deg,#11a36c,#6fe0ae)', 'linear-gradient(150deg,#7048e8,#a78bfa)', 'linear-gradient(150deg,#d6336c,#f783ac)', 'linear-gradient(150deg,#0e7490,#5eead4)'];
+const GRAD = ['linear-gradient(150deg,#3b6ef0,#7fa8ff)', 'linear-gradient(150deg,#1e40af,#22d3ee)', 'linear-gradient(150deg,#11a36c,#6fe0ae)', 'linear-gradient(150deg,#2563eb,#22d3ee)', 'linear-gradient(150deg,#155e75,#5eead4)', 'linear-gradient(150deg,#0e7490,#5eead4)'];
 
 export default function Home() {
 const [vista, setVista] = useState('inicio');

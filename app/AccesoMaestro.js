@@ -53,7 +53,7 @@ export default function AccesoMaestro() {
     supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: window.location.href } });
   }
 
-  var wrap = { minHeight: '100vh', background: 'linear-gradient(160deg,#2a2350 0%,#3a2f6e 50%,#1d1840 100%)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '46px 22px 36px', boxSizing: 'border-box', textAlign: 'center' };
+  var wrap = { minHeight: '100vh', background: 'linear-gradient(160deg,#13224a 0%,#0e1a38 55%,#0a1430 100%)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '46px 22px 36px', boxSizing: 'border-box', textAlign: 'center' };
   var inp = { width: '100%', padding: 13, borderRadius: 12, border: 'none', fontSize: 14, marginBottom: 9, boxSizing: 'border-box', color: '#1c1f2b' };
   var btnP = { width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer', marginBottom: 9 };
   var btnG = { width: '100%', background: '#fff', color: '#1c1f2b', border: 'none', borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: 'pointer' };
@@ -85,9 +85,9 @@ export default function AccesoMaestro() {
         </div>
 
         <div style={{ background: 'rgba(255,255,255,.96)', borderRadius: 18, padding: 18, width: '100%', maxWidth: 400, color: '#1c1f2b' }}>
-          <div style={{ display: 'flex', background: '#f0eefb', borderRadius: 12, padding: 4, marginBottom: 14 }}>
-            <button onClick={function () { setModo('crear'); setMsg(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', background: modo === 'crear' ? '#fff' : 'transparent', color: modo === 'crear' ? '#3C3489' : '#8b8fa3', boxShadow: modo === 'crear' ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }}>Crear cuenta</button>
-            <button onClick={function () { setModo('entrar'); setMsg(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', background: modo === 'entrar' ? '#fff' : 'transparent', color: modo === 'entrar' ? '#3C3489' : '#8b8fa3', boxShadow: modo === 'entrar' ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }}>Ya tengo cuenta</button>
+          <div style={{ display: 'flex', background: '#eef1f6', borderRadius: 12, padding: 4, marginBottom: 14 }}>
+            <button onClick={function () { setModo('crear'); setMsg(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', background: modo === 'crear' ? '#fff' : 'transparent', color: modo === 'crear' ? '#2563eb' : '#7c8499', boxShadow: modo === 'crear' ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }}>Crear cuenta</button>
+            <button onClick={function () { setModo('entrar'); setMsg(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', background: modo === 'entrar' ? '#fff' : 'transparent', color: modo === 'entrar' ? '#2563eb' : '#7c8499', boxShadow: modo === 'entrar' ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }}>Ya tengo cuenta</button>
           </div>
 
           {modo === 'crear' && (

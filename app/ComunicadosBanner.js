@@ -26,7 +26,7 @@ export default function ComunicadosBanner({ segmento }) {
           <div key={c.id} style={{ background: '#EEEDFE', border: '1px solid #d9d5fb', borderRadius: 14, padding: '12px 14px', marginBottom: 10, position: 'relative' }}>
             <button onClick={function () { setCerrados(function (p) { var n = Object.assign({}, p); n[c.id] = true; return n; }); }}
               style={{ position: 'absolute', top: 8, right: 10, background: 'none', border: 'none', color: '#7066d6', fontSize: 15, fontWeight: 800, cursor: 'pointer', lineHeight: 1 }}>{'✕'}</button>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: '#3C3489', paddingRight: 18 }}>{'\u{1F4E2} ' + c.titulo}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: '#2563eb', paddingRight: 18 }}>{'\u{1F4E2} ' + c.titulo}</div>
             <div style={{ fontSize: 13, color: '#534AB7', marginTop: 3, lineHeight: 1.5 }}>{c.cuerpo}</div>
           </div>
         );

@@ -46,7 +46,7 @@ export default function FichaMaestro({ usuario }) {
 
   var idChip = r.estado === 'aprobado'
     ? { t: '✓ Verificado', bg: '#E1F5EE', fg: '#0F6E56' }
-    : (r.estado === 'pendiente' ? { t: 'En revisión', bg: '#fff7ea', fg: '#b07a1e' } : { t: 'Falta verificar', bg: '#f1f0f5', fg: '#8b8fa3' });
+    : (r.estado === 'pendiente' ? { t: 'En revisión', bg: '#fff7ea', fg: '#b07a1e' } : { t: 'Falta verificar', bg: '#f1f0f5', fg: '#7c8499' });
 
   const wrap = { background: '#fff', borderRadius: 18, border: '1px solid #eef0f5', overflow: 'hidden', margin: '14px 16px' };
   const sep = { borderTop: '1px solid #f1f1f5' };

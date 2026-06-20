@@ -516,7 +516,7 @@ export default function PresupuestosMaestro({ usuario }) {
                 </div>
                 <div style={{ background: '#eeedfe', borderRadius: 8, padding: '7px 9px', marginBottom: 11, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 12 }}>{'\u{2728}'}</span>
-                  <span style={{ fontSize: 10, color: '#3C3489', lineHeight: 1.4 }}>Redacté la descripción según el cliente y la conversación. Los precios y los ítems los defines tú.</span>
+                  <span style={{ fontSize: 10, color: '#2563eb', lineHeight: 1.4 }}>Redacté la descripción según el cliente y la conversación. Los precios y los ítems los defines tú.</span>
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#7c8499', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Detalle de costos</div>
                 {propuestaIA.items.map(function (it, ix) {

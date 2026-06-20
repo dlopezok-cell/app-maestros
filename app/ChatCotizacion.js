@@ -21,7 +21,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
 
   var otro = miRol === 'cliente' ? (titulo || 'Maestro') : (titulo || 'Cliente');
   var inicial = (otro || '?').charAt(0).toUpperCase();
-  var GRAD = ['linear-gradient(135deg,#22d3ee,#2563eb)', 'linear-gradient(135deg,#7048e8,#a78bfa)', 'linear-gradient(135deg,#11a36c,#6fe0ae)', 'linear-gradient(135deg,#3b6ef0,#7fa8ff)', 'linear-gradient(135deg,#1e40af,#ffc06b)'];
+  var GRAD = ['linear-gradient(135deg,#22d3ee,#2563eb)', 'linear-gradient(135deg,#2dd4aa,#0f6e56)', 'linear-gradient(135deg,#11a36c,#6fe0ae)', 'linear-gradient(135deg,#3b6ef0,#7fa8ff)', 'linear-gradient(135deg,#1e40af,#22d3ee)'];
   var avBg = GRAD[(inicial.charCodeAt(0) || 0) % GRAD.length];
 
   function beep() {

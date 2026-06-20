@@ -307,7 +307,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
   const card = { background: '#fff', borderRadius: 18, padding: 18, margin: '14px 16px', border: '1px solid #eef0f5' };
   const inp = { width: '100%', padding: 12, border: '1px solid #e4e4ef', borderRadius: 12, fontSize: 14, background: '#fff', color: '#1c1f2b', boxSizing: 'border-box' };
   const lbl = { display: 'block', fontSize: 12, color: '#534AB7', margin: '12px 0 6px' };
-  function chip(on) { return { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer', border: on ? '1px solid #7F77DD' : '1px solid #e0e0ec', background: on ? '#fff' : '#fafafc', color: on ? '#3C3489' : '#6b7184' }; }
+  function chip(on) { return { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer', border: on ? '1px solid #7F77DD' : '1px solid #e0e0ec', background: on ? '#fff' : '#fafafc', color: on ? '#2563eb' : '#6b7184' }; }
   var inicial = (nombre || (usuario.email || '?')).trim().charAt(0).toUpperCase();
 
   function verAnterior(e) { e.stopPropagation(); setTrabajoIdx(function (i) { return i <= 0 ? galeria.length - 1 : i - 1; }); }
@@ -377,7 +377,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
         <div style={{ fontSize: 13, color: '#7c8499', marginBottom: 4 }}>{[oficiosTxt, anos ? anos + ' años' : '', region].filter(Boolean).join(' · ') || 'Tu ficha'}</div>
         {descripcion && <div style={{ fontSize: 13, lineHeight: 1.55, color: '#2b2f3a', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{descripcion}</div>}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-          <button onClick={function () { setEditando(true); setPaso(0); setMaxPaso(2); setErr(null); }} style={{ background: '#fff', color: '#3C3489', border: '1.5px solid #cfc9f3', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'✏️ Editar perfil'}</button>
+          <button onClick={function () { setEditando(true); setPaso(0); setMaxPaso(2); setErr(null); }} style={{ background: '#fff', color: '#2563eb', border: '1.5px solid #cfc9f3', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'✏️ Editar perfil'}</button>
           <button onClick={function () { setVerPerfil(true); }} style={{ background: '#26215C', color: '#fff', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'\u{1F441} Ver mi perfil'}</button>
         </div>
       </div>
@@ -423,7 +423,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
 
           <label style={lbl}>Teléfono</label>
           <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #e4e4ef', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f3f2fb', color: '#3C3489', fontWeight: 600, fontSize: 14, padding: '0 13px', borderRight: '1px solid #e4e4ef', whiteSpace: 'nowrap' }}>{'\u{1F1E8}\u{1F1F1} +56 9'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f3f2fb', color: '#2563eb', fontWeight: 600, fontSize: 14, padding: '0 13px', borderRight: '1px solid #e4e4ef', whiteSpace: 'nowrap' }}>{'\u{1F1E8}\u{1F1F1} +56 9'}</div>
             <input value={telVisible(tel8)} onChange={function (e) { setTel8(e.target.value.replace(/\D/g, '').slice(0, 8)); }} inputMode="numeric" placeholder="1234 5678" style={{ flex: 1, padding: 12, border: 'none', fontSize: 14, outline: 'none', color: '#1c1f2b', minWidth: 0 }} />
           </div>
 
@@ -497,7 +497,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
             </div>
             <textarea value={descripcion} onChange={function (e) { setDescripcion(e.target.value); setEditado(true); }} placeholder="Aquí aparece tu descripción (se arma sola al responder). También puedes escribirla tú." style={{ width: '100%', minHeight: 92, resize: 'vertical', border: 'none', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: '#1c1f2b', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
           </div>
-          {generando && <div style={{ fontSize: 11, color: '#7048e8' }}>{'✨ Escribiendo tu descripción...'}</div>}
+          {generando && <div style={{ fontSize: 11, color: '#2563eb' }}>{'✨ Escribiendo tu descripción...'}</div>}
           {err && <p style={{ fontSize: 12, color: '#b3261e' }}>{err}</p>}
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button onClick={function () { setPaso(0); setErr(null); }} style={{ background: '#fff', color: '#6b7184', border: '1px solid #e0e0ec', borderRadius: 12, padding: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>← Atrás</button>
@@ -528,7 +528,7 @@ export default function RegistroMaestro({ usuario, onGuardado }) {
               <input type="file" accept="image/*" multiple style={{ display: 'none' }} disabled={subiendoGal} onChange={function (e) { subirTrabajos(e.target.files); }} />
             </label>
           </div>
-          {subiendoGal && <div style={{ fontSize: 11, color: '#7048e8', marginBottom: 8 }}>Subiendo fotos...</div>}
+          {subiendoGal && <div style={{ fontSize: 11, color: '#2563eb', marginBottom: 8 }}>Subiendo fotos...</div>}
           {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456' }}>{msg}</p>}
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             <button onClick={function () { setPaso(1); setErr(null); }} style={{ background: '#fff', color: '#6b7184', border: '1px solid #e0e0ec', borderRadius: 12, padding: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>← Atrás</button>

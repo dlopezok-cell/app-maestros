@@ -43,8 +43,8 @@ export default function AgendaMaestro({ usuario }) {
 
   // --- estilos ---
   const card = { background: '#fff', borderRadius: 16, padding: 14, margin: '0 0 12px', border: '1px solid #eef0f5' };
-  const seg = function (on) { return { flex: 1, border: 'none', borderRadius: 9, padding: '8px 0', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: on ? '#fff' : 'transparent', color: on ? '#3C3489' : '#8b8fa3', boxShadow: on ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }; };
-  const navBtn = { background: '#fff', border: '1px solid #e4e4ef', borderRadius: 10, width: 34, height: 34, fontSize: 16, cursor: 'pointer', color: '#3C3489', fontWeight: 800 };
+  const seg = function (on) { return { flex: 1, border: 'none', borderRadius: 9, padding: '8px 0', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: on ? '#fff' : 'transparent', color: on ? '#2563eb' : '#7c8499', boxShadow: on ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }; };
+  const navBtn = { background: '#fff', border: '1px solid #e4e4ef', borderRadius: 10, width: 34, height: 34, fontSize: 16, cursor: 'pointer', color: '#2563eb', fontWeight: 800 };
 
   function TarjetaTrabajo(props) {
     var t = props.t;
@@ -190,7 +190,7 @@ export default function AgendaMaestro({ usuario }) {
         <b style={{ fontSize: 16 }}>Mi agenda</b>
       </div>
 
-      <div style={{ display: 'flex', background: '#f0eefb', borderRadius: 12, padding: 4, marginBottom: 14 }}>
+      <div style={{ display: 'flex', background: '#eef1f6', borderRadius: 12, padding: 4, marginBottom: 14 }}>
         <button onClick={function () { setVista('lista'); }} style={seg(vista === 'lista')}>Lista</button>
         <button onClick={function () { setVista('mes'); }} style={seg(vista === 'mes')}>Mes</button>
         <button onClick={function () { setVista('semana'); }} style={seg(vista === 'semana')}>Semana</button>
