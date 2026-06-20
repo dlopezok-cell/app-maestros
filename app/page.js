@@ -107,7 +107,7 @@ if ((v === 'cotizar' || v === 'cuenta' || v === 'mias' || v === 'mensajes') && !
 setVista(v); window.scrollTo(0, 0);
 }
 function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
-function buscar(texto) { setQ((texto || '')); setBuscado((texto || '').trim()); irTab('inicio'); window.scrollTo(0, 0); }
+function buscar(texto) { setQ((texto || '')); setBuscado((texto || '').trim()); setVista('resultados'); window.scrollTo(0, 0); }
 
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
 function _norm(x) { return (x || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
@@ -143,7 +143,7 @@ var AZ = '#2563eb', GR = '#9aa1b5';
 function ico(d, on) {
 return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={on ? AZ : GR} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 4px' }}>{d}</svg>;
 }
-var onIni = (vista === 'inicio' || vista === 'ficha'), onMias = (vista === 'mias'), onMsg = (vista === 'mensajes'), onCta = (vista === 'cuenta');
+var onIni = (vista === 'inicio' || vista === 'ficha' || vista === 'resultados'), onMias = (vista === 'mias'), onMsg = (vista === 'mensajes'), onCta = (vista === 'cuenta');
 function tabSt(on) { return { flex: 'none', width: 62, textAlign: 'center', fontSize: 10, fontWeight: 700, color: on ? AZ : GR, cursor: 'pointer' }; }
 return (
 <div className="tabbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -290,6 +290,40 @@ return (
 }
 
 // ---- COTIZAR (solo crear una cotización nueva) ----
+if (vista === 'resultados') return (
+<main>
+<div style={{ background: '#0e1a38', padding: '14px 16px 16px' }}>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+<button onClick={function () { setVista('inicio'); }} style={{ background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 36, height: 36, borderRadius: '50%', fontSize: 18, cursor: 'pointer' }}>{'\u2190'}</button>
+<div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, background: '#fff', borderRadius: 30, padding: '8px 15px' }}>
+<span style={{ color: '#9aa1b5', fontSize: 16 }}>{'\u{1F50D}'}</span>
+<input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder="Buscar maestro u oficio" enterKeyHint="search" style={{ border: 'none', outline: 'none', width: '100%', fontSize: 16, color: '#1c1f2b', background: 'transparent' }} />
+</div>
+</div>
+</div>
+<div style={{ padding: '14px 16px 96px' }}>
+<div style={{ fontSize: 13, color: '#7c8499', fontWeight: 700, marginBottom: 10 }}>{lista.length + (lista.length === 1 ? ' maestro' : ' maestros') + (q.trim() ? (' para \u201c' + q.trim() + '\u201d') : '')}</div>
+{lista.length === 0 && <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 14, padding: '44px 14px', lineHeight: 1.6 }}>{'No encontramos maestros' + (q.trim() ? (' para \u201c' + q.trim() + '\u201d') : '') + '. Prueba otra palabra, o graba un video y te cotizan.'}</div>}
+{lista.map(function (m) {
+var f = fotoM(m);
+var a = oficiosM(m).map(ofNombre);
+return (
+<div key={m.id} onClick={function () { abrirFicha(m); }} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #eef1f7', borderRadius: 14, padding: '11px 13px', marginBottom: 10, cursor: 'pointer' }}>
+<div style={{ width: 54, height: 54, borderRadius: '50%', overflow: 'hidden', background: '#e6efff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', fontWeight: 800, fontSize: 20, flex: 'none' }}>{f ? <img src={f} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : nombreM(m).charAt(0).toUpperCase()}</div>
+<div style={{ minWidth: 0, flex: 1 }}>
+<div style={{ fontSize: 15.5, fontWeight: 800, color: '#16294f', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreM(m)}</div>
+<div style={{ fontSize: 12.5, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(a.slice(0, 3).join(' \u00b7 ') + (a.length > 3 ? ' +' + (a.length - 3) : '')) || 'Maestro'}</div>
+{Array.isArray(m.comunas) && m.comunas.length > 0 && <div style={{ fontSize: 11.5, color: '#9aa1b5', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{'\u{1F4CD} ' + m.comunas.slice(0, 3).join(', ')}</div>}
+</div>
+<span style={{ color: '#22d3ee', fontWeight: 800, fontSize: 18 }}>{'\u203a'}</span>
+</div>
+);
+})}
+</div>
+<Nav />
+</main>
+);
+
 if (vista === 'cotizar') return (
 <main>
 <div className="darkhead"><div className="dh1">{'➕ Pedir presupuesto'}</div><h2 style={{ margin: '8px 0 2px' }}>Cuéntanos qué necesitas</h2><div className="dh2">Graba un video, recibe presupuestos y agenda</div></div>
