@@ -171,14 +171,25 @@ export default function PerfilCliente({ usuario }) {
   return (
     <div className="body" style={{ paddingTop: 18 }}>
       <div style={card}>
-        <b style={{ fontSize: 15 }}>Mis datos</b>
-        <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Tu nombre y teléfono para que los maestros sepan cómo contactarte.</div>
-        <input value={nombre} disabled={dis} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre" style={inp} />
-        <input value={telefono} disabled={dis} onChange={function (e) { setTelefono(e.target.value); }} placeholder="Teléfono (ej: +56 9 1234 5678)" style={inp} />
-        {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
-        {editando
-          ? <button className="gbtn full" style={{ opacity: guardando ? .6 : 1 }} disabled={guardando} onClick={guardar}>Guardar datos</button>
-          : <button className="gbtn full" style={{ background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', boxShadow: 'none' }} onClick={function () { setEditando(true); setMsg(null); }}>{'✏️ Editar datos'}</button>}
+        {editando ? (
+          <div>
+            <b style={{ fontSize: 15 }}>Mis datos</b>
+            <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Tu nombre y teléfono para que los maestros sepan cómo contactarte.</div>
+            <input value={nombre} onChange={function (e) { setNombre(e.target.value); }} placeholder="Tu nombre" style={inp2} />
+            <input value={telefono} onChange={function (e) { setTelefono(e.target.value); }} placeholder="Teléfono (ej: +56 9 1234 5678)" style={inp2} />
+            {msg && <p style={{ fontSize: 12, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', margin: '4px 0' }}>{msg}</p>}
+            <button className="gbtn full" style={{ opacity: guardando ? .6 : 1 }} disabled={guardando} onClick={guardar}>Guardar datos</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, fontWeight: 800, flexShrink: 0 }}>{((nombre || (usuario && usuario.email) || '?').charAt(0) || '?').toUpperCase()}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#1c1f2b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre || 'Tu nombre'}</div>
+              <div style={{ fontSize: 13, color: '#7c8499', marginTop: 1 }}>{telefono || 'Agrega tu teléfono'}</div>
+            </div>
+            <button onClick={function () { setEditando(true); setMsg(null); }} aria-label="Editar datos" style={{ background: '#f1f4f9', border: 'none', width: 36, height: 36, borderRadius: 11, color: '#2563eb', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{'\u270F\uFE0F'}</button>
+          </div>
+        )}
       </div>
 
       <div style={card}>
