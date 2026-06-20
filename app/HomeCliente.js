@@ -18,6 +18,9 @@ var CSS = `
 .hc-brand{font-weight:800;font-size:17px;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
 .hc-brand svg{stroke:#fff;width:22px;height:22px}
 .hc-bell svg{stroke:#fff;opacity:.9;width:21px;height:21px}
+.hc-maestro{display:flex;flex-direction:column;align-items:center;gap:1px;text-decoration:none}
+.hc-maestro svg{stroke:#fff;opacity:.92;width:21px;height:21px}
+.hc-maestro span{font-size:9.5px;font-weight:700;color:#fff;opacity:.92;letter-spacing:.2px}
 .hc-tagline{font-size:11.5px;opacity:.8;margin-top:6px}
 .hc-search{display:flex;align-items:center;gap:9px;background:#fff;border-radius:30px;padding:4px 15px;margin-top:13px}
 .hc-search svg{stroke:var(--gris);width:18px;height:18px;flex:none}
@@ -86,6 +89,7 @@ var CSS = `
 var ICON = {
   compass: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>,
   bell: <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+  tool: <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L3 18l3 3 6.5-6.5a4 4 0 0 0 5.2-5.2l-2.4 2.4-2.1-.6-.6-2.1z"/></svg>,
   search: <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
   cam: <svg viewBox="0 0 24 24"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>,
   shield: <svg viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>,
@@ -116,7 +120,7 @@ export default function HomeCliente(props) {
       <div className="hc-appbar">
         <div className="hc-row">
           <div className="hc-brand">{ICON.compass} MaestrosEnLínea</div>
-          <div className="hc-bell">{ICON.bell}</div>
+          <a className="hc-maestro" href="/maestros">{ICON.tool}<span>Maestros</span></a>
         </div>
         <div className="hc-tagline">Maestros verificados para tu hogar</div>
         <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
