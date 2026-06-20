@@ -273,6 +273,10 @@ return (
 {Array.isArray(sel.comunas) && sel.comunas.length > 0 && <span className="dbadge">{'\u{1F4CD} ' + sel.comunas.join(', ')}</span>}
 <span className="dbadge g">{'● Disponible'}</span>
 </div>
+<div style={{ display: 'flex', gap: 10, margin: '14px 0 6px' }}>
+<button onClick={function () { conversar(sel); }} aria-label="Conversar" style={{ flex: '0 0 auto', width: 52, height: 48, background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', borderRadius: 12, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'💬'}</button>
+<button className="gbtn" style={{ flex: 1 }} onClick={function () { pedir(sel); }}>{'Pedir presupuesto'}</button>
+</div>
 {sel.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, color: '#2b2f3a', margin: '12px 0' }}>{sel.descripcion}</p>}
 {gal.length > 0 && (
 <div>
@@ -301,14 +305,6 @@ return (
 );
 })()}
 <div style={{ height: 90 }} />
-</div>
-<div className="stickycta">
-<div style={{ flex: 1 }}>
-<div className="p1">{plata(sel.precio_videollamada)} <span style={{ fontWeight: 400, fontSize: 12, color: '#7c8499' }}>diagnóstico</span></div>
-<div className="p2">primera vez gratis</div>
-</div>
-<button onClick={function () { conversar(sel); }} style={{ background: '#fff', color: '#2563eb', border: '2px solid #dbe7fb', borderRadius: 12, fontWeight: 800, fontSize: 13, padding: '0 13px', cursor: 'pointer', marginRight: 8, whiteSpace: 'nowrap' }}>{'💬 Conversar'}</button>
-<button className="gbtn" onClick={function () { pedir(sel); }}>{'Pedir presupuesto'}</button>
 </div>
 {gIdx >= 0 && gal[gIdx] && (
 <div onClick={function () { setGIdx(-1); }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,.93)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
