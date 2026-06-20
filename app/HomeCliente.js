@@ -120,7 +120,7 @@ export default function HomeCliente(props) {
       <div className="hc-appbar">
         <div className="hc-row">
           <div className="hc-brand">{ICON.compass} MaestrosEnLínea</div>
-          <a className="hc-maestro" href="/maestros">{ICON.tool}<span>Maestros</span></a>
+          
         </div>
         <div className="hc-tagline">Maestros verificados para tu hogar</div>
         <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
