@@ -45,7 +45,7 @@ export default function CampanaMaestros() {
   const [extra, setExtra] = useState([]);
 
   useEffect(function () {
-    try { setEstado(JSON.parse(localStorage.getItem(STORE) || '{}')); } catch (e) {}
+    cargarEnviados();
     try { var t = localStorage.getItem('mel_tmpl_sel'); if (t) setTmpl(t); } catch (e) {}
     try { var v = localStorage.getItem('mel_tmpl_vars'); if (v) setVars(v); } catch (e) {}
     cargarPlantillas();
@@ -99,16 +99,39 @@ export default function CampanaMaestros() {
   }
 
   function guardar(ns) { setEstado(ns); try { localStorage.setItem(STORE, JSON.stringify(ns)); } catch (e) {} }
-  function marcar(w, s) {
-    setEstado(function (prev) { var ns = Object.assign({}, prev); ns[w] = s; try { localStorage.setItem(STORE, JSON.stringify(ns)); } catch (e) {} return ns; });
+  function marcar(w, s, meta) {
+    var k = last9(w);
+    setEstado(function (prev) { var ns = Object.assign({}, prev); ns[k] = s; try { localStorage.setItem(STORE, JSON.stringify(ns)); } catch (e) {} return ns; });
+    try {
+      var row = { tel9: k, estado: s, actualizado_en: new Date().toISOString() };
+      if (meta && meta.plantilla) row.plantilla = meta.plantilla;
+      if (meta && meta.nombre) row.nombre = meta.nombre;
+      supabase.from('wa_enviados').upsert(row, { onConflict: 'tel9' }).then(function () {});
+    } catch (e) {}
   }
-  function getSt(c) { return estado[c.w] || 'pend'; }
+  async function cargarEnviados() {
+    var dbMap = {};
+    try {
+      var r = await supabase.from('wa_enviados').select('tel9, estado');
+      (r.data || []).forEach(function (x) { if (x.tel9) dbMap[x.tel9] = x.estado; });
+    } catch (e) {}
+    var lsMap = {};
+    try {
+      var ls = JSON.parse(localStorage.getItem(STORE) || '{}');
+      Object.keys(ls).forEach(function (w) { var k = last9(w); if (k) lsMap[k] = ls[w]; });
+    } catch (e) {}
+    var map = Object.assign({}, lsMap, dbMap);
+    setEstado(map);
+    var faltan = Object.keys(lsMap).filter(function (k) { return !(k in dbMap); }).map(function (k) { return { tel9: k, estado: lsMap[k] }; });
+    if (faltan.length) { try { supabase.from('wa_enviados').upsert(faltan, { onConflict: 'tel9' }).then(function () {}); } catch (e) {} }
+  }
+  function getSt(c) { return estado[last9(c.w)] || 'pend'; }
   function elegirTmpl(v) { setTmpl(v); try { localStorage.setItem('mel_tmpl_sel', v); } catch (e) {} }
   function cambiarVars(v) { setVars(v); try { localStorage.setItem('mel_tmpl_vars', v); } catch (e) {} }
 
   // lista completa = base inyectada + contactos extraídos de Maps (sin duplicar por w)
   var vistos = {};
-  var TODOS = CONTACTS.concat(extra).filter(function (c) { if (!c.w || vistos[c.w]) return false; vistos[c.w] = 1; return true; });
+  var TODOS = CONTACTS.concat(extra).filter(function (c) { if (!c.w) return false; var k = last9(c.w); if (vistos[k]) return false; vistos[k] = 1; return true; });
 
   // opciones de filtros
   var oficios = Array.from(new Set(TODOS.map(function (c) { return c.o; }))).sort();
@@ -180,7 +203,7 @@ export default function CampanaMaestros() {
         body: JSON.stringify({ to: c.w, template: tp.name, lang: tp.lang, params: paramsPara(c) })
       });
       var d = await r.json();
-      if (d.ok) { marcar(c.w, 'sent'); return { ok: true }; }
+      if (d.ok) { marcar(c.w, 'sent', { plantilla: tp.name, nombre: c.n }); return { ok: true }; }
       var err = d.error || '?';
       if (/132000|number of parameters|does not match/i.test(err)) err = 'Falta una variable en la plantilla "' + tp.name + '". Escríbela en el campo "Variables" (arriba) y reintenta.';
       return { ok: false, error: err };
