@@ -107,7 +107,7 @@ if ((v === 'cotizar' || v === 'cuenta' || v === 'mias' || v === 'mensajes') && !
 setVista(v); window.scrollTo(0, 0);
 }
 function pedir(m) { if (!usuario) { setDestinoLogin('cotizar'); setVista('acceso'); window.scrollTo(0, 0); return; } setVista('cotizar'); window.scrollTo(0, 0); }
-function buscar(texto) { setBuscado((texto || '').trim()); irTab('cotizar'); }
+function buscar(texto) { setQ((texto || '')); setBuscado((texto || '').trim()); irTab('inicio'); window.scrollTo(0, 0); }
 
 var maestrosFlat = maestros.map(function (m) { return { id: m.id, nombre: nombreM(m), oficio: m.oficio, rating: m.rating_promedio || '—' }; });
 function _norm(x) { return (x || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }

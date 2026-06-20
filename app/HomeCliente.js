@@ -59,6 +59,13 @@ var CSS = `
 .hc-proj .hc-prow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:5px}
 .hc-proj .hc-desc{font-size:12.5px;color:#dfe7f5;line-height:1.3;flex:1}
 .hc-proj .hc-go{font-size:13px;font-weight:800;color:#22d3ee;white-space:nowrap;flex:none}
+.hc-vlist{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.hc-vrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #eef1f7;border-radius:14px;padding:11px 13px;cursor:pointer}
+.hc-vrow .ph{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#e6efff;display:flex;align-items:center;justify-content:center;font-weight:800;color:#2563eb;flex:none;font-size:20px}
+.hc-vrow .ph img{width:100%;height:100%;object-fit:cover}
+.hc-vrow .nm{font-size:15px;font-weight:800;color:#16294f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-vrow .sp{font-size:12.5px;color:#7c8499;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-vempty{font-size:13px;color:#9aa1b5;text-align:center;padding:26px 12px;line-height:1.5}
 .hc-hscroll{display:flex;gap:10px;overflow-x:auto;margin-top:11px;padding-bottom:4px}
 .hc-hscroll::-webkit-scrollbar{height:0}
 .hc-prom{min-width:128px;border:1px solid var(--linea);border-radius:16px;padding:13px 11px;text-align:center;background:#fff;cursor:pointer}
@@ -99,6 +106,7 @@ var ICON = {
 export default function HomeCliente(props) {
   var cats = props.cats || [];
   var lista = props.lista || [];
+  var buscando = ((props.q || '') + '').trim().length > 0;
   var oficio = props.oficio;
   var EMO = props.EMO || {};
   var nombreM = props.nombreM || function (m) { return (m.perfiles && m.perfiles.nombre) || 'Maestro'; };
@@ -125,6 +133,7 @@ export default function HomeCliente(props) {
         </form>
       </div>
 
+      {!buscando && (
       <div className="hc-sec">
         <div className="hc-videohero" onClick={onCotizar}>
           <img className="hc-herobg" src={FOTO_PORTADA} alt="" />
@@ -141,7 +150,9 @@ export default function HomeCliente(props) {
           <span>{ICON.checkc}Cotiza gratis</span>
         </div>
       </div>
+      )}
 
+      {!buscando && (
       <div className="hc-sec">
         <h4>¿Cómo funciona?</h4>
         <div className="hc-hsteps">
@@ -159,6 +170,7 @@ export default function HomeCliente(props) {
           </div>
         </div>
       </div>
+      )}
 
       <div className="hc-sec">
         <h4>¿Qué necesitas?</h4>
@@ -176,6 +188,32 @@ export default function HomeCliente(props) {
         </div>
       </div>
 
+      {buscando && (
+        <div className="hc-sec">
+          <div className="hc-seehead"><h4>{'Resultados' + (lista.length ? ' (' + lista.length + ')' : '')}</h4></div>
+          {lista.length > 0 ? (
+            <div className="hc-vlist">
+              {lista.map(function (m) {
+                var f = fotoM(m);
+                return (
+                  <div key={m.id} className="hc-vrow" onClick={function () { onMaestro(m); }}>
+                    <div className="ph">{f ? <img src={f} alt="" /> : nombreM(m).charAt(0).toUpperCase()}</div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="nm">{nombreM(m)}</div>
+                      <div className="sp">{(function () { var a = oficiosM(m).map(ofNombre); return a.slice(0, 3).join(' \u00b7 ') + (a.length > 3 ? ' +' + (a.length - 3) : ''); })() || 'Maestro'}</div>
+                    </div>
+                    {m.verificado && <span className="hc-mbadge">{ICON.check}Verificado</span>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="hc-vempty">{'No encontramos maestros para \u201c' + ((props.q || '').trim()) + '\u201d. Prueba otra palabra, o graba un video y te cotizan.'}</div>
+          )}
+        </div>
+      )}
+
+      {!buscando && (
       <div className="hc-sec">
         <div className="hc-seehead"><h4>Proyectos destacados</h4></div>
         <div className="hc-proj">
@@ -194,7 +232,9 @@ export default function HomeCliente(props) {
           <div className="hc-bc"><b className="hc-ptitle">Mantención del hogar</b><div className="hc-prow"><span className="hc-desc">Arreglos y mejoras con maestros verificados</span><span className="hc-go">Pronto</span></div></div>
         </div>
       </div>
+      )}
 
+      {!buscando && (
       <div className="hc-sec">
         <div className="hc-seehead"><h4>Maestros destacados</h4></div>
         <div className="hc-hscroll">
@@ -233,6 +273,7 @@ export default function HomeCliente(props) {
           <span className="hc-cta2">Quiero unirme</span>
         </a>
       </div>
+      )}
 
       <div className="hc-footer">
         <a href="/terminos">Términos</a> · <a href="/privacidad">Privacidad</a> · MaestrosEnLínea
