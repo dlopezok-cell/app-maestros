@@ -178,20 +178,20 @@ export default function HomeCliente(props) {
 
       <div className="hc-sec">
         <div className="hc-seehead"><h4>Proyectos destacados</h4></div>
-        <div className="hc-proj" onClick={onCotizar}>
+        <div className="hc-proj">
           <img src={FOTO_COCINA} alt="" />
           <div className="hc-veil"></div>
-          <div className="hc-bc"><b className="hc-ptitle">Remodela tu cocina</b><div className="hc-prow"><span className="hc-desc">Diseño + instalación con maestros verificados</span><span className="hc-go">Cotizar ›</span></div></div>
+          <div className="hc-bc"><b className="hc-ptitle">Remodela tu cocina</b><div className="hc-prow"><span className="hc-desc">Diseño + instalación con maestros verificados</span><span className="hc-go">Pronto</span></div></div>
         </div>
-        <div className="hc-proj" onClick={onCotizar}>
+        <div className="hc-proj">
           <img src={FOTO_BANO} alt="" />
           <div className="hc-veil"></div>
-          <div className="hc-bc"><b className="hc-ptitle">Remodela tu baño</b><div className="hc-prow"><span className="hc-desc">Renovación completa, lista en pocos días</span><span className="hc-go">Cotizar ›</span></div></div>
+          <div className="hc-bc"><b className="hc-ptitle">Remodela tu baño</b><div className="hc-prow"><span className="hc-desc">Renovación completa, lista en pocos días</span><span className="hc-go">Pronto</span></div></div>
         </div>
-        <div className="hc-proj" onClick={onCotizar}>
+        <div className="hc-proj">
           <img src={FOTO_PINTURA} alt="" />
           <div className="hc-veil"></div>
-          <div className="hc-bc"><b className="hc-ptitle">Mantención del hogar</b><div className="hc-prow"><span className="hc-desc">Arreglos y mejoras con maestros verificados</span><span className="hc-go">Cotizar ›</span></div></div>
+          <div className="hc-bc"><b className="hc-ptitle">Mantención del hogar</b><div className="hc-prow"><span className="hc-desc">Arreglos y mejoras con maestros verificados</span><span className="hc-go">Pronto</span></div></div>
         </div>
       </div>
 
