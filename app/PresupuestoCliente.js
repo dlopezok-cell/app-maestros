@@ -24,6 +24,9 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   const [solicitudes, setSolicitudes] = useState([]);
   const [mensajesPorPres, setMensajesPorPres] = useState({});
   const [perfil, setPerfil] = useState(null);
+  const [direcciones, setDirecciones] = useState([]);
+  const [dirSel, setDirSel] = useState(null);
+  const [dirOpen, setDirOpen] = useState(false);
   const [chatKey, setChatKey] = useState(null);
   const [hojaKey, setHojaKey] = useState(null);     // cotización abierta (hoja)
   const [miaSel, setMiaSel] = useState(null);       // solicitud expandida en la lista
@@ -110,6 +113,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     if (!usuario) return;
     supabase.from('perfiles').select('*').eq('id', usuario.id).maybeSingle()
       .then(function (r) { setPerfil(r.data || null); });
+    supabase.from('direcciones').select('*').eq('user_id', usuario.id).order('principal', { ascending: false }).order('creado_en', { ascending: true })
+      .then(function (r) { var ds = r.error ? [] : (r.data || []); setDirecciones(ds); var p = ds.find(function (x) { return x.principal; }) || ds[0] || null; if (p) setDirSel(p); });
     cargarReservas();
     supabase.from('reservas').select('id, presupuesto_id').eq('cliente_id', usuario.id)
       .then(function (r) { var m = {}; (r.data || []).forEach(function (x) { m[x.id] = x.presupuesto_id; }); setPresMap(m); });
@@ -193,10 +198,10 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
           video_url: primerVideo ? primerVideo.url : (media[0] ? media[0].url : null),
           archivos: media,
           maestro_id: null,
-          comuna: perfil ? perfil.comuna : null,
-          direccion: perfil ? perfil.direccion : null,
-          lat: perfil ? perfil.lat : null,
-          lng: perfil ? perfil.lng : null,
+          comuna: (dirSel && dirSel.comuna) || (perfil ? perfil.comuna : null),
+          direccion: (dirSel && dirSel.direccion) || (perfil ? perfil.direccion : null),
+          lat: (dirSel && dirSel.lat != null) ? dirSel.lat : (perfil ? perfil.lat : null),
+          lng: (dirSel && dirSel.lng != null) ? dirSel.lng : (perfil ? perfil.lng : null),
           estado: 'abierto',
         };
         supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
@@ -294,6 +299,39 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         <div style={{ fontSize: 12, color: '#7c8499', margin: '4px 0 12px' }}>Graba un video corto mostrando el problema. Los maestros lo revisan y te mandan su cotización para que elijas.</div>
         <div style={{ background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#2b4a86', lineHeight: 1.45, marginBottom: 12 }}>{'\u{1F4A1}'} Aquí <b>creas</b> una solicitud nueva. Para ver y comparar las cotizaciones que recibas, entra a <b>Mis cotizaciones</b>.</div>
 
+        <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>¿Dónde es el trabajo?</label>
+        {(function () {
+          var activa = dirSel || (direcciones[0] || null);
+          if (!activa && (!perfil || !perfil.direccion)) {
+            return <div style={{ ...inp, marginTop: 4, marginBottom: 12, color: '#9aa1b5', fontSize: 12.5 }}>Agrega una dirección en tu perfil (pestaña Cuenta) para que el maestro sepa dónde es.</div>;
+          }
+          var d = activa || { titulo: 'Mi dirección', direccion: perfil.direccion, comuna: perfil.comuna };
+          return (
+            <div style={{ marginTop: 4, marginBottom: 12 }}>
+              <div onClick={function () { if (direcciones.length > 1) setDirOpen(!dirOpen); }} style={{ border: '1.5px solid #ddd', borderRadius: 12, padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 9, cursor: direcciones.length > 1 ? 'pointer' : 'default', background: '#fff' }}>
+                <span style={{ fontSize: 18 }}>{'\u{1F4CD}'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: '#16294f' }}>{(d.titulo || 'Dirección') + (activa && activa.principal ? ' · Principal' : '')}</div>
+                  <div style={{ fontSize: 11.5, color: '#7c8499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.direccion}{d.comuna ? (' · ' + d.comuna) : ''}</div>
+                </div>
+                {direcciones.length > 1 && <span style={{ fontSize: 12, color: '#2563eb', fontWeight: 800, whiteSpace: 'nowrap' }}>Cambiar ▾</span>}
+              </div>
+              {dirOpen && direcciones.length > 1 && (
+                <div style={{ border: '1.5px solid #eef1f7', borderRadius: 12, marginTop: 6, overflow: 'hidden' }}>
+                  {direcciones.map(function (x) {
+                    var sel = activa && activa.id === x.id;
+                    return (
+                      <div key={x.id} onClick={function () { setDirSel(x); setDirOpen(false); }} style={{ padding: '10px 12px', borderTop: '1px solid #f3f4f8', cursor: 'pointer', background: sel ? '#eef4ff' : '#fff' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#16294f' }}>{(x.titulo || 'Dirección') + (x.principal ? ' · Principal' : '')}</div>
+                        <div style={{ fontSize: 11.5, color: '#7c8499' }}>{x.direccion}{x.comuna ? (' · ' + x.comuna) : ''}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <label style={{ fontSize: 12, fontWeight: 700, color: '#5b6275' }}>Especialidad</label>
         <select value={oficio} onChange={function (e) { setOficio(e.target.value); }} style={{ ...inp, marginTop: 4 }}>
           {cats.map(function (c) { return <option key={c.slug} value={c.slug}>{c.valor}</option>; })}

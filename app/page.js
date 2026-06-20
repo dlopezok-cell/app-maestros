@@ -25,6 +25,8 @@ const [cats, setCats] = useState([]);
 const [oficio, setOficio] = useState(null);
 const [sel, setSel] = useState(null);
 const [fichaDesde, setFichaDesde] = useState('inicio');
+const [perfilCli, setPerfilCli] = useState(null);
+const [orden, setOrden] = useState('cerca');
 const [gIdx, setGIdx] = useState(-1);
 const [destinoLogin, setDestinoLogin] = useState('cuenta');
 const [authTab, setAuthTab] = useState('ingresar');
@@ -38,6 +40,10 @@ const [resenas, setResenas] = useState([]);
 const [portada, setPortada] = useState(undefined); // undefined = cargando
 const [noLeidosCli, setNoLeidosCli] = useState(0);  // mensajes de maestros sin leer (badge)
 
+useEffect(function () {
+if (!usuario) { setPerfilCli(null); return; }
+supabase.from('perfiles').select('comuna, lat, lng').eq('id', usuario.id).maybeSingle().then(function (r) { setPerfilCli(r.data || null); });
+}, [usuario]);
 useEffect(function () {
 supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
 .then(function (r) { setPortada(r.data || null); });
@@ -138,6 +144,17 @@ if (!coincideBusqueda(t, q)) return false;
 }
 return true;
 });
+function resultadosLista() {
+var cComuna = perfilCli ? _norm(perfilCli.comuna || '') : '';
+var cRegion = '';
+if (cComuna) { for (var i = 0; i < maestros.length; i++) { var mm = maestros[i]; var cs = (Array.isArray(mm.comunas) ? mm.comunas : []).map(_norm); if (cs.indexOf(cComuna) >= 0) { cRegion = _norm(mm.region || ''); break; } } }
+var lr = lista.slice();
+if (cRegion) lr = lr.filter(function (m) { return _norm(m.region || '') === cRegion; });
+function cerca(m) { var cs = (Array.isArray(m.comunas) ? m.comunas : []).map(_norm); return (cComuna && cs.indexOf(cComuna) >= 0) ? 1 : 0; }
+if (orden === 'rating') lr.sort(function (a, b) { return (b.rating_promedio || 0) - (a.rating_promedio || 0) || (b.total_trabajos || 0) - (a.total_trabajos || 0); });
+else lr.sort(function (a, b) { var d = cerca(b) - cerca(a); if (d) return d; return (b.rating_promedio || 0) - (a.rating_promedio || 0) || (b.total_trabajos || 0) - (a.total_trabajos || 0); });
+return lr;
+}
 
 function Nav() {
 var AZ = '#2563eb', GR = '#9aa1b5';
@@ -291,7 +308,7 @@ return (
 }
 
 // ---- COTIZAR (solo crear una cotización nueva) ----
-if (vista === 'resultados') return (
+if (vista === 'resultados') { var lr = resultadosLista(); return (
 <main>
 <div style={{ background: '#0e1a38', padding: '14px 16px 16px' }}>
 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -303,9 +320,13 @@ if (vista === 'resultados') return (
 </div>
 </div>
 <div style={{ padding: '14px 16px 96px' }}>
-<div style={{ fontSize: 13, color: '#7c8499', fontWeight: 700, marginBottom: 10 }}>{lista.length + (lista.length === 1 ? ' maestro' : ' maestros') + (q.trim() ? (' para \u201c' + q.trim() + '\u201d') : '')}</div>
-{lista.length === 0 && <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 14, padding: '44px 14px', lineHeight: 1.6 }}>{'No encontramos maestros' + (q.trim() ? (' para \u201c' + q.trim() + '\u201d') : '') + '. Prueba otra palabra, o graba un video y te cotizan.'}</div>}
-{lista.map(function (m) {
+<div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+<button onClick={function () { setOrden('cerca'); }} style={{ fontSize: 12.5, fontWeight: 700, border: 'none', borderRadius: 20, padding: '7px 13px', cursor: 'pointer', background: orden === 'cerca' ? '#2563eb' : '#fff', color: orden === 'cerca' ? '#fff' : '#5b6275', boxShadow: orden === 'cerca' ? 'none' : 'inset 0 0 0 1px #e4e4ef' }}>{'\u{1F4CD} Más cerca de ti'}</button>
+<button onClick={function () { setOrden('rating'); }} style={{ fontSize: 12.5, fontWeight: 700, border: 'none', borderRadius: 20, padding: '7px 13px', cursor: 'pointer', background: orden === 'rating' ? '#2563eb' : '#fff', color: orden === 'rating' ? '#fff' : '#5b6275', boxShadow: orden === 'rating' ? 'none' : 'inset 0 0 0 1px #e4e4ef' }}>{'⭐ Mejor evaluados'}</button>
+</div>
+<div style={{ fontSize: 13, color: '#7c8499', fontWeight: 700, marginBottom: 10 }}>{lr.length + (lr.length === 1 ? ' maestro' : ' maestros') + (q.trim() ? (' para \u201c' + q.trim() + '\u201d') : '')}</div>
+{lr.length === 0 && <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 14, padding: '44px 14px', lineHeight: 1.6 }}>{'No encontramos maestros' + (q.trim() ? (' para \u201c' + q.trim() + '\u201d') : '') + '. Prueba otra palabra, o graba un video y te cotizan.'}</div>}
+{lr.map(function (m) {
 var f = fotoM(m);
 var a = oficiosM(m).map(ofNombre);
 return (
@@ -323,7 +344,7 @@ return (
 </div>
 <Nav />
 </main>
-);
+); }
 
 if (vista === 'cotizar') return (
 <main>
