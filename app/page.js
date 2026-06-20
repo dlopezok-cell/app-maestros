@@ -42,6 +42,7 @@ const [q, setQ] = useState('');
 const [buscado, setBuscado] = useState('');
 const [resenas, setResenas] = useState([]);
 const [portada, setPortada] = useState(undefined); // undefined = cargando
+const [aviso, setAviso] = useState(false); // popup de prelanzamiento
 const [noLeidosCli, setNoLeidosCli] = useState(0);  // mensajes de maestros sin leer (badge)
 
 useEffect(function () {
@@ -50,7 +51,7 @@ supabase.from('perfiles').select('comuna, lat, lng').eq('id', usuario.id).maybeS
 }, [usuario]);
 useEffect(function () {
 supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
-.then(function (r) { setPortada(r.data || null); });
+.then(function (r) { var c = r.data || null; setPortada(c); try { if (c && c.prelanzamiento && window.localStorage.getItem('mel_aviso_v1') !== '1') setAviso(true); } catch (e) {} });
 supabase.auth.getUser().then(function (r) { setUsuario((r.data && r.data.user) || null); setCargado(true); });
 if (typeof window !== 'undefined') {
 var sp = new URLSearchParams(window.location.search);
@@ -490,6 +491,23 @@ q={q} setQ={setQ} lista={lista} EMO={EMO} plata={plata}
 nombreM={nombreM} fotoM={fotoM} oficiosM={oficiosM} ofNombre={ofNombre} ratingDe={ratingDe}
 onMaestro={abrirFicha} onCotizar={function () { irTab('cotizar'); }} onBuscar={buscar}
 />
+{aviso && (
+<div onClick={function () { try { window.localStorage.setItem('mel_aviso_v1', '1'); } catch (e) {} setAviso(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(8,15,32,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+<div onClick={function (e) { e.stopPropagation(); }} style={{ width: '100%', maxWidth: 330, background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,.4)' }}>
+<div style={{ background: '#0e1a38', padding: '24px 22px 20px', textAlign: 'center', position: 'relative' }}>
+<button onClick={function () { try { window.localStorage.setItem('mel_aviso_v1', '1'); } catch (e) {} setAviso(false); }} style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 30, height: 30, borderRadius: '50%', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>{'\u00D7'}</button>
+<div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(34,211,238,.18)', color: '#7fe9fb', fontSize: 11, fontWeight: 800, padding: '4px 11px', borderRadius: 999, marginBottom: 13 }}>{'\u{1F680} Muy pronto'}</div>
+<div style={{ color: '#fff', fontSize: 19, fontWeight: 800, marginBottom: 6 }}>{(portada && portada.aviso_titulo) || 'Estamos por lanzar'}</div>
+<div style={{ color: '#aab3c9', fontSize: 13.5, lineHeight: 1.5 }}>{(portada && portada.aviso_texto) || 'Ya puedes crear tu cuenta y explorar c\u00f3mo funciona. \u00a1S\u00e9 de los primeros!'}</div>
+</div>
+<div style={{ padding: '16px 18px 18px' }}>
+<button onClick={function () { try { window.localStorage.setItem('mel_aviso_v1', '1'); } catch (e) {} setAviso(false); setRolPre('cliente'); setAuthMsg(null); setVista('acceso'); }} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 11, padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', marginBottom: 9 }}>{'\u{1F50D} Busco un maestro'}</button>
+<a href="/maestros" style={{ display: 'block', textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box', width: '100%', background: '#fff', color: '#0f6e56', border: '1.5px solid #2dd4aa', borderRadius: 11, padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', marginBottom: 13 }}>{'\u{1F6E0}\uFE0F Quiero trabajar como maestro'}</a>
+<div onClick={function () { try { window.localStorage.setItem('mel_aviso_v1', '1'); } catch (e) {} setAviso(false); }} style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 13, cursor: 'pointer' }}>Solo mirar por ahora</div>
+</div>
+</div>
+</div>
+)}
 <CookieBanner />
 <Nav />
 </main>

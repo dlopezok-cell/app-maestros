@@ -15,6 +15,7 @@ var IVA = 0.19;
 // pop-up; el maestro la usa o la edita. El IVA se suma siempre.
 export default function PresupuestosMaestro({ usuario }) {
   const [comisionPct, setComisionPct] = useState(0);
+  const [prelanz, setPrelanz] = useState(false);
   const [misOficios, setMisOficios] = useState([]);
   const [esMaestro, setEsMaestro] = useState(false);
   const [items, setItems] = useState([]);
@@ -165,7 +166,7 @@ export default function PresupuestosMaestro({ usuario }) {
   function toggleInc(x) { setIncluye(function (p) { return p.indexOf(x) >= 0 ? p.filter(function (y) { return y !== x; }) : p.concat([x]); }); }
 
   useEffect(function () {
-    supabase.from('home_config').select('comision_pct').eq('id', 1).maybeSingle().then(function (r) { if (r.data && r.data.comision_pct != null) setComisionPct(Number(r.data.comision_pct)); });
+    supabase.from('home_config').select('comision_pct, prelanzamiento').eq('id', 1).maybeSingle().then(function (r) { if (r.data && r.data.comision_pct != null) setComisionPct(Number(r.data.comision_pct)); if (r.data) setPrelanz(!!r.data.prelanzamiento); });
   }, []);
 
   function neto() { return lineas.reduce(function (a, x) { return a + (Number(x.valor) || 0); }, 0); }
@@ -259,7 +260,7 @@ export default function PresupuestosMaestro({ usuario }) {
 
   // ---------- LISTA ----------
   if (vista === 'lista') {
-    var nuevas = items.filter(function (p) { return !yaRespondida(p); });
+    var nuevas = prelanz ? [] : items.filter(function (p) { return !yaRespondida(p); });
     var cotizadas = items.filter(function (p) { return yaRespondida(p); });
     var listaF = filtro === 'cotizadas' ? cotizadas : nuevas;
     function Tab(props) {
