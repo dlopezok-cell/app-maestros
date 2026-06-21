@@ -19,6 +19,37 @@ function aWhatsapp(tel) {
 function esMovil(w) { return /^569\d{8}$/.test(w); }
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 
+export const maxDuration = 60;
+const GRAPH = 'https://graph.facebook.com/v21.0';
+const WABA_ID = process.env.WHATSAPP_WABA_ID || '3112654475791357';
+const CAPT_TEMPLATE = process.env.CAPTACION_TEMPLATE || 'tengo_un_cliente';
+
+// Busca idioma + cuerpo de una plantilla APROBADA de Meta.
+async function buscarPlantilla(token, nombre) {
+  try {
+    const r = await fetch(GRAPH + '/' + WABA_ID + '/message_templates?name=' + encodeURIComponent(nombre) + '&fields=name,language,status,components&access_token=' + encodeURIComponent(token));
+    const d = await r.json();
+    const t = (d.data || []).filter(function (x) { return x.status === 'APPROVED'; })[0];
+    if (!t) return null;
+    const body = (t.components || []).filter(function (c) { return c.type === 'BODY'; })[0];
+    return { language: t.language, body: body && body.text ? body.text : '' };
+  } catch (e) { return null; }
+}
+
+// Envía la plantilla por WhatsApp Cloud con [comuna, oficio].
+async function enviarPlantilla(token, phoneId, lang, to, comuna, oficio) {
+  const payload = {
+    messaging_product: 'whatsapp', to: to, type: 'template',
+    template: { name: CAPT_TEMPLATE, language: { code: lang }, components: [ { type: 'body', parameters: [ { type: 'text', text: String(comuna || '') }, { type: 'text', text: String(oficio || '') } ] } ] }
+  };
+  try {
+    const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (!r.ok) return { ok: false, error: (d && d.error ? d.error.message : 'Error de Meta') };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: String(e && e.message ? e.message : e) }; }
+}
+
 export async function POST(req) {
   try {
     const body = await req.json().catch(function () { return {}; });
@@ -80,19 +111,39 @@ export async function POST(req) {
     // Preferir celulares (los particulares casi siempre tienen móvil)
     cand.sort(function (a, b) { return (b.movil ? 1 : 0) - (a.movil ? 1 : 0); });
 
-    const rows = cand.slice(0, max).map(function (c) {
-      const mensaje = tmpl.replace(/\{nombre\}/g, (c.nombre.split(' ')[0] || ''))
-        .replace(/\{oficio\}/g, p.oficio).replace(/\{comuna\}/g, p.comuna).replace(/\{link\}/g, LINK);
-      return { presupuesto_id: pid, oficio: p.oficio, comuna: p.comuna, nombre: c.nombre, telefono: c.tel, whatsapp: c.w, direccion: c.direccion, es_movil: c.movil, mensaje: mensaje, pedido_texto: pedidoTexto, estado: 'pendiente' };
-    });
+    const seleccion = cand.slice(0, max);
+
+    // Envío AUTOMÁTICO de la plantilla aprobada por WhatsApp Cloud.
+    const waToken = process.env.WHATSAPP_TOKEN;
+    const phoneId = process.env.WHATSAPP_PHONE_ID;
+    const plantilla = (waToken && phoneId) ? await buscarPlantilla(waToken, CAPT_TEMPLATE) : null;
+    const lang = plantilla ? plantilla.language : 'es';
+    function textoPlantilla(comuna, oficio) {
+      if (plantilla && plantilla.body) return plantilla.body.replace(/\{\{\s*1\s*\}\}/g, comuna).replace(/\{\{\s*2\s*\}\}/g, oficio);
+      return 'Tengo un cliente en ' + comuna + ' que necesita ' + oficio + '. Súmate gratis a MaestrosEnLínea: ' + LINK;
+    }
+
+    const rows = [];
+    for (let i = 0; i < seleccion.length; i++) {
+      const c = seleccion[i];
+      let estado = 'pendiente';
+      let errMsg = null;
+      if (plantilla) {
+        const res = await enviarPlantilla(waToken, phoneId, lang, c.w, p.comuna, p.oficio);
+        estado = res.ok ? 'enviado' : 'error';
+        errMsg = res.ok ? null : (res.error || 'error');
+        if (res.ok) { try { await sb.from('wa_mensajes').insert({ telefono: c.w, direccion: 'out', texto: textoPlantilla(p.comuna, p.oficio) }); } catch (e) {} }
+      }
+      rows.push({ presupuesto_id: pid, oficio: p.oficio, comuna: p.comuna, nombre: c.nombre, telefono: c.tel, whatsapp: c.w, direccion: c.direccion, es_movil: c.movil, mensaje: textoPlantilla(p.comuna, p.oficio), pedido_texto: pedidoTexto, estado: estado, error: errMsg });
+    }
     if (rows.length) {
       let ins = await sb.from('captacion_cola').insert(rows);
       if (ins.error && /pedido_texto/.test(ins.error.message || '')) {
-        // La columna pedido_texto aún no existe: reintentar sin ella.
         await sb.from('captacion_cola').insert(rows.map(function (r) { var c = Object.assign({}, r); delete c.pedido_texto; return c; }));
       }
     }
-    return Response.json({ ok: true, encolados: rows.length, google_status: gStatus, google_error: gError, encontrados: places.length, candidatos: cand.length }, { status: 200 });
+    const enviados = rows.filter(function (r) { return r.estado === 'enviado'; }).length;
+    return Response.json({ ok: true, encolados: rows.length, enviados: enviados, plantilla: plantilla ? (CAPT_TEMPLATE + '/' + lang) : 'sin_plantilla', google_status: gStatus, google_error: gError, encontrados: places.length, candidatos: cand.length }, { status: 200 });
   } catch (e) {
     return Response.json({ error: String(e && e.message ? e.message : e) }, { status: 200 });
   }
