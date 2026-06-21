@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // Panel admin "Captación auto": revisa los maestros que la IA encontró en Google Maps
 // para cada pedido, y aprueba el envío del WhatsApp (cola de aprobación).
 export default function CaptacionPanel() {
-  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_mensaje: '' });
+  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_mensaje: '', captacion_msg_si: '', captacion_msg_no: '' });
   const [cola, setCola] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
@@ -14,8 +14,8 @@ export default function CaptacionPanel() {
 
   function cargar() {
     setCargando(true);
-    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje').eq('id', 1).maybeSingle()
-      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_mensaje: r.data.captacion_mensaje || '' }); });
+    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje,captacion_msg_si,captacion_msg_no').eq('id', 1).maybeSingle()
+      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_mensaje: r.data.captacion_mensaje || '', captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '' }); });
     supabase.from('captacion_cola').select('*').order('creado_en', { ascending: false }).limit(500)
       .then(function (r) { setCola(r.data || []); setCargando(false); });
   }
@@ -85,6 +85,16 @@ export default function CaptacionPanel() {
         </div>
         <label style={{ fontSize: 12.5, fontWeight: 700, color: '#5b6275' }}>Mensaje (usa {'{nombre} {oficio} {comuna} {link}'})</label>
         <textarea value={cfg.captacion_mensaje} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_mensaje: v }); }); }} style={{ width: '100%', minHeight: 70, resize: 'vertical', padding: 10, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 13.5, boxSizing: 'border-box', marginTop: 6 }} />
+        <div style={{ height: 1, background: '#eef0f5', margin: '18px 0 14px' }} />
+        <b style={{ fontSize: 14 }}>Respuestas automáticas del bot</b>
+        <div style={{ fontSize: 12, color: '#7c8499', marginTop: 4, lineHeight: 1.5 }}>Cuando el maestro <b>responde</b> al primer mensaje, la IA detecta si le interesa y envía uno de estos dos. Variables: <code>{'{oficio}'}</code> <code>{'{comuna}'}</code> <code>{'{pedido}'}</code> <code>{'{link}'}</code>.</div>
+
+        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#0d9456', marginTop: 14 }}>✅ Si el maestro acepta / pide info</label>
+        <textarea value={cfg.captacion_msg_si} placeholder={'¡Gracias por responder! 🙌 El cliente necesita *{oficio}* en *{comuna}*.\n\n“{pedido}”\n\nPara ver el detalle y enviarle tu presupuesto, súmate gratis acá 👉 {link}'} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_msg_si: v }); }); }} style={{ width: '100%', minHeight: 110, resize: 'vertical', padding: 10, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 13.5, boxSizing: 'border-box', marginTop: 6 }} />
+
+        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#b3261e', marginTop: 12 }}>🚫 Si el maestro no quiere</label>
+        <textarea value={cfg.captacion_msg_no} placeholder={'¡Sin problema! 🙌 Si más adelante quieres recibir clientes de tu zona, acá estamos: {link}'} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_msg_no: v }); }); }} style={{ width: '100%', minHeight: 70, resize: 'vertical', padding: 10, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 13.5, boxSizing: 'border-box', marginTop: 6 }} />
+
         <button onClick={function () { guardarCfg({ captacion_max: Number(cfg.captacion_max) || 10 }); }} style={{ marginTop: 10, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar</button>
         {msg && <span style={{ marginLeft: 12, fontSize: 13, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456' }}>{msg}</span>}
       </div>
