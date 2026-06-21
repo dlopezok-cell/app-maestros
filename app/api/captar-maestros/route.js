@@ -57,7 +57,7 @@ export async function POST(req) {
     if (!pid) return Response.json({ error: 'falta presupuesto_id' }, { status: 200 });
     const sb = admin();
 
-    const cfgr = await sb.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje').eq('id', 1).maybeSingle();
+    const cfgr = await sb.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje,captacion_test').eq('id', 1).maybeSingle();
     const cfg = cfgr.data || {};
     if (!cfg.captacion_activa) return Response.json({ ok: true, skipped: 'inactivo' }, { status: 200 });
     const max = Math.min(20, Math.max(1, Number(cfg.captacion_max) || 10));
@@ -68,6 +68,37 @@ export async function POST(req) {
     if (!p) return Response.json({ error: 'no existe' }, { status: 200 });
     if (p.creado_en) { var age = Date.now() - new Date(p.creado_en).getTime(); if (age > 15 * 60 * 1000) return Response.json({ ok: true, skipped: 'viejo' }, { status: 200 }); }
     if (!p.oficio || !p.comuna) return Response.json({ ok: true, skipped: 'sin oficio o comuna' }, { status: 200 });
+
+    // === MODO PRUEBA ===
+    // Si hay un número de prueba configurado, NO se busca en Google ni se contacta
+    // a maestros reales: la plantilla se envía SOLO a ese número para probar el flujo.
+    const testNum = String(cfg.captacion_test || '').replace(/[^0-9]/g, '');
+    if (testNum) {
+      const pedidoTextoT = (((p.titulo && p.titulo.trim()) ? p.titulo.trim() : (p.descripcion || '').trim()) || '').slice(0, 140) || null;
+      const waTokenT = process.env.WHATSAPP_TOKEN;
+      const phoneIdT = process.env.WHATSAPP_PHONE_ID;
+      const plantillaT = (waTokenT && phoneIdT) ? await buscarPlantilla(waTokenT, CAPT_TEMPLATE) : null;
+      const langT = plantillaT ? plantillaT.language : 'es';
+      const txtT = (plantillaT && plantillaT.body)
+        ? plantillaT.body.replace(/\{\{\s*1\s*\}\}/g, p.comuna).replace(/\{\{\s*2\s*\}\}/g, p.oficio)
+        : ('Tengo un cliente en ' + p.comuna + ' que necesita ' + p.oficio + '. Súmate gratis a MaestrosEnLínea: ' + LINK);
+      let estadoT = 'pendiente';
+      let errT = null;
+      if (plantillaT) {
+        const resT = await enviarPlantilla(waTokenT, phoneIdT, langT, testNum, p.comuna, p.oficio);
+        estadoT = resT.ok ? 'enviado' : 'error';
+        errT = resT.ok ? null : (resT.error || 'error');
+        if (resT.ok) { try { await sb.from('wa_mensajes').insert({ telefono: testNum, direccion: 'out', texto: txtT }); } catch (e) {} }
+      } else {
+        errT = 'sin_plantilla';
+      }
+      // Limpia filas de prueba previas de ese número para poder repetir la prueba.
+      try { await sb.from('captacion_cola').delete().eq('whatsapp', testNum).eq('nombre', 'PRUEBA'); } catch (e) {}
+      const rowT = { presupuesto_id: pid, oficio: p.oficio, comuna: p.comuna, nombre: 'PRUEBA', telefono: testNum, whatsapp: testNum, direccion: '', es_movil: true, mensaje: txtT, pedido_texto: pedidoTextoT, estado: estadoT, error: errT };
+      let insT = await sb.from('captacion_cola').insert(rowT);
+      if (insT.error && /pedido_texto/.test(insT.error.message || '')) { const r2 = Object.assign({}, rowT); delete r2.pedido_texto; await sb.from('captacion_cola').insert(r2); }
+      return Response.json({ ok: true, modo: 'prueba', enviado_a: testNum, estado: estadoT, plantilla: plantillaT ? (CAPT_TEMPLATE + '/' + langT) : 'sin_plantilla', error: errT }, { status: 200 });
+    }
 
     const ya = await sb.from('captacion_cola').select('id', { count: 'exact', head: true }).eq('presupuesto_id', pid);
     if ((ya.count || 0) > 0) return Response.json({ ok: true, skipped: 'ya encolado' }, { status: 200 });
