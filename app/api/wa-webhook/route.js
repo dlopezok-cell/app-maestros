@@ -89,6 +89,53 @@ async function responderIA(sb, from, config) {
   await sb.from('wa_mensajes').insert({ telefono: from, direccion: 'out', texto: texto, wamid: wamid });
 }
 
+async function enviarTextoCloud(sb, to, texto) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  if (!token || !phoneId || !texto) return;
+  let wamid = null;
+  try {
+    const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to: to, type: 'text', text: { body: texto } }) });
+    const d = await r.json();
+    wamid = d.messages && d.messages[0] ? d.messages[0].id : null;
+  } catch (e) {}
+  try { await sb.from('wa_mensajes').insert({ telefono: to, direccion: 'out', texto: texto, wamid: wamid }); } catch (e) {}
+}
+
+// La IA clasifica la respuesta del maestro: si / no / duda.
+async function clasificarCaptacion(texto) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return 'si';
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, system: 'Clasifica la respuesta de un maestro a una invitacion a una plataforma. Responde SOLO una palabra, sin puntuacion: SI (acepta, le interesa o pide mas info), NO (rechaza claramente), DUDA (pregunta algo).', messages: [{ role: 'user', content: String(texto).slice(0, 300) }] })
+    });
+    const j = await r.json();
+    const t = (j.content && j.content[0] && j.content[0].text ? j.content[0].text : '').toUpperCase();
+    if (t.indexOf('NO') >= 0) return 'no';
+    if (t.indexOf('DUDA') >= 0) return 'duda';
+    return 'si';
+  } catch (e) { return 'si'; }
+}
+
+// Maneja la respuesta a una captación: detalles+link o cierre cordial.
+async function manejarCaptacion(sb, from, texto, row) {
+  const intento = await clasificarCaptacion(texto);
+  if (intento === 'no') {
+    await enviarTextoCloud(sb, from, '¡Sin problema! 🙌 Si más adelante quieres recibir clientes de tu zona, acá estamos: https://www.maestrosenlinea.cl/unete');
+    await sb.from('captacion_cola').update({ estado: 'no_interesado' }).eq('id', row.id);
+    return true;
+  }
+  let det = '¡Gracias por responder! 🙌 El cliente necesita *' + (row.oficio || 'un servicio') + '*' + (row.comuna ? ' en *' + row.comuna + '*' : '') + '.';
+  if (row.pedido_texto) det += '\n\n“' + row.pedido_texto + '”';
+  det += '\n\nPara ver el detalle completo y enviarle tu presupuesto, súmate gratis acá 👉 https://www.maestrosenlinea.cl/unete';
+  await enviarTextoCloud(sb, from, det);
+  await sb.from('captacion_cola').update({ estado: 'detalle_enviado' }).eq('id', row.id);
+  return true;
+}
+
 export async function POST(req) {
   // Leemos el cuerpo crudo para poder validar la firma de Meta.
   const raw = await req.text();
@@ -136,10 +183,25 @@ export async function POST(req) {
 
     await sb.from('wa_mensajes').insert({ telefono: from, nombre: nombre, direccion: 'in', texto: texto, wamid: wamid });
 
-    const cfg = await sb.from('ia_config').select('activo, modelo, prompt').eq('id', 1).maybeSingle();
-    const config = cfg.data || { activo: false };
-    if (config.activo && esTexto && from) {
-      await responderIA(sb, from, config);
+    // ¿Es respuesta a una captación auto? La IA decide y manda los detalles.
+    let manejadoCaptacion = false;
+    if (esTexto && from) {
+      try {
+        const cfgH = await sb.from('home_config').select('captacion_activa').eq('id', 1).maybeSingle();
+        if (cfgH.data && cfgH.data.captacion_activa) {
+          const cr = await sb.from('captacion_cola').select('id, oficio, comuna, pedido_texto').eq('whatsapp', from).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
+          const row = cr.data && cr.data[0];
+          if (row) manejadoCaptacion = await manejarCaptacion(sb, from, texto, row);
+        }
+      } catch (e) {}
+    }
+
+    if (!manejadoCaptacion) {
+      const cfg = await sb.from('ia_config').select('activo, modelo, prompt').eq('id', 1).maybeSingle();
+      const config = cfg.data || { activo: false };
+      if (config.activo && esTexto && from) {
+        await responderIA(sb, from, config);
+      }
     }
   } catch (e) { /* nunca tirar error a Meta */ }
 
