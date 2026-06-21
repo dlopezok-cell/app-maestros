@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 
 const WASAPI_API = 'https://api-ws.wasapi.io/api/v1';
+const GRAPH = 'https://graph.facebook.com/v21.0';
 
 function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -109,15 +110,70 @@ async function enviarWasapiTexto(sb, waId, fromId, texto) {
   return outId;
 }
 
+// --- Envío por Meta WhatsApp Cloud (texto + media). El maestro acaba de responder,
+// así que la ventana de 24h está abierta y se permite texto libre + imágenes. ---
+async function enviarTextoCloud(sb, to, texto) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  if (!token || !phoneId || !texto) return;
+  let wamid = null;
+  try {
+    const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to: to, type: 'text', text: { body: texto } }) });
+    const dd = await r.json();
+    wamid = dd.messages && dd.messages[0] ? dd.messages[0].id : null;
+  } catch (e) {}
+  try { await sb.from('wa_mensajes').insert({ telefono: to, direccion: 'out', texto: texto, wamid: wamid }); } catch (e) {}
+}
+async function enviarMediaCloud(sb, to, url, esVideo) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  if (!token || !phoneId || !url) return;
+  const payload = esVideo ? { messaging_product: 'whatsapp', to: to, type: 'video', video: { link: url } } : { messaging_product: 'whatsapp', to: to, type: 'image', image: { link: url } };
+  try {
+    await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    await sb.from('wa_mensajes').insert({ telefono: to, direccion: 'out', texto: (esVideo ? '[video] ' : '[foto] ') + url });
+  } catch (e) {}
+}
+
+// Plantillas por defecto (si el admin no las personalizó en el panel).
+const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c Te paso lo que necesita el cliente:\n\n\ud83d\udcdd {pedido}\n\n\ud83d\udc47 Te mando tambi\u00e9n las fotos y videos que subi\u00f3.\n\nSi quieres tomarlo, cr\u00e9ale un presupuesto directo en la plataforma. Solo reg\u00edstrate (es gratis y r\u00e1pido) y cot\u00edzale ac\u00e1 \ud83d\udc49 {link}';
+const DEF_NO = '\u00a1Sin problema! \ud83d\ude4c Si m\u00e1s adelante quieres recibir clientes de tu zona, ac\u00e1 estamos: {link}';
+
+function renderCaptacion(tpl, row) {
+  const pedido = (row && row.pedido_texto) ? String(row.pedido_texto) : '';
+  const comuna = (row && row.comuna) ? String(row.comuna) : '';
+  let out = String(tpl || '')
+    .replace(/\{ _en_ \}/g, comuna ? ' en ' : '')
+    .replace(/\{oficio\}/g, (row && row.oficio) ? row.oficio : 'un servicio')
+    .replace(/\{comuna\}/g, comuna)
+    .replace(/\{pedido\}/g, pedido)
+    .replace(/\{link\}/g, 'https://www.maestrosenlinea.cl/unete');
+  if (!pedido) out = out.replace(/\n*\u201c\u201d\n*/g, '\n\n').replace(/\n*""\n*/g, '\n\n');
+  return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// Capa rápida y determinista: respuestas comunes sin llamar a la IA.
+function clasificarRapido(texto) {
+  const raw = String(texto || '');
+  if (/[\u{1F44D}\u{1F44C}\u{1F64C}\u{2705}\u{1F646}\u{1F197}\u{1F4AA}]/u.test(raw)) return 'si';
+  const t = raw.toLowerCase().replace(/[!¡.,:;()"]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/^(no|nop|nel|nope|paso|negativo)$/.test(t)) return 'no';
+  if (/no me interesa|no gracias|no por ahora|por ahora no|no me sirve|no puedo|no estoy interes|no quiero|ya no trabajo|no hago/.test(t)) return 'no';
+  if (/\b(ok|oka|okay|okey|ya|dale|dele|listo|bueno|buena|claro|perfecto|de una|si|s[ií]|sip|sipo|obvio|por supuesto|me interesa|interesad|cu[eé]ntame|cuentame|mand[aá]|env[ií]a|env[ií]ame|pasa|p[aá]same|de acuerdo|conforme|vale|ya po|filo)\b/.test(t)) return 'si';
+  return null;
+}
+
 // La IA clasifica la respuesta del maestro a la invitación: si / no / duda.
 async function clasificarCaptacion(texto) {
+  const rapido = clasificarRapido(texto);
+  if (rapido) return rapido;
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return 'si';
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, system: 'Clasifica la respuesta de un maestro a una invitacion a una plataforma. Responde SOLO una palabra, sin puntuacion: SI (acepta, le interesa o pide mas info), NO (rechaza claramente), DUDA (pregunta algo).', messages: [{ role: 'user', content: String(texto).slice(0, 300) }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, system: 'Eres un clasificador. Un maestro (gasfiter, electricista, etc.) recibio una invitacion para atender a un cliente. Clasifica SU respuesta. Responde SOLO una palabra: SI = acepta, muestra interes, dice ok/dale/ya/listo/bueno/claro, da las gracias positivamente, o pide mas informacion del trabajo. NO = rechaza claramente, no le interesa, no puede, no trabaja eso. DUDA = solo hace una pregunta sin aceptar ni rechazar. Ante la duda entre SI y NO, responde SI.', messages: [{ role: 'user', content: String(texto).slice(0, 300) }] })
     });
     const j = await r.json();
     const t = (j.content && j.content[0] && j.content[0].text ? j.content[0].text : '').toUpperCase();
@@ -127,18 +183,38 @@ async function clasificarCaptacion(texto) {
   } catch (e) { return 'si'; }
 }
 
-// Maneja la respuesta a una captación: manda detalles+link o cierre cordial.
-async function manejarCaptacion(sb, waId, fromId, texto, row) {
+// Maneja la respuesta a una captación: detalles+fotos+link (por Cloud) o cierre cordial.
+async function manejarCaptacion(sb, waId, fromId, texto, row, cfg) {
   const intento = await clasificarCaptacion(texto);
   if (intento === 'no') {
-    await enviarWasapiTexto(sb, waId, fromId, '¡Sin problema! 🙌 Si más adelante quieres recibir clientes de tu zona, acá estamos: https://www.maestrosenlinea.cl/unete');
+    const tplNo = (cfg && cfg.captacion_msg_no) ? cfg.captacion_msg_no : DEF_NO;
+    await enviarTextoCloud(sb, waId, renderCaptacion(tplNo, row));
     await sb.from('captacion_cola').update({ estado: 'no_interesado' }).eq('id', row.id);
     return true;
   }
-  let det = '¡Gracias por responder! 🙌 El cliente necesita *' + (row.oficio || 'un servicio') + '*' + (row.comuna ? ' en *' + row.comuna + '*' : '') + '.';
-  if (row.pedido_texto) det += '\n\n“' + row.pedido_texto + '”';
-  det += '\n\nPara ver el detalle completo y enviarle tu presupuesto, súmate gratis acá 👉 https://www.maestrosenlinea.cl/unete';
-  await enviarWasapiTexto(sb, waId, fromId, det);
+  // SI / DUDA: cargar el detalle completo del pedido (descripción + fotos/videos).
+  let pres = null;
+  try {
+    if (row.presupuesto_id) {
+      const pr = await sb.from('presupuestos').select('descripcion,titulo,archivos,video_url').eq('id', row.presupuesto_id).maybeSingle();
+      pres = pr.data;
+    }
+  } catch (e) {}
+  const detalle = pres ? (((pres.descripcion && pres.descripcion.trim()) ? pres.descripcion.trim() : (pres.titulo && pres.titulo.trim() ? pres.titulo.trim() : '')) || '') : '';
+  const rowFull = Object.assign({}, row, { pedido_texto: detalle || row.pedido_texto });
+  const tplSi = (cfg && cfg.captacion_msg_si) ? cfg.captacion_msg_si : DEF_SI;
+  await enviarTextoCloud(sb, waId, renderCaptacion(tplSi, rowFull));
+  try {
+    const media = (pres && Array.isArray(pres.archivos)) ? pres.archivos : [];
+    let n = 0;
+    for (let i = 0; i < media.length && n < 10; i++) {
+      const mu = media[i] && media[i].url ? media[i].url : null;
+      if (!mu) continue;
+      await enviarMediaCloud(sb, waId, mu, media[i].tipo === 'video');
+      n++;
+    }
+    if (!n && pres && pres.video_url) { await enviarMediaCloud(sb, waId, pres.video_url, true); }
+  } catch (e) {}
   await sb.from('captacion_cola').update({ estado: 'detalle_enviado' }).eq('id', row.id);
   return true;
 }
@@ -206,11 +282,11 @@ export async function POST(req) {
     let manejadoCaptacion = false;
     if (esTexto) {
       try {
-        const cfgH = await sb.from('home_config').select('captacion_activa').eq('id', 1).maybeSingle();
+        const cfgH = await sb.from('home_config').select('captacion_activa, captacion_msg_si, captacion_msg_no').eq('id', 1).maybeSingle();
         if (cfgH.data && cfgH.data.captacion_activa) {
-          const cr = await sb.from('captacion_cola').select('id, oficio, comuna, pedido_texto').eq('whatsapp', tel).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
+          const cr = await sb.from('captacion_cola').select('id, presupuesto_id, oficio, comuna, pedido_texto').eq('whatsapp', tel).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
           const row = cr.data && cr.data[0];
-          if (row) manejadoCaptacion = await manejarCaptacion(sb, tel, fromId, texto, row);
+          if (row) manejadoCaptacion = await manejarCaptacion(sb, tel, fromId, texto, row, cfgH.data);
         }
       } catch (e) {}
     }
