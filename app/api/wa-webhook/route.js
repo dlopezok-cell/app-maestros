@@ -163,7 +163,7 @@ function renderCaptacion(tpl, row) {
     .replace(/\{oficio\}/g, (row && row.oficio) ? row.oficio : 'un servicio')
     .replace(/\{comuna\}/g, comuna)
     .replace(/\{pedido\}/g, pedido)
-    .replace(/\{link\}/g, 'https://www.maestrosenlinea.cl/unete');
+    .replace(/\{link\}/g, (row && row.presupuesto_id) ? 'https://www.maestrosenlinea.cl/maestros?pedido=' + row.presupuesto_id : 'https://www.maestrosenlinea.cl/maestros');
   if (!pedido) {
     // quita comillas o líneas que quedaron vacías
     out = out.replace(/\n*\u201c\u201d\n*/g, '\n\n').replace(/\n*""\n*/g, '\n\n');
