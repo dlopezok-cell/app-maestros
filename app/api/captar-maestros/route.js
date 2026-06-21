@@ -50,6 +50,23 @@ async function enviarPlantilla(token, phoneId, lang, to, comuna, oficio) {
   } catch (e) { return { ok: false, error: String(e && e.message ? e.message : e) }; }
 }
 
+// --- Ventana horaria (hora de Chile). Fuera de ella los envíos quedan 'programado'. ---
+function chileMinutos() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    let h = 0, m = 0;
+    for (const pp of parts) { if (pp.type === 'hour') h = parseInt(pp.value, 10); if (pp.type === 'minute') m = parseInt(pp.value, 10); }
+    return ((h % 24) * 60) + m;
+  } catch (e) { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+}
+function parseHM(v, def) { if (!v) return def; const mm = String(v).match(/(\d{1,2})\s*:?\s*(\d{2})?/); if (!mm) return def; return (parseInt(mm[1], 10) % 24) * 60 + (mm[2] ? parseInt(mm[2], 10) : 0); }
+function enHorario(cfg) {
+  const ini = parseHM(cfg && cfg.captacion_hora_ini, 600);
+  const fin = parseHM(cfg && cfg.captacion_hora_fin, 1080);
+  const now = chileMinutos();
+  return ini <= fin ? (now >= ini && now < fin) : (now >= ini || now < fin);
+}
+
 export async function POST(req) {
   try {
     const body = await req.json().catch(function () { return {}; });
@@ -57,10 +74,11 @@ export async function POST(req) {
     if (!pid) return Response.json({ error: 'falta presupuesto_id' }, { status: 200 });
     const sb = admin();
 
-    const cfgr = await sb.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje,captacion_test').eq('id', 1).maybeSingle();
+    const cfgr = await sb.from('home_config').select('*').eq('id', 1).maybeSingle();
     const cfg = cfgr.data || {};
     if (!cfg.captacion_activa) return Response.json({ ok: true, skipped: 'inactivo' }, { status: 200 });
     const max = Math.min(20, Math.max(1, Number(cfg.captacion_max) || 10));
+    const enVentana = enHorario(cfg);
     const tmpl = cfg.captacion_mensaje || 'Hola {nombre}, un cliente en {comuna} busca {oficio}. Súmate a MaestrosEnLínea: {link}';
 
     const pr = await sb.from('presupuestos').select('id,oficio,comuna,creado_en,titulo,descripcion').eq('id', pid).maybeSingle();
@@ -159,7 +177,9 @@ export async function POST(req) {
       const c = seleccion[i];
       let estado = 'pendiente';
       let errMsg = null;
-      if (plantilla) {
+      if (!enVentana) {
+        estado = 'programado';
+      } else if (plantilla) {
         const res = await enviarPlantilla(waToken, phoneId, lang, c.w, p.comuna, p.oficio);
         estado = res.ok ? 'enviado' : 'error';
         errMsg = res.ok ? null : (res.error || 'error');
@@ -174,7 +194,7 @@ export async function POST(req) {
       }
     }
     const enviados = rows.filter(function (r) { return r.estado === 'enviado'; }).length;
-    return Response.json({ ok: true, encolados: rows.length, enviados: enviados, plantilla: plantilla ? (CAPT_TEMPLATE + '/' + lang) : 'sin_plantilla', google_status: gStatus, google_error: gError, encontrados: places.length, candidatos: cand.length }, { status: 200 });
+    return Response.json({ ok: true, en_ventana: enVentana, encolados: rows.length, enviados: enviados, plantilla: plantilla ? (CAPT_TEMPLATE + '/' + lang) : 'sin_plantilla', google_status: gStatus, google_error: gError, encontrados: places.length, candidatos: cand.length }, { status: 200 });
   } catch (e) {
     return Response.json({ error: String(e && e.message ? e.message : e) }, { status: 200 });
   }
