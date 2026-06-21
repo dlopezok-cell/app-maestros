@@ -120,18 +120,38 @@ async function clasificarCaptacion(texto) {
   } catch (e) { return 'si'; }
 }
 
+// Plantillas por defecto (si el admin no las ha personalizado).
+const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c El cliente necesita *{oficio}*{ _en_ }*{comuna}*.\n\n\u201c{pedido}\u201d\n\nPara ver el detalle completo y enviarle tu presupuesto, s\u00famate gratis ac\u00e1 \ud83d\udc49 {link}';
+const DEF_NO = '\u00a1Sin problema! \ud83d\ude4c Si m\u00e1s adelante quieres recibir clientes de tu zona, ac\u00e1 estamos: {link}';
+
+// Reemplaza {oficio} {comuna} {pedido} {link} y limpia líneas vacías si falta el pedido.
+function renderCaptacion(tpl, row) {
+  const pedido = (row && row.pedido_texto) ? String(row.pedido_texto) : '';
+  const comuna = (row && row.comuna) ? String(row.comuna) : '';
+  let out = String(tpl || '')
+    .replace(/\{ _en_ \}/g, comuna ? ' en ' : '')
+    .replace(/\{oficio\}/g, (row && row.oficio) ? row.oficio : 'un servicio')
+    .replace(/\{comuna\}/g, comuna)
+    .replace(/\{pedido\}/g, pedido)
+    .replace(/\{link\}/g, 'https://www.maestrosenlinea.cl/unete');
+  if (!pedido) {
+    // quita comillas o líneas que quedaron vacías
+    out = out.replace(/\n*\u201c\u201d\n*/g, '\n\n').replace(/\n*""\n*/g, '\n\n');
+  }
+  return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // Maneja la respuesta a una captación: detalles+link o cierre cordial.
-async function manejarCaptacion(sb, from, texto, row) {
+async function manejarCaptacion(sb, from, texto, row, cfg) {
   const intento = await clasificarCaptacion(texto);
   if (intento === 'no') {
-    await enviarTextoCloud(sb, from, '¡Sin problema! 🙌 Si más adelante quieres recibir clientes de tu zona, acá estamos: https://www.maestrosenlinea.cl/unete');
+    const tplNo = (cfg && cfg.captacion_msg_no) ? cfg.captacion_msg_no : DEF_NO;
+    await enviarTextoCloud(sb, from, renderCaptacion(tplNo, row));
     await sb.from('captacion_cola').update({ estado: 'no_interesado' }).eq('id', row.id);
     return true;
   }
-  let det = '¡Gracias por responder! 🙌 El cliente necesita *' + (row.oficio || 'un servicio') + '*' + (row.comuna ? ' en *' + row.comuna + '*' : '') + '.';
-  if (row.pedido_texto) det += '\n\n“' + row.pedido_texto + '”';
-  det += '\n\nPara ver el detalle completo y enviarle tu presupuesto, súmate gratis acá 👉 https://www.maestrosenlinea.cl/unete';
-  await enviarTextoCloud(sb, from, det);
+  const tplSi = (cfg && cfg.captacion_msg_si) ? cfg.captacion_msg_si : DEF_SI;
+  await enviarTextoCloud(sb, from, renderCaptacion(tplSi, row));
   await sb.from('captacion_cola').update({ estado: 'detalle_enviado' }).eq('id', row.id);
   return true;
 }
@@ -187,11 +207,11 @@ export async function POST(req) {
     let manejadoCaptacion = false;
     if (esTexto && from) {
       try {
-        const cfgH = await sb.from('home_config').select('captacion_activa').eq('id', 1).maybeSingle();
+        const cfgH = await sb.from('home_config').select('captacion_activa, captacion_msg_si, captacion_msg_no').eq('id', 1).maybeSingle();
         if (cfgH.data && cfgH.data.captacion_activa) {
           const cr = await sb.from('captacion_cola').select('id, oficio, comuna, pedido_texto').eq('whatsapp', from).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
           const row = cr.data && cr.data[0];
-          if (row) manejadoCaptacion = await manejarCaptacion(sb, from, texto, row);
+          if (row) manejadoCaptacion = await manejarCaptacion(sb, from, texto, row, cfgH.data);
         }
       } catch (e) {}
     }
