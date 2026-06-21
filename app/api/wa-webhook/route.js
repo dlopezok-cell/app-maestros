@@ -116,15 +116,31 @@ async function enviarMediaCloud(sb, to, url, esVideo) {
   } catch (e) {}
 }
 
+// Capa rápida y determinista: cubre las respuestas más comunes sin llamar a la IA.
+function clasificarRapido(texto) {
+  const raw = String(texto || '');
+  // Emojis de aprobación => SÍ
+  if (/[\u{1F44D}\u{1F44C}\u{1F64C}\u{2705}\u{1F646}\u{1F197}\u{1F4AA}]/u.test(raw)) return 'si';
+  const t = raw.toLowerCase().replace(/[!¡.,:;()"]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Negativos claros
+  if (/^(no|nop|nel|nope|paso|negativo)$/.test(t)) return 'no';
+  if (/no me interesa|no gracias|no por ahora|por ahora no|no me sirve|no puedo|no estoy interes|no quiero|ya no trabajo|no hago/.test(t)) return 'no';
+  // Positivos comunes (acepta o pide info)
+  if (/\b(ok|oka|okay|okey|ya|dale|dele|listo|bueno|buena|claro|perfecto|de una|si|s[ií]|sip|sipo|obvio|por supuesto|me interesa|interesad|cu[eé]ntame|cuentame|mand[aá]|env[ií]a|env[ií]ame|pasa|p[aá]same|de acuerdo|conforme|vale|ya po|filo)\b/.test(t)) return 'si';
+  return null; // que decida la IA
+}
+
 // La IA clasifica la respuesta del maestro: si / no / duda.
 async function clasificarCaptacion(texto) {
+  const rapido = clasificarRapido(texto);
+  if (rapido) return rapido;
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return 'si';
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, system: 'Clasifica la respuesta de un maestro a una invitacion a una plataforma. Responde SOLO una palabra, sin puntuacion: SI (acepta, le interesa o pide mas info), NO (rechaza claramente), DUDA (pregunta algo).', messages: [{ role: 'user', content: String(texto).slice(0, 300) }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, system: 'Eres un clasificador. Un maestro (gasfiter, electricista, etc.) recibio una invitacion para atender a un cliente. Clasifica SU respuesta. Responde SOLO una palabra: SI = acepta, muestra interes, dice ok/dale/ya/listo/bueno/claro, da las gracias positivamente, o pide mas informacion del trabajo. NO = rechaza claramente, no le interesa, no puede, no trabaja eso. DUDA = solo hace una pregunta sin aceptar ni rechazar. Ante la duda entre SI y NO, responde SI.', messages: [{ role: 'user', content: String(texto).slice(0, 300) }] })
     });
     const j = await r.json();
     const t = (j.content && j.content[0] && j.content[0].text ? j.content[0].text : '').toUpperCase();
