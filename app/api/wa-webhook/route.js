@@ -116,6 +116,25 @@ async function enviarMediaCloud(sb, to, url, esVideo) {
   } catch (e) {}
 }
 
+// Envía un mensaje con botón (CTA URL) por Cloud. Permitido dentro de la ventana de 24h.
+async function enviarBotonCloud(sb, to, texto, btnText, url) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  if (!token || !phoneId || !url) return;
+  const payload = { messaging_product: 'whatsapp', to: to, type: 'interactive', interactive: { type: 'cta_url', body: { text: String(texto || '').slice(0, 1024) }, action: { name: 'cta_url', parameters: { display_text: String(btnText || 'Abrir').slice(0, 20), url: url } } } };
+  let wamid = null;
+  let okEnvio = false;
+  try {
+    const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const d = await r.json();
+    wamid = d.messages && d.messages[0] ? d.messages[0].id : null;
+    okEnvio = !!wamid;
+  } catch (e) {}
+  // Fallback: si el botón no se pudo enviar, manda el texto con el link visible.
+  if (!okEnvio) { await enviarTextoCloud(sb, to, texto + '\n\n\ud83d\udc49 ' + url); return; }
+  try { await sb.from('wa_mensajes').insert({ telefono: to, direccion: 'out', texto: texto + '\n[' + btnText + '] ' + url, wamid: wamid }); } catch (e) {}
+}
+
 // Capa rápida y determinista: cubre las respuestas más comunes sin llamar a la IA.
 function clasificarRapido(texto) {
   const raw = String(texto || '');
@@ -153,6 +172,7 @@ async function clasificarCaptacion(texto) {
 // Plantillas por defecto (si el admin no las ha personalizado).
 const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c Te paso lo que necesita el cliente:\n\n\ud83d\udcdd {pedido}\n\n\ud83d\udc47 Te mando tambi\u00e9n las fotos y videos que subi\u00f3.\n\nSi quieres tomarlo, cr\u00e9ale un presupuesto directo en la plataforma. Solo reg\u00edstrate (es gratis y r\u00e1pido) y cot\u00edzale ac\u00e1 \ud83d\udc49 {link}';
 const DEF_NO = '\u00a1Sin problema! \ud83d\ude4c Si m\u00e1s adelante quieres recibir clientes de tu zona, ac\u00e1 estamos: {link}';
+const DEF_CIERRE = 'Si quieres tomarlo, cr\u00e9ale un presupuesto directo en la plataforma. Solo reg\u00edstrate (es gratis y r\u00e1pido).';
 
 // Reemplaza {oficio} {comuna} {pedido} {link} y limpia líneas vacías si falta el pedido.
 function renderCaptacion(tpl, row) {
@@ -191,7 +211,8 @@ async function manejarCaptacion(sb, from, texto, row, cfg) {
   const detalle = pres ? (((pres.descripcion && pres.descripcion.trim()) ? pres.descripcion.trim() : (pres.titulo && pres.titulo.trim() ? pres.titulo.trim() : '')) || '') : '';
   const rowFull = Object.assign({}, row, { pedido_texto: detalle || row.pedido_texto });
   const tplSi = (cfg && cfg.captacion_msg_si) ? cfg.captacion_msg_si : DEF_SI;
-  await enviarTextoCloud(sb, from, renderCaptacion(tplSi, rowFull));
+  const _t1 = String(tplSi).split(/\n*Si quieres tomarlo/i)[0].replace(/\{link\}/g, '');
+  await enviarTextoCloud(sb, from, renderCaptacion(_t1, rowFull));
   // Enviar las fotos y videos que subió el cliente (hasta 10).
   try {
     const media = (pres && Array.isArray(pres.archivos)) ? pres.archivos : [];
@@ -204,6 +225,8 @@ async function manejarCaptacion(sb, from, texto, row, cfg) {
     }
     if (!n && pres && pres.video_url) { await enviarMediaCloud(sb, from, pres.video_url, true); }
   } catch (e) {}
+  const _url = (row && row.presupuesto_id) ? 'https://www.maestrosenlinea.cl/maestros?pedido=' + row.presupuesto_id : 'https://www.maestrosenlinea.cl/maestros';
+  await enviarBotonCloud(sb, from, renderCaptacion(DEF_CIERRE, rowFull), 'Ver y cotizar', _url);
   await sb.from('captacion_cola').update({ estado: 'detalle_enviado' }).eq('id', row.id);
   return true;
 }
