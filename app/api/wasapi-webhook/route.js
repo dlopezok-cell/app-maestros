@@ -184,6 +184,16 @@ function clasificarRapido(texto) {
 }
 
 // La IA clasifica la respuesta del maestro a la invitación: si / no / duda.
+// Respuestas rápidas a dudas frecuentes del maestro. Devuelve texto o null.
+function respuestaFaq(texto) {
+  const t = String(texto || '').toLowerCase();
+  if (/comisi[oó]n|cu[aá]nto cobran|qu[eé] cobran|cu[aá]nto cuesta|cobran algo|tiene costo|cu[aá]nto sale|cu[aá]nto me cobran/.test(t)) return 'Registrarte y cotizar es 100% gratis. Solo cobramos una pequeña comisión cuando el cliente te paga por la app. 🙌';
+  if (/c[oó]mo (me )?pag|cu[aá]ndo me pag|forma de pago|me pagan|c[oó]mo cobro/.test(t)) return 'El cliente paga por la app y nosotros te transferimos. Es seguro para los dos. 👍';
+  if (/es gratis|gratis\?|pagar para entrar|cu[aá]nto vale entrar/.test(t)) return 'Sumarte es 100% gratis, no pagas nada por entrar. 🙌';
+  if (/c[oó]mo funciona|qu[eé] es esto|de qu[eé] se trata|qui[eé]n eres|qui[eé]n habla|es estafa|es real|es confiable|es seguro/.test(t)) return 'Somos MaestrosEnLínea.cl: conectamos clientes con maestros de su zona. Tú cotizas, el cliente elige y paga por la app. 😊';
+  return null;
+}
+
 async function clasificarCaptacion(texto) {
   const rapido = clasificarRapido(texto);
   if (rapido) return rapido;
@@ -224,6 +234,7 @@ async function manejarCaptacion(sb, waId, fromId, texto, row, cfg) {
   const rowFull = Object.assign({}, row, { pedido_texto: detalle || row.pedido_texto });
   const tplSi = (cfg && cfg.captacion_msg_si) ? cfg.captacion_msg_si : DEF_SI;
   const _t1 = String(tplSi).split(/\n*Si quieres tomarlo/i)[0].replace(/\{link\}/g, '');
+  const _faq = respuestaFaq(texto); if (_faq) await enviarTextoCloud(sb, waId, _faq);
   await enviarTextoCloud(sb, waId, renderCaptacion(_t1, rowFull));
   try {
     const media = (pres && Array.isArray(pres.archivos)) ? pres.archivos : [];
