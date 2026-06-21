@@ -18,6 +18,7 @@ export default function Maestros() {
   const [cargado, setCargado] = useState(false);
   const [pestana, setPestana] = useState('perfil');
   const [noLeidos, setNoLeidos] = useState(0); // mensajes de clientes sin leer (badge)
+  const [pedidoDestacado, setPedidoDestacado] = useState(null);
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) {
@@ -25,6 +26,17 @@ export default function Maestros() {
       setCargado(true);
     });
   }, []);
+
+  useEffect(function () {
+    try {
+      var sp = new URLSearchParams(window.location.search);
+      var pid = sp.get('pedido');
+      if (pid) { localStorage.setItem('mel_pedido_captado', pid); setPedidoDestacado(pid); }
+      else { var sv = localStorage.getItem('mel_pedido_captado'); if (sv) setPedidoDestacado(sv); }
+    } catch (e) {}
+  }, []);
+
+  useEffect(function () { if (usuario && pedidoDestacado) setPestana('solicitudes'); }, [usuario, pedidoDestacado]);
 
   useEffect(function () {
     if (!usuario) return;
@@ -95,7 +107,7 @@ export default function Maestros() {
               <b style={{ fontSize: 16 }}>Cotizaciones</b>
             </div>
           </div>
-          <PresupuestosMaestro usuario={usuario} />
+          <PresupuestosMaestro usuario={usuario} pedidoDestacado={pedidoDestacado} />
         </div>
       )}
 
