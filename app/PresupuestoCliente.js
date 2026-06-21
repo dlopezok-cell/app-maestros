@@ -58,8 +58,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
 
   function borrarSolicitud(s) {
     if (!window.confirm('¿Borrar esta solicitud? Se quitará de tu lista.')) return;
-    supabase.from('presupuestos').update({ estado: 'borrado' }).eq('id', s.id).eq('cliente_id', usuario.id).then(function (r) {
-      if (r.error) { setMsg('No se pudo borrar: ' + r.error.message); return; }
+    supabase.from('presupuestos').update({ estado: 'cerrado' }).eq('id', s.id).then(function (r) {
+      if (r.error) { setMsg('No se pudo borrar: ' + r.error.message); setTimeout(function () { setMsg(null); }, 4000); return; }
       setSolicitudes(function (pp) { return pp.filter(function (x) { return x.id !== s.id; }); });
     });
   }
