@@ -13,7 +13,8 @@ var IVA = 0.19;
 // de cotización a pantalla completa (barra fija Total + Enviar). Validez y garantía van
 // como chips. El botón "Redactar" llama a la IA, que devuelve una cotización formal en un
 // pop-up; el maestro la usa o la edita. El IVA se suma siempre.
-export default function PresupuestosMaestro({ usuario }) {
+export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
+  const [abiertoCaptado, setAbiertoCaptado] = useState(false);
   const [comisionPct, setComisionPct] = useState(0);
   const [prelanz, setPrelanz] = useState(false);
   const [misOficios, setMisOficios] = useState([]);
@@ -49,7 +50,7 @@ export default function PresupuestosMaestro({ usuario }) {
         var filt = data.filter(function (p) {
           if (p.estado === 'agendado' || p.estado === 'cerrado') return false;
           if (p.maestro_id === usuario.id) return true;
-          return p.maestro_id == null && (Array.isArray(p.destinatarios) ? (p.destinatarios.indexOf(usuario.id) >= 0) : (oficios.indexOf(p.oficio) >= 0));
+          return p.maestro_id == null && (p.id === pedidoDestacado || (Array.isArray(p.destinatarios) ? (p.destinatarios.indexOf(usuario.id) >= 0) : (oficios.indexOf(p.oficio) >= 0)));
         });
         setItems(filt);
         setCargado(true);
@@ -228,6 +229,12 @@ export default function PresupuestosMaestro({ usuario }) {
   const back = { border: 'none', background: 'none', color: '#2563eb', fontSize: 26, fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 2px' };
   const lab = { fontSize: 11.5, fontWeight: 700, color: '#5b6275', marginBottom: 7 };
 
+  useEffect(function () {
+    if (abiertoCaptado || !pedidoDestacado || !cargado) return;
+    var pd = items.filter(function (x) { return x.id === pedidoDestacado; })[0];
+    if (pd) { setSel(pd); setVista('detalle'); setAbiertoCaptado(true); window.scrollTo(0, 0); }
+  }, [cargado, items, pedidoDestacado, abiertoCaptado]);
+
   function Chip(props) {
     var on = props.on;
     return <span onClick={props.onClick} style={{ fontSize: 11.5, borderRadius: 999, padding: '6px 11px', cursor: 'pointer', background: on ? props.bg : '#fff', color: on ? props.col : '#7c8499', border: '1px solid ' + (on ? props.bd : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + props.label}</span>;
@@ -260,7 +267,7 @@ export default function PresupuestosMaestro({ usuario }) {
 
   // ---------- LISTA ----------
   if (vista === 'lista') {
-    var nuevas = prelanz ? [] : items.filter(function (p) { return !yaRespondida(p); });
+    var nuevas = items.filter(function (p) { return !yaRespondida(p); });
     var cotizadas = items.filter(function (p) { return yaRespondida(p); });
     var listaF = filtro === 'cotizadas' ? cotizadas : nuevas;
     function Tab(props) {
