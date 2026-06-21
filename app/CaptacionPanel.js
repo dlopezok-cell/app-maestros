@@ -113,8 +113,8 @@ export default function CaptacionPanel() {
             {abierto && <div style={{ marginTop: 8 }} />}
             {abierto && g.map(function (r) {
               var est = r.estado;
-              var ec = est === 'enviado' ? chip('#e1f5ee', '#0f6e56') : est === 'error' ? chip('#fcebeb', '#a32d2d') : est === 'descartado' ? chip('#f1efe8', '#5f5e5a') : chip('#fef3d6', '#854f0b');
-              var et = est === 'enviado' ? 'Enviado' : est === 'error' ? 'Error' : est === 'descartado' ? 'Descartado' : 'Pendiente';
+              var ec = est === 'detalle_enviado' ? chip('#e1f5ee', '#0f6e56') : est === 'no_interesado' ? chip('#f1efe8', '#5f5e5a') : est === 'enviado' ? chip('#e6f1fb', '#185fa5') : est === 'error' ? chip('#fcebeb', '#a32d2d') : est === 'descartado' ? chip('#f1efe8', '#5f5e5a') : chip('#fef3d6', '#854f0b');
+              var et = est === 'detalle_enviado' ? 'Interesado ✓' : est === 'no_interesado' ? 'No interesado' : est === 'enviado' ? 'Invitado' : est === 'error' ? 'Error' : est === 'descartado' ? 'Descartado' : 'Pendiente';
               return (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid #f3f4f8' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
