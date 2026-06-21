@@ -66,7 +66,7 @@ export async function POST(req) {
     const pr = await sb.from('presupuestos').select('id,oficio,comuna,creado_en,titulo,descripcion').eq('id', pid).maybeSingle();
     const p = pr.data;
     if (!p) return Response.json({ error: 'no existe' }, { status: 200 });
-    if (p.creado_en) { var age = Date.now() - new Date(p.creado_en).getTime(); if (age > 15 * 60 * 1000) return Response.json({ ok: true, skipped: 'viejo' }, { status: 200 }); }
+    if (p.creado_en && !cfg.captacion_test) { var age = Date.now() - new Date(p.creado_en).getTime(); if (age > 15 * 60 * 1000) return Response.json({ ok: true, skipped: 'viejo' }, { status: 200 }); }
     if (!p.oficio || !p.comuna) return Response.json({ ok: true, skipped: 'sin oficio o comuna' }, { status: 200 });
 
     // === MODO PRUEBA ===
