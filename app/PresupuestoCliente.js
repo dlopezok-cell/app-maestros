@@ -56,6 +56,14 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     supabase.rpc('mis_reservas').then(function (r) { setReservas(r.error ? [] : (r.data || [])); });
   }
 
+  function borrarSolicitud(s) {
+    if (!window.confirm('¿Borrar esta solicitud? Se quitará de tu lista.')) return;
+    supabase.from('presupuestos').update({ estado: 'borrado' }).eq('id', s.id).eq('cliente_id', usuario.id).then(function (r) {
+      if (r.error) { setMsg('No se pudo borrar: ' + r.error.message); return; }
+      setSolicitudes(function (pp) { return pp.filter(function (x) { return x.id !== s.id; }); });
+    });
+  }
+
   function cancelarReserva(reservaId) {
     if (typeof window !== 'undefined' && !window.confirm('¿Cancelar esta solicitud? Solo puedes hacerlo antes de pagar.')) return;
     supabase.rpc('cancelar_reserva', { p_reserva_id: reservaId }).then(function (r) {
@@ -594,8 +602,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
       {soloLista && tabMia === 'activas' && (
       <div style={card}>
         <b style={{ fontSize: 15 }}>{'\u{1F4CB} Mis solicitudes'}</b>
-        {solicitudes.filter(function (s) { return s.estado !== 'cerrado'; }).length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>No tienes solicitudes activas. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
-        {solicitudes.filter(function (s) { return s.estado !== 'cerrado'; }).map(function (s) {
+        {solicitudes.filter(function (s) { return s.estado !== 'cerrado' && s.estado !== 'borrado'; }).length === 0 && <p style={{ fontSize: 13, color: '#9aa1b5', marginTop: 8 }}>No tienes solicitudes activas. Anda a la pestaña <b>Cotizar</b> y graba un video para empezar.</p>}
+        {solicitudes.filter(function (s) { return s.estado !== 'cerrado' && s.estado !== 'borrado'; }).map(function (s) {
           var cots = s.cotizaciones || [];
           var msgs = mensajesPorPres[s.id] || [];
           var maestroIds = [];
@@ -620,6 +628,11 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 </div>
                 {(function () { var nl = (mensajesPorPres[s.id] || []).filter(function (m) { return m.autor_rol === 'maestro' && !m.leido; }).length; return nl > 0 ? <span style={{ background: '#2563eb', color: '#fff', fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0 }}>{nl}</span> : <span style={{ color: '#c5c9d6', fontSize: 18, flexShrink: 0 }}>{'›'}</span>; })()}
               </div>
+              {!cerrado && (
+                <div style={{ textAlign: 'right', marginTop: 2 }}>
+                  <button onClick={function (e) { e.stopPropagation(); borrarSolicitud(s); }} style={{ background: 'none', border: 'none', color: '#b3261e', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', padding: '3px 4px' }}>{'\u{1F5D1} Borrar'}</button>
+                </div>
+              )}
 
               {miaSel === s.id && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 250, background: '#fff', display: 'flex', flexDirection: 'column' }}>

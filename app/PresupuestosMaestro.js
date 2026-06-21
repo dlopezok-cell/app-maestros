@@ -53,7 +53,7 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
       .then(function (r) {
         var data = r.data || [];
         var filt = data.filter(function (p) {
-          if (p.estado === 'agendado' || p.estado === 'cerrado') return false;
+          if (p.estado === 'agendado' || p.estado === 'cerrado' || p.estado === 'borrado') return false;
           if (p.maestro_id === usuario.id) return true;
           return p.maestro_id == null && (p.id === pedidoDestacado || (Array.isArray(p.destinatarios) ? (p.destinatarios.indexOf(usuario.id) >= 0) : (oficios.indexOf(p.oficio) >= 0)));
         });

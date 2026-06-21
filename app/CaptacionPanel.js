@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // Panel admin "Captación auto": revisa los maestros que la IA encontró en Google Maps
 // para cada pedido, y aprueba el envío del WhatsApp (cola de aprobación).
 export default function CaptacionPanel() {
-  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_msg_si: '', captacion_msg_no: '', captacion_test: '', captacion_hora_ini: '10:00', captacion_hora_fin: '18:00' });
+  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_msg_si: '', captacion_msg_no: '', captacion_test: '', captacion_hora_ini: '10:00', captacion_hora_fin: '18:00', captacion_dias: '0,1,2,3,4,5,6' });
   const [cola, setCola] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
@@ -14,7 +14,7 @@ export default function CaptacionPanel() {
   function cargar() {
     setCargando(true);
     supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
-      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '', captacion_hora_ini: r.data.captacion_hora_ini || '10:00', captacion_hora_fin: r.data.captacion_hora_fin || '18:00' }); });
+      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '', captacion_hora_ini: r.data.captacion_hora_ini || '10:00', captacion_hora_fin: r.data.captacion_hora_fin || '18:00', captacion_dias: (r.data.captacion_dias != null && r.data.captacion_dias !== '') ? r.data.captacion_dias : '0,1,2,3,4,5,6' }); });
     supabase.from('captacion_cola').select('*').order('creado_en', { ascending: false }).limit(500)
       .then(function (r) { setCola(r.data || []); setCargando(false); });
   }
@@ -24,8 +24,8 @@ export default function CaptacionPanel() {
     var fila = Object.assign({ id: 1 }, cfg, extra || {});
     setCfg(function (p) { return Object.assign({}, p, extra || {}); });
     supabase.from('home_config').upsert(fila, { onConflict: 'id' }).then(function (r) {
-      if (r.error && /captacion_hora/.test(r.error.message || '')) {
-        var f2 = Object.assign({}, fila); delete f2.captacion_hora_ini; delete f2.captacion_hora_fin;
+      if (r.error && /captacion_(hora|dias)/.test(r.error.message || '')) {
+        var f2 = Object.assign({}, fila); delete f2.captacion_hora_ini; delete f2.captacion_hora_fin; delete f2.captacion_dias;
         supabase.from('home_config').upsert(f2, { onConflict: 'id' }).then(function (r2) {
           setMsg(r2.error ? ('Error: ' + r2.error.message) : 'Guardado ✓ (el horario se podrá editar en breve)');
           setTimeout(function () { setMsg(null); }, 3500);
@@ -101,6 +101,14 @@ export default function CaptacionPanel() {
             <input type="time" value={cfg.captacion_hora_ini} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_hora_ini: v }); }); }} style={{ padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 15, boxSizing: 'border-box' }} />
             <span style={{ fontSize: 13, color: '#5b6275' }}>hasta</span>
             <input type="time" value={cfg.captacion_hora_fin} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_hora_fin: v }); }); }} style={{ padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 15, boxSizing: 'border-box' }} />
+          </div>
+          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#5b6275', marginTop: 12 }}>Días que envía</label>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            {[{ n: 'Lun', v: '1' }, { n: 'Mar', v: '2' }, { n: 'Mié', v: '3' }, { n: 'Jue', v: '4' }, { n: 'Vie', v: '5' }, { n: 'Sáb', v: '6' }, { n: 'Dom', v: '0' }].map(function (d) {
+              var sel = String(cfg.captacion_dias || '').split(/[^0-9]+/).filter(function (x) { return x !== ''; });
+              var on = sel.indexOf(d.v) >= 0;
+              return <button key={d.v} type="button" onClick={function () { var cur = String(cfg.captacion_dias || '').split(/[^0-9]+/).filter(function (x) { return x !== ''; }); var nx = on ? cur.filter(function (x) { return x !== d.v; }) : cur.concat([d.v]); nx.sort(); setCfg(function (p) { return Object.assign({}, p, { captacion_dias: nx.join(',') }); }); }} style={{ fontSize: 12.5, borderRadius: 10, padding: '7px 11px', cursor: 'pointer', background: on ? '#2563eb' : '#fff', color: on ? '#fff' : '#7c8499', border: '1.5px solid ' + (on ? '#2563eb' : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{d.n}</button>;
+            })}
           </div>
         </div>
         <label style={{ fontSize: 12.5, fontWeight: 700, color: '#5b6275' }}>Primer mensaje · plantilla de Meta (solo lectura)</label>
