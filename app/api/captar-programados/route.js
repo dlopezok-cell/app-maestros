@@ -19,8 +19,14 @@ function chileMinutos() {
     return ((h % 24) * 60) + m;
   } catch (e) { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
 }
+function chileDia() {
+  try { const wd = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santiago', weekday: 'short' }).format(new Date()); const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }; return map[wd] != null ? map[wd] : new Date().getDay(); } catch (e) { return new Date().getDay(); }
+}
 function parseHM(v, def) { if (!v) return def; const mm = String(v).match(/(\d{1,2})\s*:?\s*(\d{2})?/); if (!mm) return def; return (parseInt(mm[1], 10) % 24) * 60 + (mm[2] ? parseInt(mm[2], 10) : 0); }
 function enHorario(cfg) {
+  var dias = (cfg && cfg.captacion_dias != null && String(cfg.captacion_dias) !== '') ? String(cfg.captacion_dias) : '0,1,2,3,4,5,6';
+  var setDias = dias.split(/[^0-9]+/).filter(function (x) { return x !== ''; });
+  if (setDias.length && setDias.indexOf(String(chileDia())) < 0) return false;
   const ini = parseHM(cfg && cfg.captacion_hora_ini, 600);
   const fin = parseHM(cfg && cfg.captacion_hora_fin, 1080);
   const now = chileMinutos();
