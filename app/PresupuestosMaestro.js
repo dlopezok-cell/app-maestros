@@ -15,6 +15,11 @@ var IVA = 0.19;
 // pop-up; el maestro la usa o la edita. El IVA se suma siempre.
 export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
   const [abiertoCaptado, setAbiertoCaptado] = useState(false);
+  const [oficiosCat, setOficiosCat] = useState([]);
+  const [regNombre, setRegNombre] = useState('');
+  const [regOficios, setRegOficios] = useState([]);
+  const [regGuardando, setRegGuardando] = useState(false);
+  const [regMsg, setRegMsg] = useState(null);
   const [comisionPct, setComisionPct] = useState(0);
   const [prelanz, setPrelanz] = useState(false);
   const [misOficios, setMisOficios] = useState([]);
@@ -91,6 +96,27 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
         } else { setEsMaestro(false); setCargado(true); }
       });
   }, [usuario]);
+
+  useEffect(function () {
+    supabase.from('catalogos').select('slug, valor').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true }).then(function (r) { if (r.data) setOficiosCat(r.data); });
+    try {
+      var u = (usuario && usuario.user_metadata) ? usuario.user_metadata : {};
+      var nm = u.full_name || u.name || '';
+      if (!nm && usuario && usuario.email) nm = usuario.email.split('@')[0];
+      if (nm) setRegNombre(nm);
+    } catch (e) {}
+  }, [usuario]);
+
+  function activarCuenta() {
+    if (!regNombre.trim()) { setRegMsg('Escribe tu nombre'); return; }
+    if (!regOficios.length) { setRegMsg('Elige al menos un oficio'); return; }
+    setRegGuardando(true); setRegMsg(null);
+    supabase.rpc('registrar_maestro', { p_nombre: regNombre.trim(), p_oficios: regOficios, p_descripcion: '', p_anos: 0, p_precio_video: 0, p_precio_visita: 0, p_lat: null, p_lng: null })
+      .then(function (r) {
+        if (r.error) { setRegGuardando(false); setRegMsg('Error: ' + r.error.message); return; }
+        setRegGuardando(false); setEsMaestro(true); setMisOficios(regOficios); cargar(regOficios);
+      });
+  }
 
   function abrirDetalle(p) { setSel(p); setVista('detalle'); setMsg(null); window.scrollTo(0, 0); }
   function volverLista() { setVista('lista'); setSel(null); }
@@ -243,9 +269,21 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
   if (!cargado) return null;
   if (!esMaestro) {
     return (
-      <div style={{ background: '#fff', borderRadius: 18, padding: 16, margin: '14px 16px', border: '1.5px solid #eee' }}>
-        <b style={{ fontSize: 14 }}>{'\u{1F3A5} Cotizaciones'}</b>
-        <div style={{ fontSize: 12, color: '#9aa1b5', marginTop: 6 }}>Cuando completes tu ficha como maestro, aquí verás los videos de clientes que piden presupuesto en tu especialidad.</div>
+      <div style={{ background: '#fff', borderRadius: 18, padding: 18, margin: '14px 16px', border: '1.5px solid #eef0f5' }}>
+        <b style={{ fontSize: 15 }}>{'\u{1F6E0}\uFE0F Activa tu cuenta para cotizar'}</b>
+        <div style={{ fontSize: 12.5, color: '#7c8499', marginTop: 6, lineHeight: 1.5 }}>Solo necesitamos tu nombre y tu oficio para empezar. El resto del perfil (fotos, zona, garantías) lo completas después en <b>Perfil</b>.</div>
+        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: '#5b6275', marginTop: 14 }}>Tu nombre o el de tu taller</label>
+        <input value={regNombre} onChange={function (e) { setRegNombre(e.target.value); }} placeholder="Ej: Juan Pérez" style={{ width: '100%', padding: 11, border: '1.5px solid #e4e4ef', borderRadius: 12, fontSize: 14, boxSizing: 'border-box', marginTop: 6 }} />
+        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: '#5b6275', marginTop: 14 }}>¿Qué oficio haces?</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          {oficiosCat.map(function (o) {
+            var on = regOficios.indexOf(o.slug) >= 0;
+            return <button key={o.slug} type="button" onClick={function () { setRegOficios(function (pp) { return pp.indexOf(o.slug) >= 0 ? pp.filter(function (x) { return x !== o.slug; }) : pp.concat([o.slug]); }); }} style={{ fontSize: 12.5, borderRadius: 999, padding: '7px 13px', cursor: 'pointer', background: on ? '#2563eb' : '#fff', color: on ? '#fff' : '#7c8499', border: '1.5px solid ' + (on ? '#2563eb' : '#e4e4ef'), fontWeight: on ? 800 : 600 }}>{(on ? '✓ ' : '') + o.valor}</button>;
+          })}
+          {oficiosCat.length === 0 && <span style={{ fontSize: 12, color: '#9aa1b5' }}>Cargando oficios…</span>}
+        </div>
+        <button onClick={activarCuenta} disabled={regGuardando} className="gbtn full" style={{ marginTop: 16, opacity: regGuardando ? 0.6 : 1 }}>{regGuardando ? 'Activando…' : 'Activar y ver el pedido'}</button>
+        {regMsg && <div style={{ fontSize: 12.5, color: regMsg.indexOf('Error') >= 0 ? '#b3261e' : '#b35900', marginTop: 8 }}>{regMsg}</div>}
       </div>
     );
   }
