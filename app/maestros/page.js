@@ -19,6 +19,7 @@ export default function Maestros() {
   const [pestana, setPestana] = useState('perfil');
   const [noLeidos, setNoLeidos] = useState(0); // mensajes de clientes sin leer (badge)
   const [pedidoDestacado, setPedidoDestacado] = useState(null);
+  const [perfilIncompleto, setPerfilIncompleto] = useState(false);
 
   useEffect(function () {
     supabase.auth.getUser().then(function (r) {
@@ -37,6 +38,17 @@ export default function Maestros() {
   }, []);
 
   useEffect(function () { if (usuario && pedidoDestacado) setPestana('solicitudes'); }, [usuario, pedidoDestacado]);
+
+  useEffect(function () {
+    if (!usuario) return;
+    supabase.from('maestros').select('descripcion, galeria').eq('id', usuario.id).maybeSingle().then(function (r) {
+      if (r.data) {
+        var sinDesc = !(r.data.descripcion && r.data.descripcion.trim());
+        var sinGal = !(r.data.galeria && r.data.galeria.length);
+        setPerfilIncompleto(sinDesc || sinGal);
+      }
+    });
+  }, [usuario, pestana]);
 
   useEffect(function () {
     if (!usuario) return;
@@ -107,6 +119,18 @@ export default function Maestros() {
               <b style={{ fontSize: 16 }}>Cotizaciones</b>
             </div>
           </div>
+          {perfilIncompleto && (
+            <div className="body" style={{ paddingTop: 10, paddingBottom: 0 }}>
+              <div onClick={function () { setPestana('perfil'); window.scrollTo(0, 0); }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, background: '#fff4e5', border: '1.5px solid #f0a020', borderRadius: 14, padding: '12px 14px' }}>
+                <span style={{ fontSize: 18 }}>{'\u2728'}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#9a5b00' }}>Completa tu perfil para ganar más pegas</div>
+                  <div style={{ fontSize: 11.5, color: '#b35900', marginTop: 2 }}>Sube fotos de tus trabajos y verifícate. Toca para ir a Perfil.</div>
+                </div>
+                <span style={{ color: '#9a5b00', fontSize: 18 }}>{'\u203A'}</span>
+              </div>
+            </div>
+          )}
           <PresupuestosMaestro usuario={usuario} pedidoDestacado={pedidoDestacado} />
         </div>
       )}
