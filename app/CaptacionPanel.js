@@ -57,10 +57,26 @@ export default function CaptacionPanel() {
   var claves = Object.keys(grupos);
 
   var card = { background: '#fff', borderRadius: 14, padding: 14, marginBottom: 14, border: '1px solid #eef0f5' };
+  var estN = function (sx) { return cola.filter(function (r) { return r.estado === sx; }).length; };
+  var mContactados = estN('enviado') + estN('detalle_enviado') + estN('no_interesado');
+  var mRespondieron = estN('detalle_enviado') + estN('no_interesado');
+  var mInteresados = estN('detalle_enviado');
+  var mNoInteresados = estN('no_interesado');
+  var mPct = function (a, b) { return b > 0 ? Math.round(a * 100 / b) + '%' : '—'; };
+  function Metr(pp) { return (<div style={{ background: '#f6f7fb', borderRadius: 12, padding: '12px 14px' }}><div style={{ fontSize: 23, fontWeight: 800, color: pp.c }}>{pp.n}</div><div style={{ fontSize: 11.5, color: '#7c8499', marginTop: 2, lineHeight: 1.3 }}>{pp.l}</div></div>); }
   var chip = function (bg, col) { return { fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: bg, color: col }; };
 
   return (
     <div>
+      <div style={card}>
+        <b style={{ fontSize: 14 }}>Embudo de captación</b>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 12 }}>
+          <Metr n={mContactados} l="Invitados" c="#2563eb" />
+          <Metr n={mRespondieron} l={'Respondieron · ' + mPct(mRespondieron, mContactados)} c="#0f6e56" />
+          <Metr n={mInteresados} l={'Interesados ✓ · ' + mPct(mInteresados, mContactados)} c="#0d9456" />
+          <Metr n={mNoInteresados} l="No interesados" c="#7c8499" />
+        </div>
+      </div>
       <div style={{ ...card, background: cfg.captacion_activa ? 'linear-gradient(160deg,#0e1a38,#13224a)' : '#fff', color: cfg.captacion_activa ? '#fff' : '#1c1f2b', border: cfg.captacion_activa ? 'none' : '1px solid #eef0f5' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1 }}>
