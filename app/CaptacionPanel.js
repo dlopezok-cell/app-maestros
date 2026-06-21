@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // Panel admin "Captación auto": revisa los maestros que la IA encontró en Google Maps
 // para cada pedido, y aprueba el envío del WhatsApp (cola de aprobación).
 export default function CaptacionPanel() {
-  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_msg_si: '', captacion_msg_no: '', captacion_test: '' });
+  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_msg_si: '', captacion_msg_no: '', captacion_test: '', captacion_hora_ini: '10:00', captacion_hora_fin: '18:00' });
   const [cola, setCola] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
@@ -13,8 +13,8 @@ export default function CaptacionPanel() {
 
   function cargar() {
     setCargando(true);
-    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_msg_si,captacion_msg_no,captacion_test').eq('id', 1).maybeSingle()
-      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '' }); });
+    supabase.from('home_config').select('*').eq('id', 1).maybeSingle()
+      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '', captacion_hora_ini: r.data.captacion_hora_ini || '10:00', captacion_hora_fin: r.data.captacion_hora_fin || '18:00' }); });
     supabase.from('captacion_cola').select('*').order('creado_en', { ascending: false }).limit(500)
       .then(function (r) { setCola(r.data || []); setCargando(false); });
   }
@@ -24,6 +24,14 @@ export default function CaptacionPanel() {
     var fila = Object.assign({ id: 1 }, cfg, extra || {});
     setCfg(function (p) { return Object.assign({}, p, extra || {}); });
     supabase.from('home_config').upsert(fila, { onConflict: 'id' }).then(function (r) {
+      if (r.error && /captacion_hora/.test(r.error.message || '')) {
+        var f2 = Object.assign({}, fila); delete f2.captacion_hora_ini; delete f2.captacion_hora_fin;
+        supabase.from('home_config').upsert(f2, { onConflict: 'id' }).then(function (r2) {
+          setMsg(r2.error ? ('Error: ' + r2.error.message) : 'Guardado ✓ (el horario se podrá editar en breve)');
+          setTimeout(function () { setMsg(null); }, 3500);
+        });
+        return;
+      }
       setMsg(r.error ? ('Error: ' + r.error.message) : 'Guardado ✓');
       setTimeout(function () { setMsg(null); }, 2500);
     });
@@ -85,6 +93,16 @@ export default function CaptacionPanel() {
           <label style={{ fontSize: 12.5, fontWeight: 700, color: '#5b6275' }}>Máx. por pedido</label>
           <input type="number" min="1" max="20" value={cfg.captacion_max} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_max: v }); }); }} style={{ width: 80, padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 14, boxSizing: 'border-box' }} />
         </div>
+        <div style={{ padding: 12, borderRadius: 10, background: '#f6f7fb', border: '1px solid #eef0f5', marginBottom: 4 }}>
+          <label style={{ fontSize: 12.5, fontWeight: 800, color: '#5b6275' }}>🕒 Horario de envío</label>
+          <div style={{ fontSize: 11.5, color: '#7c8499', margin: '3px 0 10px', lineHeight: 1.45 }}>Solo se envía dentro de este horario (todos los días). Lo que llegue fuera, queda <b>programado</b> y sale al abrir la ventana.</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, color: '#5b6275' }}>Desde</span>
+            <input type="time" value={cfg.captacion_hora_ini} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_hora_ini: v }); }); }} style={{ padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 15, boxSizing: 'border-box' }} />
+            <span style={{ fontSize: 13, color: '#5b6275' }}>hasta</span>
+            <input type="time" value={cfg.captacion_hora_fin} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_hora_fin: v }); }); }} style={{ padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 15, boxSizing: 'border-box' }} />
+          </div>
+        </div>
         <label style={{ fontSize: 12.5, fontWeight: 700, color: '#5b6275' }}>Primer mensaje · plantilla de Meta (solo lectura)</label>
         <div style={{ width: '100%', padding: 12, border: '1.5px dashed #cbd0dd', background: '#f6f7fb', borderRadius: 10, fontSize: 13, color: '#3a4252', lineHeight: 1.5, boxSizing: 'border-box', marginTop: 6, whiteSpace: 'pre-wrap' }}>{'Hola \u{1F44B} Mi nombre es Diego y tengo una plataforma llamada MaestrosEnL\u00EDnea.cl, que ayuda a clientes a buscar maestros en su zona. Justo tengo un cliente en {comuna} que necesita un {oficio}. \u00BFTe parece si te paso lo que necesita para que le hagas un presupuesto desde la misma app? Sumarte es gratis \u{1F64C}'}</div>
         <div style={{ fontSize: 11.5, color: '#9aa1b5', marginTop: 6, lineHeight: 1.45 }}>Es la plantilla aprobada <b>tengo_un_cliente</b>. Para editarla se hace en Meta (pestaña 📝 Plantillas WA).</div>
@@ -124,8 +142,8 @@ export default function CaptacionPanel() {
             {abierto && <div style={{ marginTop: 8 }} />}
             {abierto && g.map(function (r) {
               var est = r.estado;
-              var ec = est === 'detalle_enviado' ? chip('#e1f5ee', '#0f6e56') : est === 'no_interesado' ? chip('#f1efe8', '#5f5e5a') : est === 'enviado' ? chip('#e6f1fb', '#185fa5') : est === 'error' ? chip('#fcebeb', '#a32d2d') : est === 'descartado' ? chip('#f1efe8', '#5f5e5a') : chip('#fef3d6', '#854f0b');
-              var et = est === 'detalle_enviado' ? 'Interesado ✓' : est === 'no_interesado' ? 'No interesado' : est === 'enviado' ? 'Invitado' : est === 'error' ? 'Error' : est === 'descartado' ? 'Descartado' : 'Pendiente';
+              var ec = est === 'detalle_enviado' ? chip('#e1f5ee', '#0f6e56') : est === 'no_interesado' ? chip('#f1efe8', '#5f5e5a') : est === 'enviado' ? chip('#e6f1fb', '#185fa5') : est === 'programado' ? chip('#faeeda', '#854f0b') : est === 'error' ? chip('#fcebeb', '#a32d2d') : est === 'descartado' ? chip('#f1efe8', '#5f5e5a') : chip('#fef3d6', '#854f0b');
+              var et = est === 'detalle_enviado' ? 'Interesado ✓' : est === 'no_interesado' ? 'No interesado' : est === 'enviado' ? 'Invitado' : est === 'programado' ? 'Programado ⏰' : est === 'error' ? 'Error' : est === 'descartado' ? 'Descartado' : 'Pendiente';
               return (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid #f3f4f8' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
