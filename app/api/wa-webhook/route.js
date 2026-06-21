@@ -135,7 +135,7 @@ async function clasificarCaptacion(texto) {
 }
 
 // Plantillas por defecto (si el admin no las ha personalizado).
-const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c Te paso lo que necesita el cliente:\n\n\ud83d\udd27 *{oficio}*{ _en_ }*{comuna}*\n\ud83d\udcdd {pedido}\n\n\ud83d\udc47 Te mando tambi\u00e9n las fotos y videos que subi\u00f3.\n\nSi quieres tomarlo, cr\u00e9ale un presupuesto directo en la plataforma. Solo reg\u00edstrate (es gratis y r\u00e1pido) y cot\u00edzale ac\u00e1 \ud83d\udc49 {link}';
+const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c Te paso lo que necesita el cliente:\n\n\ud83d\udcdd {pedido}\n\n\ud83d\udc47 Te mando tambi\u00e9n las fotos y videos que subi\u00f3.\n\nSi quieres tomarlo, cr\u00e9ale un presupuesto directo en la plataforma. Solo reg\u00edstrate (es gratis y r\u00e1pido) y cot\u00edzale ac\u00e1 \ud83d\udc49 {link}';
 const DEF_NO = '\u00a1Sin problema! \ud83d\ude4c Si m\u00e1s adelante quieres recibir clientes de tu zona, ac\u00e1 estamos: {link}';
 
 // Reemplaza {oficio} {comuna} {pedido} {link} y limpia líneas vacías si falta el pedido.
