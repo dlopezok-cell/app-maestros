@@ -102,6 +102,20 @@ async function enviarTextoCloud(sb, to, texto) {
   try { await sb.from('wa_mensajes').insert({ telefono: to, direccion: 'out', texto: texto, wamid: wamid }); } catch (e) {}
 }
 
+// Envía una imagen o video por su URL (Cloud API). Best-effort.
+async function enviarMediaCloud(sb, to, url, esVideo) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  if (!token || !phoneId || !url) return;
+  const payload = esVideo
+    ? { messaging_product: 'whatsapp', to: to, type: 'video', video: { link: url } }
+    : { messaging_product: 'whatsapp', to: to, type: 'image', image: { link: url } };
+  try {
+    await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    await sb.from('wa_mensajes').insert({ telefono: to, direccion: 'out', texto: (esVideo ? '[video] ' : '[foto] ') + url });
+  } catch (e) {}
+}
+
 // La IA clasifica la respuesta del maestro: si / no / duda.
 async function clasificarCaptacion(texto) {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -121,7 +135,7 @@ async function clasificarCaptacion(texto) {
 }
 
 // Plantillas por defecto (si el admin no las ha personalizado).
-const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c El cliente necesita *{oficio}*{ _en_ }*{comuna}*.\n\n\u201c{pedido}\u201d\n\nPara ver el detalle completo y enviarle tu presupuesto, s\u00famate gratis ac\u00e1 \ud83d\udc49 {link}';
+const DEF_SI = '\u00a1Gracias por responder! \ud83d\ude4c Te paso lo que necesita el cliente:\n\n\ud83d\udd27 *{oficio}*{ _en_ }*{comuna}*\n\ud83d\udcdd {pedido}\n\n\ud83d\udc47 Te mando tambi\u00e9n las fotos y videos que subi\u00f3.\n\nSi quieres tomarlo, cr\u00e9ale un presupuesto directo en la plataforma. Solo reg\u00edstrate (es gratis y r\u00e1pido) y cot\u00edzale ac\u00e1 \ud83d\udc49 {link}';
 const DEF_NO = '\u00a1Sin problema! \ud83d\ude4c Si m\u00e1s adelante quieres recibir clientes de tu zona, ac\u00e1 estamos: {link}';
 
 // Reemplaza {oficio} {comuna} {pedido} {link} y limpia líneas vacías si falta el pedido.
@@ -150,8 +164,30 @@ async function manejarCaptacion(sb, from, texto, row, cfg) {
     await sb.from('captacion_cola').update({ estado: 'no_interesado' }).eq('id', row.id);
     return true;
   }
+  // SI / DUDA: cargamos el detalle completo del pedido (descripción + fotos/videos).
+  let pres = null;
+  try {
+    if (row.presupuesto_id) {
+      const pr = await sb.from('presupuestos').select('descripcion,titulo,archivos,video_url').eq('id', row.presupuesto_id).maybeSingle();
+      pres = pr.data;
+    }
+  } catch (e) {}
+  const detalle = pres ? (((pres.descripcion && pres.descripcion.trim()) ? pres.descripcion.trim() : (pres.titulo && pres.titulo.trim() ? pres.titulo.trim() : '')) || '') : '';
+  const rowFull = Object.assign({}, row, { pedido_texto: detalle || row.pedido_texto });
   const tplSi = (cfg && cfg.captacion_msg_si) ? cfg.captacion_msg_si : DEF_SI;
-  await enviarTextoCloud(sb, from, renderCaptacion(tplSi, row));
+  await enviarTextoCloud(sb, from, renderCaptacion(tplSi, rowFull));
+  // Enviar las fotos y videos que subió el cliente (hasta 10).
+  try {
+    const media = (pres && Array.isArray(pres.archivos)) ? pres.archivos : [];
+    let n = 0;
+    for (let i = 0; i < media.length && n < 10; i++) {
+      const mu = media[i] && media[i].url ? media[i].url : null;
+      if (!mu) continue;
+      await enviarMediaCloud(sb, from, mu, media[i].tipo === 'video');
+      n++;
+    }
+    if (!n && pres && pres.video_url) { await enviarMediaCloud(sb, from, pres.video_url, true); }
+  } catch (e) {}
   await sb.from('captacion_cola').update({ estado: 'detalle_enviado' }).eq('id', row.id);
   return true;
 }
@@ -209,7 +245,7 @@ export async function POST(req) {
       try {
         const cfgH = await sb.from('home_config').select('captacion_activa, captacion_msg_si, captacion_msg_no').eq('id', 1).maybeSingle();
         if (cfgH.data && cfgH.data.captacion_activa) {
-          const cr = await sb.from('captacion_cola').select('id, oficio, comuna, pedido_texto').eq('whatsapp', from).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
+          const cr = await sb.from('captacion_cola').select('id, presupuesto_id, oficio, comuna, pedido_texto').eq('whatsapp', from).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
           const row = cr.data && cr.data[0];
           if (row) manejadoCaptacion = await manejarCaptacion(sb, from, texto, row, cfgH.data);
         }
