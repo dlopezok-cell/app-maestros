@@ -94,6 +94,55 @@ async function responderIA(sb, waId, fromId, config) {
   await sb.from('wa_mensajes').insert({ telefono: waId, direccion: 'out', texto: texto, wamid: outId });
 }
 
+async function enviarWasapiTexto(sb, waId, fromId, texto) {
+  const token = process.env.WASAPI_TOKEN;
+  if (!token || !texto) return null;
+  const body = { message: texto, wa_id: waId };
+  if (fromId) body.from_id = fromId;
+  let outId = null;
+  try {
+    const r = await fetch(WASAPI_API + '/whatsapp-messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    outId = (d && d.data && d.data.wam_id) ? d.data.wam_id : null;
+  } catch (e) {}
+  try { await sb.from('wa_mensajes').insert({ telefono: waId, direccion: 'out', texto: texto, wamid: outId }); } catch (e) {}
+  return outId;
+}
+
+// La IA clasifica la respuesta del maestro a la invitación: si / no / duda.
+async function clasificarCaptacion(texto) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return 'si';
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, system: 'Clasifica la respuesta de un maestro a una invitacion a una plataforma. Responde SOLO una palabra, sin puntuacion: SI (acepta, le interesa o pide mas info), NO (rechaza claramente), DUDA (pregunta algo).', messages: [{ role: 'user', content: String(texto).slice(0, 300) }] })
+    });
+    const j = await r.json();
+    const t = (j.content && j.content[0] && j.content[0].text ? j.content[0].text : '').toUpperCase();
+    if (t.indexOf('NO') >= 0) return 'no';
+    if (t.indexOf('DUDA') >= 0) return 'duda';
+    return 'si';
+  } catch (e) { return 'si'; }
+}
+
+// Maneja la respuesta a una captación: manda detalles+link o cierre cordial.
+async function manejarCaptacion(sb, waId, fromId, texto, row) {
+  const intento = await clasificarCaptacion(texto);
+  if (intento === 'no') {
+    await enviarWasapiTexto(sb, waId, fromId, '¡Sin problema! 🙌 Si más adelante quieres recibir clientes de tu zona, acá estamos: https://www.maestrosenlinea.cl/unete');
+    await sb.from('captacion_cola').update({ estado: 'no_interesado' }).eq('id', row.id);
+    return true;
+  }
+  let det = '¡Gracias por responder! 🙌 El cliente necesita *' + (row.oficio || 'un servicio') + '*' + (row.comuna ? ' en *' + row.comuna + '*' : '') + '.';
+  if (row.pedido_texto) det += '\n\n“' + row.pedido_texto + '”';
+  det += '\n\nPara ver el detalle completo y enviarle tu presupuesto, súmate gratis acá 👉 https://www.maestrosenlinea.cl/unete';
+  await enviarWasapiTexto(sb, waId, fromId, det);
+  await sb.from('captacion_cola').update({ estado: 'detalle_enviado' }).eq('id', row.id);
+  return true;
+}
+
 export async function POST(req) {
   const raw = await req.text();
   let body;
@@ -153,10 +202,25 @@ export async function POST(req) {
 
     await sb.from('wa_mensajes').insert({ telefono: tel, nombre: nombre, direccion: 'in', texto: texto, wamid: wamid ? String(wamid) : null });
 
-    const cfg = await sb.from('ia_config').select('activo, modelo, prompt').eq('id', 1).maybeSingle();
-    const config = cfg.data || { activo: false };
-    if (config.activo && esTexto) {
-      await responderIA(sb, tel, fromId, config);
+    // ¿Es respuesta a una captación auto? La IA decide y manda los detalles.
+    let manejadoCaptacion = false;
+    if (esTexto) {
+      try {
+        const cfgH = await sb.from('home_config').select('captacion_activa').eq('id', 1).maybeSingle();
+        if (cfgH.data && cfgH.data.captacion_activa) {
+          const cr = await sb.from('captacion_cola').select('id, oficio, comuna, pedido_texto').eq('whatsapp', tel).eq('estado', 'enviado').order('creado_en', { ascending: false }).limit(1);
+          const row = cr.data && cr.data[0];
+          if (row) manejadoCaptacion = await manejarCaptacion(sb, tel, fromId, texto, row);
+        }
+      } catch (e) {}
+    }
+
+    if (!manejadoCaptacion) {
+      const cfg = await sb.from('ia_config').select('activo, modelo, prompt').eq('id', 1).maybeSingle();
+      const config = cfg.data || { activo: false };
+      if (config.activo && esTexto) {
+        await responderIA(sb, tel, fromId, config);
+      }
     }
   } catch (e) { /* nunca tirar error al proveedor */ }
 
