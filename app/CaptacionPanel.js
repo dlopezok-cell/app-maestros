@@ -5,17 +5,16 @@ import { supabase } from '../lib/supabase';
 // Panel admin "Captación auto": revisa los maestros que la IA encontró en Google Maps
 // para cada pedido, y aprueba el envío del WhatsApp (cola de aprobación).
 export default function CaptacionPanel() {
-  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_mensaje: '', captacion_msg_si: '', captacion_msg_no: '', captacion_test: '' });
+  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_msg_si: '', captacion_msg_no: '', captacion_test: '' });
   const [cola, setCola] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
-  const [enviando, setEnviando] = useState({});
   const [abiertos, setAbiertos] = useState({});
 
   function cargar() {
     setCargando(true);
-    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje,captacion_msg_si,captacion_msg_no,captacion_test').eq('id', 1).maybeSingle()
-      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_mensaje: r.data.captacion_mensaje || '', captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '' }); });
+    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_msg_si,captacion_msg_no,captacion_test').eq('id', 1).maybeSingle()
+      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '' }); });
     supabase.from('captacion_cola').select('*').order('creado_en', { ascending: false }).limit(500)
       .then(function (r) { setCola(r.data || []); setCargando(false); });
   }
@@ -31,25 +30,6 @@ export default function CaptacionPanel() {
   }
   function toggle() { guardarCfg({ captacion_activa: !cfg.captacion_activa }); }
 
-  function enviar(ids) {
-    if (!ids.length) return;
-    if (!window.confirm('¿Enviar WhatsApp a ' + ids.length + (ids.length === 1 ? ' maestro?' : ' maestros?'))) return;
-    var mk = {}; ids.forEach(function (i) { mk[i] = true; }); setEnviando(function (p) { return Object.assign({}, p, mk); });
-    supabase.auth.getSession().then(function (s) {
-      var tok = s.data && s.data.session ? s.data.session.access_token : null;
-      fetch('/api/captar-enviar', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ ids: ids }) })
-        .then(function (r) { return r.json(); })
-        .then(function (j) {
-          if (j.error) setMsg('Error: ' + j.error);
-          else setMsg('Enviados: ' + (j.enviados || 0) + (j.errores ? (' · Errores: ' + j.errores) : ''));
-          setEnviando({}); cargar(); setTimeout(function () { setMsg(null); }, 4000);
-        })
-        .catch(function (e) { setMsg('Error: ' + e.message); setEnviando({}); });
-    });
-  }
-  function descartar(id) {
-    supabase.from('captacion_cola').update({ estado: 'descartado' }).eq('id', id).then(function () { cargar(); });
-  }
 
   // Agrupar por pedido
   var grupos = {};
@@ -127,7 +107,6 @@ export default function CaptacionPanel() {
 
       {claves.map(function (k, idx) {
         var g = grupos[k];
-        var pend = g.filter(function (r) { return r.estado === 'pendiente'; });
         var g0 = g[0];
         var abierto = (abiertos[k] !== undefined) ? abiertos[k] : (idx === 0);
         return (
@@ -138,10 +117,9 @@ export default function CaptacionPanel() {
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: '#16294f', textTransform: 'capitalize' }}>{(g0.oficio || 'pedido') + (g0.comuna ? (' · ' + g0.comuna) : '')}</div>
                   {g0.pedido_texto && <div style={{ fontSize: 12.5, color: '#5b6275', fontStyle: 'italic', margin: '2px 0 3px', lineHeight: 1.35 }}>{'\u201C' + g0.pedido_texto + '\u201D'}</div>}
-                  <div style={{ fontSize: 11, color: '#9aa1b5' }}>{g.length + ' encontrados · ' + pend.length + ' pendientes'}</div>
+                  <div style={{ fontSize: 11, color: '#9aa1b5' }}>{g.length + ' encontrados'}</div>
                 </div>
               </div>
-              {pend.length > 0 && <button onClick={function (e) { e.stopPropagation(); enviar(pend.map(function (r) { return r.id; })); }} style={{ flexShrink: 0, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'Enviar a los ' + pend.length}</button>}
             </div>
             {abierto && <div style={{ marginTop: 8 }} />}
             {abierto && g.map(function (r) {
@@ -155,8 +133,6 @@ export default function CaptacionPanel() {
                     <div style={{ fontSize: 12, color: '#7c8499' }}>{r.telefono}{r.es_movil ? '' : ' · fijo'}</div>
                   </div>
                   <span style={ec}>{et}</span>
-                  {est === 'pendiente' && <button onClick={function () { enviar([r.id]); }} disabled={!!enviando[r.id]} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 10px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>{enviando[r.id] ? '...' : 'Enviar'}</button>}
-                  {est === 'pendiente' && <button onClick={function () { descartar(r.id); }} style={{ background: '#fff', color: '#7c8499', border: '1px solid #e4e4ef', borderRadius: 8, padding: '6px 9px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{'✕'}</button>}
                 </div>
               );
             })}
