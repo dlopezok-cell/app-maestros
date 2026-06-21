@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // Panel admin "Captación auto": revisa los maestros que la IA encontró en Google Maps
 // para cada pedido, y aprueba el envío del WhatsApp (cola de aprobación).
 export default function CaptacionPanel() {
-  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_mensaje: '', captacion_msg_si: '', captacion_msg_no: '' });
+  const [cfg, setCfg] = useState({ captacion_activa: false, captacion_max: 10, captacion_mensaje: '', captacion_msg_si: '', captacion_msg_no: '', captacion_test: '' });
   const [cola, setCola] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
@@ -14,8 +14,8 @@ export default function CaptacionPanel() {
 
   function cargar() {
     setCargando(true);
-    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje,captacion_msg_si,captacion_msg_no').eq('id', 1).maybeSingle()
-      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_mensaje: r.data.captacion_mensaje || '', captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '' }); });
+    supabase.from('home_config').select('captacion_activa,captacion_max,captacion_mensaje,captacion_msg_si,captacion_msg_no,captacion_test').eq('id', 1).maybeSingle()
+      .then(function (r) { if (r.data) setCfg({ captacion_activa: !!r.data.captacion_activa, captacion_max: r.data.captacion_max || 10, captacion_mensaje: r.data.captacion_mensaje || '', captacion_msg_si: r.data.captacion_msg_si || '', captacion_msg_no: r.data.captacion_msg_no || '', captacion_test: r.data.captacion_test || '' }); });
     supabase.from('captacion_cola').select('*').order('creado_en', { ascending: false }).limit(500)
       .then(function (r) { setCola(r.data || []); setCargando(false); });
   }
@@ -79,6 +79,12 @@ export default function CaptacionPanel() {
 
       <div style={card}>
         <b style={{ fontSize: 14 }}>Configuración</b>
+        <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: cfg.captacion_test ? '#fff4e5' : '#f6f7fb', border: cfg.captacion_test ? '1.5px solid #f0a020' : '1px solid #eef0f5' }}>
+          <label style={{ fontSize: 12.5, fontWeight: 800, color: cfg.captacion_test ? '#9a5b00' : '#5b6275' }}>🧪 Número de prueba</label>
+          <div style={{ fontSize: 11.5, color: '#7c8499', margin: '3px 0 8px', lineHeight: 1.45 }}>Si pones un número aquí, los mensajes van <b>solo a ese número</b> y NO se busca ni contacta a maestros reales. Déjalo vacío para operar normal.</div>
+          <input type="text" value={cfg.captacion_test} placeholder="Ej: 56912345678" onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_test: v }); }); }} style={{ width: 220, maxWidth: '100%', padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 14, boxSizing: 'border-box' }} />
+          {cfg.captacion_test ? <div style={{ fontSize: 12, fontWeight: 800, color: '#b35900', marginTop: 8 }}>⚠️ MODO PRUEBA ACTIVO — nadie real recibe mensajes.</div> : null}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0' }}>
           <label style={{ fontSize: 12.5, fontWeight: 700, color: '#5b6275' }}>Máx. por pedido</label>
           <input type="number" min="1" max="20" value={cfg.captacion_max} onChange={function (e) { var v = e.target.value; setCfg(function (p) { return Object.assign({}, p, { captacion_max: v }); }); }} style={{ width: 80, padding: 9, border: '1.5px solid #e4e4ef', borderRadius: 10, fontSize: 14, boxSizing: 'border-box' }} />
