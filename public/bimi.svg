@@ -1,0 +1,11 @@
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>MaestrosEnLínea</title>
+  <defs>
+    <linearGradient id="mel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22b6f3"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" fill="url(#mel)"/>
+  <path fill="#ffffff" d="M118,150 H196 L256,262 L316,150 H394 V362 H330 V236 L274,344 H238 L182,236 V362 H118 Z"/>
+</svg>
