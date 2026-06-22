@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import MaestrosLanding from './MaestrosLanding';
 import { OFICIOS, COMUNAS, SITE } from '../../lib/seo';
 
 const NAVY = '#0e1a38', CYAN = '#22d3ee', BLUE = '#2563eb', TXT = '#1c1f2b', MUT = '#5b6275';
@@ -55,6 +56,10 @@ export default function Landing({ of, comuna }) {
           </div>
         </div>
       </section>
+
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 18px' }}>
+        <MaestrosLanding oficioSlug={of.slug} oficioNombre={of.servicio} profesional={of.profesional} comunaNombre={comuna ? comuna.nombre : null} />
+      </div>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 18px 50px' }}>
         <H2>Cómo funciona</H2>
