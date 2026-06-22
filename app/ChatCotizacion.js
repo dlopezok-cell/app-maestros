@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import CotizadorChat from './CotizadorChat';
 
 // Chat cliente <-> maestro, a pantalla completa, con look propio de la marca.
 // Texto + imagen + video + audio (grabado), sonido y notificación al recibir.
@@ -12,6 +13,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   const [cargado, setCargado] = useState(false);
   const [oculto, setOculto] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [cotizarOpen, setCotizarOpen] = useState(false);
   const [grabando, setGrabando] = useState(false);
   const [vp, setVp] = useState(null);
   const finRef = useRef(null);
@@ -220,7 +222,8 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       {/* Menú adjuntar */}
       {attachOpen && (
         <div style={{ position: 'absolute', bottom: 70, left: 12, background: '#fff', borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,.2)', padding: 6, zIndex: 5 }}>
-          <button onClick={function () { if (imgRef.current) imgRef.current.click(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: 180, border: 'none', background: 'none', padding: '11px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 700, color: '#1c1f2b', cursor: 'pointer' }}>{'🖼️'} Foto</button>
+          {miRol === 'maestro' && <button onClick={function () { setAttachOpen(false); setCotizarOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: 200, border: 'none', background: '#fff5f2', padding: '11px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 800, color: '#ff5a3c', cursor: 'pointer', marginBottom: 4 }}>{'🧾'} Cotizar este trabajo</button>}
+          <button onClick={function () { if (imgRef.current) imgRef.current.click(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: 200, border: 'none', background: 'none', padding: '11px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 700, color: '#1c1f2b', cursor: 'pointer' }}>{'🖼️'} Foto</button>
           <button onClick={function () { if (vidRef.current) vidRef.current.click(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: 180, border: 'none', background: 'none', padding: '11px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 700, color: '#1c1f2b', cursor: 'pointer' }}>{'🎥'} Video</button>
         </div>
       )}
@@ -235,6 +238,8 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
         <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={function (e) { elegir(e, 'imagen'); }} />
         <input ref={vidRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={function (e) { elegir(e, 'video'); }} />
       </div>
+
+      {cotizarOpen && <CotizadorChat usuario={usuario} presupuestoId={presupuestoId} maestroId={maestroId} titulo={otro} onClose={function () { setCotizarOpen(false); }} />}
     </div>
   );
 }
