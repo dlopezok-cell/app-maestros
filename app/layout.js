@@ -1,4 +1,5 @@
 import './globals.css';
+import Analytics from './Analytics';
 
 export const metadata = {
   metadataBase: new URL('https://www.maestrosenlinea.cl'),
@@ -45,6 +46,7 @@ export default function RootLayout({ children }) {
     <html lang="es">
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
+        <Analytics />
         {children}
       </body>
     </html>

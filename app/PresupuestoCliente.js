@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
 import MediaCarrusel from './MediaCarrusel';
 import { subirACloudinary, LIMITES } from '../lib/cloudinary';
+import { trackSolicitud } from '../lib/track';
 
 var MAX_ARCHIVOS = 6;
 
@@ -255,6 +256,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
         supabase.from('presupuestos').insert(fila).select().single().then(function (r) {
           if (r.error) { setMsg('Error: ' + r.error.message); setSubiendo(false); return; }
           setMsg('¡Listo! Tu solicitud fue enviada ✓ Estamos contactando maestros de tu zona; te avisaremos apenas coticen.');
+          try { trackSolicitud(); } catch (e) {}
           try { fetch('/api/captar-maestros', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: r.data.id }) }).catch(function () {}); } catch (e) {}
           setTitulo(''); setDescripcion(''); setArchivos([]);
           setSubiendo(false);
