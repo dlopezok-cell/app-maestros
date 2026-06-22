@@ -71,8 +71,8 @@ export default function SoporteCliente({ usuario, onBack }) {
         })}
         <div ref={finRef} />
       </div>
-      <div style={{ display: 'flex', gap: 8, padding: '10px 12px', borderTop: '1px solid #eee', background: '#fff', alignItems: 'center' }}>
-        <input value={txt} onChange={function (e) { setTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviar(); }} placeholder="Escribe un mensaje..." style={{ flex: 1, background: '#f1f1f5', border: 'none', borderRadius: 999, padding: '11px 15px', fontSize: 14, outline: 'none' }} />
+      <div style={{ display: 'flex', gap: 8, padding: '10px 12px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', borderTop: '1px solid #eee', background: '#fff', alignItems: 'center' }}>
+        <input value={txt} onChange={function (e) { setTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviar(); }} placeholder="Escribe un mensaje..." style={{ flex: 1, background: '#f1f1f5', border: 'none', borderRadius: 999, padding: '11px 15px', fontSize: 16, outline: 'none' }} />
         <button onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2563eb', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
       </div>
     </div>
