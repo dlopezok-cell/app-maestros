@@ -8,6 +8,7 @@ import Bienvenida from './Bienvenida';
 import EliminarCuenta from './EliminarCuenta';
 import HomeCliente from './HomeCliente';
 import MensajesCliente from './MensajesCliente';
+import SoporteCliente from './SoporteCliente';
 import ChatCotizacion from './ChatCotizacion';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
@@ -450,6 +451,19 @@ if (vista === 'mensajes') return (
 <Nav />
 </main>
 );
+if (vista === 'soporte') return (
+<main>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#0f1320', padding: '12px 14px' }}>
+<button onClick={function () { setVista('cuenta'); }} style={{ background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer' }}>{'\u2190'}</button>
+<div style={{ color: '#fff', fontSize: 15, fontWeight: 800 }}>Ayuda y soporte</div>
+</div>
+<div style={{ paddingBottom: 90 }}>
+<SoporteCliente usuario={usuario} />
+</div>
+<Nav />
+</main>
+);
+
 // ---- CUENTA ----
 if (vista === 'cuenta') return (
 <main>
@@ -469,6 +483,7 @@ if (vista === 'cuenta') return (
 </div>
 <PerfilCliente usuario={usuario} />
 <div className="body" style={{ paddingTop: 0 }}>
+<button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #e3e6ef', boxShadow: 'none', marginBottom: 10 }} onClick={function () { setVista('soporte'); }}>Ayuda y soporte</button>
 <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
 <EliminarCuenta redirigir="/" />
 <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
