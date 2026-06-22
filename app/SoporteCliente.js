@@ -9,15 +9,16 @@ export default function SoporteCliente({ usuario, onBack }) {
   const [txt, setTxt] = useState('');
   const [cargado, setCargado] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const [vpH, setVpH] = useState(null);
+  const [vp, setVp] = useState(null);
   const finRef = useRef(null);
 
-  // Ajusta la altura a la zona visible real: cuando se abre el teclado en el
-  // móvil, visualViewport encoge y el botón de enviar queda siempre a la vista.
+  // Fija el chat exactamente a la zona visible: cuando se abre el teclado en el
+  // móvil, visualViewport encoge y se desplaza; anclamos top+alto a esa zona
+  // para que el campo de texto y el botón de enviar queden siempre a la vista.
   useEffect(function () {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     var vv = window.visualViewport;
-    function upd() { setVpH(vv.height); }
+    function upd() { setVp({ h: vv.height, top: vv.offsetTop || 0 }); }
     upd();
     vv.addEventListener('resize', upd);
     vv.addEventListener('scroll', upd);
@@ -46,7 +47,9 @@ export default function SoporteCliente({ usuario, onBack }) {
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''; }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: vpH ? vpH + 'px' : '100%', minHeight: 0 }}>
+    <div style={vp
+      ? { position: 'fixed', left: 0, right: 0, top: vp.top + 'px', height: vp.h + 'px', zIndex: 500, background: '#fff', display: 'flex', flexDirection: 'column', minHeight: 0 }
+      : { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ background: '#1c2030', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', flex: 'none' }}>{'\u2190'}</button>}
         <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F4AC}'}</div>
