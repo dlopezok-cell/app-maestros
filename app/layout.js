@@ -11,6 +11,7 @@ export const metadata = {
   applicationName: 'MaestrosEnLínea',
   alternates: { canonical: '/' },
   robots: { index: true, follow: true },
+  verification: { google: 'csHfvFlcc3HD0U4EMiJUsoKc0jDNfJlMvvM8MlQBKqE' },
   openGraph: {
     type: 'website',
     locale: 'es_CL',
