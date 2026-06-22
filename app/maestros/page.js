@@ -147,11 +147,11 @@ export default function Maestros() {
 
       <div className="tabbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
-          <div style={tabStM(pestana === 'perfil')} onClick={function () { setPestana('perfil'); window.scrollTo(0, 0); }}>
-            {icoM(<g><path d="M20 21a8 8 0 1 0-16 0" /><circle cx="12" cy="7" r="4" /></g>, pestana === 'perfil')}Perfil
-          </div>
           <div style={tabStM(pestana === 'agenda')} onClick={function () { setPestana('agenda'); window.scrollTo(0, 0); }}>
             {icoM(<g><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></g>, pestana === 'agenda')}Agenda
+          </div>
+          <div style={tabStM(pestana === 'ganancias')} onClick={function () { setPestana('ganancias'); window.scrollTo(0, 0); }}>
+            {icoM(<g><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></g>, pestana === 'ganancias')}Ganancias
           </div>
         </div>
         <div style={{ flex: 'none', width: 70, textAlign: 'center', cursor: 'pointer' }} onClick={function () { setPestana('solicitudes'); window.scrollTo(0, 0); }}>
@@ -167,8 +167,8 @@ export default function Maestros() {
               {noLeidos > 0 && <span style={{ position: 'absolute', top: -4, right: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidos > 9 ? '9+' : noLeidos}</span>}
             </span>Mensajes
           </div>
-          <div style={tabStM(pestana === 'ganancias')} onClick={function () { setPestana('ganancias'); window.scrollTo(0, 0); }}>
-            {icoM(<g><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></g>, pestana === 'ganancias')}Ganancias
+          <div style={tabStM(pestana === 'perfil')} onClick={function () { setPestana('perfil'); window.scrollTo(0, 0); }}>
+            {icoM(<g><path d="M20 21a8 8 0 1 0-16 0" /><circle cx="12" cy="7" r="4" /></g>, pestana === 'perfil')}Perfil
           </div>
         </div>
       </div>
