@@ -238,6 +238,9 @@ export default function HomeCliente(props) {
         </a>
       </div>
 
+      <div className="hc-footer" style={{ paddingBottom: 2 }}>
+        <a href="/servicios/gasfiteria">Gasfíter</a> · <a href="/servicios/electricidad">Electricista</a> · <a href="/servicios/pintura">Pintor</a> · <a href="/servicios/cerrajeria">Cerrajero</a> · <a href="/servicios/calefont">Calefont</a> · <a href="/servicios">Ver todos los servicios</a>
+      </div>
       <div className="hc-footer">
         <a href="/terminos">Términos</a> · <a href="/privacidad">Privacidad</a> · MaestrosEnLínea
       </div>

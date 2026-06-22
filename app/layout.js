@@ -33,9 +33,19 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }) {
+  const orgLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'Organization', name: 'MaestrosEnLínea.cl', url: 'https://www.maestrosenlinea.cl', description: 'Marketplace de maestros a domicilio en Chile: pide presupuesto gratis por video a maestros verificados de tu comuna.', areaServed: { '@type': 'Country', name: 'Chile' } },
+      { '@type': 'WebSite', name: 'MaestrosEnLínea.cl', url: 'https://www.maestrosenlinea.cl', inLanguage: 'es-CL' },
+    ],
+  };
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
+        {children}
+      </body>
     </html>
   );
 }
