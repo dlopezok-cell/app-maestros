@@ -10,6 +10,7 @@ import AgendaMaestro from '../AgendaMaestro';
 import GananciasMaestro from '../GananciasMaestro';
 import AccesoMaestro from '../AccesoMaestro';
 import ComunicadosBanner from '../ComunicadosBanner';
+import BandejaMaestro from '../BandejaMaestro';
 
 // App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
 // cuenta y arme su ficha. Navega por pestañas: Perfil · Solicitudes · Agenda · Ganancias.
@@ -84,6 +85,9 @@ export default function Maestros() {
     );
   }
 
+  function tabStM(on) { return { flex: 'none', width: 62, textAlign: 'center', fontSize: 10, fontWeight: 700, color: on ? '#2563eb' : '#9aa1b5', cursor: 'pointer' }; }
+  function icoM(d, on) { return <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke={on ? '#2563eb' : '#9aa1b5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 4px' }}>{d}</svg>; }
+
   return (
     <main>
       {pestana === 'perfil' && (
@@ -139,12 +143,36 @@ export default function Maestros() {
 
       {pestana === 'ganancias' && <div style={{ paddingBottom: 90 }}><GananciasMaestro usuario={usuario} /></div>}
 
-      <div className="tabbar">
-        <Tab id="perfil" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><path d="M20 21a8 8 0 1 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>} nombre="Perfil" />
-        <Tab id="solicitudes" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>} nombre="Cotizaciones" badge={noLeidos} />
-        <Tab id="agenda" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></svg>} nombre="Agenda" />
-        <Tab id="ganancias" icono={<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto' }}><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>} nombre="Ganancias" />
+      {pestana === 'mensajes' && <div style={{ paddingBottom: 90 }}><BandejaMaestro usuario={usuario} /></div>}
+
+      <div className="tabbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
+          <div style={tabStM(pestana === 'perfil')} onClick={function () { setPestana('perfil'); window.scrollTo(0, 0); }}>
+            {icoM(<g><path d="M20 21a8 8 0 1 0-16 0" /><circle cx="12" cy="7" r="4" /></g>, pestana === 'perfil')}Perfil
+          </div>
+          <div style={tabStM(pestana === 'agenda')} onClick={function () { setPestana('agenda'); window.scrollTo(0, 0); }}>
+            {icoM(<g><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></g>, pestana === 'agenda')}Agenda
+          </div>
+        </div>
+        <div style={{ flex: 'none', width: 70, textAlign: 'center', cursor: 'pointer' }} onClick={function () { setPestana('solicitudes'); window.scrollTo(0, 0); }}>
+          <div style={{ width: 54, height: 54, margin: '-28px auto 3px', borderRadius: 18, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(37,99,235,.45)', border: '4px solid #fff' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>
+          </div>
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: '#2563eb' }}>Cotizaciones</span>
+        </div>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
+          <div style={tabStM(pestana === 'mensajes')} onClick={function () { setPestana('mensajes'); window.scrollTo(0, 0); }}>
+            <span style={{ position: 'relative', display: 'inline-block' }}>
+              {icoM(<g><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></g>, pestana === 'mensajes')}
+              {noLeidos > 0 && <span style={{ position: 'absolute', top: -4, right: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidos > 9 ? '9+' : noLeidos}</span>}
+            </span>Mensajes
+          </div>
+          <div style={tabStM(pestana === 'ganancias')} onClick={function () { setPestana('ganancias'); window.scrollTo(0, 0); }}>
+            {icoM(<g><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></g>, pestana === 'ganancias')}Ganancias
+          </div>
+        </div>
       </div>
-    </main>
+
+      </main>
   );
 }
