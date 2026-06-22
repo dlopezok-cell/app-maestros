@@ -122,7 +122,7 @@ export default function HomeCliente(props) {
           <div className="hc-brand">{ICON.compass} MaestrosEnLínea</div>
           
         </div>
-        <div className="hc-tagline">Maestros verificados para tu hogar</div>
+        <div className="hc-tagline">🇨🇱 La primera plataforma en Chile · pide, compara y paga seguro</div>
         <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
           {ICON.search}
           <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" enterKeyHint="search" />
@@ -136,13 +136,13 @@ export default function HomeCliente(props) {
           <span className="hc-cam">{ICON.cam}</span>
           <span className="hc-tag">Nuevo</span>
           <h3>Pide presupuesto<br />por video</h3>
-          <p>Graba el problema o lo que quieres remodelar y recibe cotizaciones de maestros, sin costo.</p>
+          <p>Pide en un solo lugar y te llegan varios presupuestos de maestros verificados. Eliges al mejor evaluado y pagas seguro, sin sorpresas.</p>
           <button className="hc-btn">Grabar video →</button>
         </div>
         <div className="hc-trustrip">
-          <span>{ICON.shield}Identidad verificada</span>
-          <span>{ICON.lock}Pago protegido</span>
-          <span>{ICON.checkc}Cotiza gratis</span>
+          <span>{ICON.shield}Maestros verificados</span>
+          <span>{ICON.checkc}Sin sorpresas en el precio</span>
+          <span>{ICON.lock}Protegemos tu pago</span>
         </div>
       </div>
 
