@@ -9,7 +9,20 @@ export default function SoporteCliente({ usuario, onBack }) {
   const [txt, setTxt] = useState('');
   const [cargado, setCargado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [vpH, setVpH] = useState(null);
   const finRef = useRef(null);
+
+  // Ajusta la altura a la zona visible real: cuando se abre el teclado en el
+  // móvil, visualViewport encoge y el botón de enviar queda siempre a la vista.
+  useEffect(function () {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    var vv = window.visualViewport;
+    function upd() { setVpH(vv.height); }
+    upd();
+    vv.addEventListener('resize', upd);
+    vv.addEventListener('scroll', upd);
+    return function () { vv.removeEventListener('resize', upd); vv.removeEventListener('scroll', upd); };
+  }, []);
 
   function cargar() {
     if (!usuario) return;
@@ -33,7 +46,7 @@ export default function SoporteCliente({ usuario, onBack }) {
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''; }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)', minHeight: 420 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: vpH ? vpH + 'px' : '100%', minHeight: 0 }}>
       <div style={{ background: '#1c2030', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', flex: 'none' }}>{'\u2190'}</button>}
         <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F4AC}'}</div>

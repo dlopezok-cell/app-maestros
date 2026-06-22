@@ -4,12 +4,25 @@ import { supabase } from '../lib/supabase';
 
 // Chat de soporte del maestro con el equipo (admin). Tabla: mensajes_soporte.
 // autor 'maestro' = el propio maestro; 'admin' = soporte.
-export default function MensajesMaestro({ usuario }) {
+export default function MensajesMaestro({ usuario, onBack }) {
   const [msgs, setMsgs] = useState([]);
   const [txt, setTxt] = useState('');
   const [cargado, setCargado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [vpH, setVpH] = useState(null);
   const finRef = useRef(null);
+
+  // Ajusta la altura a la zona visible real: cuando se abre el teclado en el
+  // móvil, visualViewport encoge y el botón de enviar queda siempre a la vista.
+  useEffect(function () {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    var vv = window.visualViewport;
+    function upd() { setVpH(vv.height); }
+    upd();
+    vv.addEventListener('resize', upd);
+    vv.addEventListener('scroll', upd);
+    return function () { vv.removeEventListener('resize', upd); vv.removeEventListener('scroll', upd); };
+  }, []);
 
   function cargar() {
     supabase.from('mensajes_soporte').select('*').eq('maestro_id', usuario.id).order('creado_en', { ascending: true })
@@ -32,9 +45,10 @@ export default function MensajesMaestro({ usuario }) {
   function fecha(f) { return f ? new Date(f).toLocaleString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''; }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)', minHeight: 420 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: vpH ? vpH + 'px' : '100%', minHeight: 0 }}>
       <div style={{ background: '#1c2030', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F6E0}'}</div>
+        {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', flex: 'none' }}>{'←'}</button>}
+        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#ff5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F6E0}'}</div>
         <div><div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Soporte MaestrosEnLínea</div><div style={{ color: '#9aa1b5', fontSize: 11 }}>Escríbenos cualquier duda</div></div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', background: '#f5f6fa', padding: 16 }}>
@@ -55,7 +69,7 @@ export default function MensajesMaestro({ usuario }) {
       </div>
       <div style={{ display: 'flex', gap: 8, padding: '10px 12px', borderTop: '1px solid #eee', background: '#fff', alignItems: 'center' }}>
         <input value={txt} onChange={function (e) { setTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviar(); }} placeholder="Escribe un mensaje..." style={{ flex: 1, background: '#f1f1f5', border: 'none', borderRadius: 999, padding: '11px 15px', fontSize: 14, outline: 'none' }} />
-        <button onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2563eb', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
+        <button onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#ff5a3c', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
       </div>
     </div>
   );
