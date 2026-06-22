@@ -10,6 +10,7 @@ import EmbudoMaestros from '../EmbudoMaestros';
 import CaptacionPanel from '../CaptacionPanel';
 import PlantillasMeta from '../PlantillasMeta';
 import AdsPanel from '../AdsPanel';
+import MaestrosPerfiles from '../MaestrosPerfiles';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -44,6 +45,7 @@ const SECCIONES = [
   { id: 'comision', icono: '\u{1F4B8}', nombre: 'Comisión', cat: 'finanzas' },
   { id: 'embudo', icono: '\u{1F5C2}\u{FE0F}', nombre: 'Embudo', cat: 'comunidad' },
   { id: 'clientes', icono: '\u{1F465}', nombre: 'Clientes', cat: 'comunidad' },
+  { id: 'perfiles', icono: '\u{1F9D1}\u{200D}\u{1F527}', nombre: 'Perfiles maestros', cat: 'comunidad' },
   { id: 'portada', icono: '\u{1FAA7}', nombre: 'Portada', cat: 'config' },
   { id: 'lanzamiento', icono: '\u{1F680}', nombre: 'Lanzamiento', cat: 'config' },
   { id: 'catalogos', icono: '\u{1F4D1}', nombre: 'Catálogos', cat: 'config' },
@@ -1373,6 +1375,7 @@ export default function Admin() {
     {seccion === 'embudo' && <EmbudoMaestros maestros={maestros} perfiles={perfiles} verifs={verifs} interesados={interesados} onAprobarMaestro={aprobarMaestro} onRechazar={rechazar} onReactivar={function (m) { suspender(m, false); }} onRecargar={cargarTodo} />}
     {seccion === 'campana' && <CampanaMaestros />}
       {seccion === 'ads' && <AdsPanel />}
+      {seccion === 'perfiles' && <MaestrosPerfiles />}
       {seccion === 'extraer' && <MapsExtractor />}
       {seccion === 'captacion' && <CaptacionPanel />}
       {seccion === 'plantillas' && <PlantillasMeta />}
