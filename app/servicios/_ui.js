@@ -20,8 +20,25 @@ export default function Landing({ of, comuna }) {
     comuna ? { q: '¿Atienden en ' + comuna.nombre + '?', a: 'Sí. Contamos con ' + of.profesional.toLowerCase() + 's disponibles en ' + comuna.nombre + ' y comunas cercanas.' } : { q: '¿Los maestros son confiables?', a: 'Trabajamos con maestros verificados y con reputación. Además, el pago queda protegido hasta que confirmas el trabajo.' },
   ];
 
+  const canonical = SITE + linkBase + (comuna ? '/' + comuna.slug : '');
+  const crumbs = [
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: SITE + '/' },
+    { '@type': 'ListItem', position: 2, name: 'Servicios', item: SITE + '/servicios' },
+    { '@type': 'ListItem', position: 3, name: of.servicio, item: SITE + linkBase },
+  ];
+  if (comuna) crumbs.push({ '@type': 'ListItem', position: 4, name: comuna.nombre, item: canonical });
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'BreadcrumbList', itemListElement: crumbs },
+      { '@type': 'Service', serviceType: of.servicio, name: titulo, areaServed: { '@type': comuna ? 'City' : 'Country', name: comuna ? comuna.nombre : 'Chile' }, provider: { '@type': 'Organization', name: 'MaestrosEnLínea.cl', url: SITE }, url: canonical },
+      { '@type': 'FAQPage', mainEntity: faqs.map(function (f) { return { '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } }; }) },
+    ],
+  };
+
   return (
     <main style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', color: TXT, lineHeight: 1.6, background: '#fff' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <header style={{ background: NAVY, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ color: '#fff', fontWeight: 800, fontSize: 17, textDecoration: 'none' }}>MaestrosEnLínea<span style={{ color: CYAN }}>.cl</span></a>
         <a href="/" style={{ color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none', border: '1px solid rgba(255,255,255,.3)', borderRadius: 9, padding: '7px 12px' }}>Pedir presupuesto</a>
