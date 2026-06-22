@@ -45,6 +45,7 @@ const [resenas, setResenas] = useState([]);
 const [portada, setPortada] = useState(undefined); // undefined = cargando
 const [aviso, setAviso] = useState(false); // popup de prelanzamiento
 const [noLeidosCli, setNoLeidosCli] = useState(0);  // mensajes de maestros sin leer (badge)
+const [soporteNL, setSoporteNL] = useState(0);
 
 useEffect(function () {
 if (!usuario) { setPerfilCli(null); return; }
@@ -76,6 +77,7 @@ function contar() {
 supabase.from('mensajes').select('id, presupuestos!inner(cliente_id)', { count: 'exact', head: true })
 .eq('autor_rol', 'maestro').eq('leido', false).eq('presupuestos.cliente_id', usuario.id)
 .then(function (r) { setNoLeidosCli(r.count || 0); });
+supabase.from('mensajes_soporte').select('id', { count: 'exact', head: true }).eq('cliente_id', usuario.id).eq('autor', 'admin').eq('leido', false).then(function (r) { setSoporteNL(r.count || 0); });
 }
 contar();
 var iv = setInterval(contar, 20000);
@@ -209,7 +211,7 @@ return (
 <div style={tabSt(onMsg)} onClick={function () { irTab('mensajes'); }}>
 <span style={{ position: 'relative', display: 'inline-block' }}>
 {ico(<g><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></g>, onMsg)}
-{noLeidosCli > 0 && <span style={{ position: 'absolute', top: -4, right: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{noLeidosCli > 9 ? '9+' : noLeidosCli}</span>}
+{(noLeidosCli + soporteNL) > 0 && <span style={{ position: 'absolute', top: -4, right: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 999, minWidth: 15, height: 15, lineHeight: '15px', padding: '0 3px', textAlign: 'center', boxSizing: 'border-box' }}>{(noLeidosCli + soporteNL) > 9 ? '9+' : (noLeidosCli + soporteNL)}</span>}
 </span>Mensajes
 </div>
 <div style={tabSt(onCta)} onClick={function () { irTab('cuenta'); }}>
@@ -458,7 +460,7 @@ if (vista === 'soporte') return (
 <div style={{ color: '#fff', fontSize: 15, fontWeight: 800 }}>Ayuda y soporte</div>
 </div>
 <div style={{ paddingBottom: 90 }}>
-<SoporteCliente usuario={usuario} />
+<SoporteCliente usuario={usuario} onBack={function () { setVista('cuenta'); }} />
 </div>
 <Nav />
 </main>
@@ -483,7 +485,7 @@ if (vista === 'cuenta') return (
 </div>
 <PerfilCliente usuario={usuario} />
 <div className="body" style={{ paddingTop: 0 }}>
-<button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #e3e6ef', boxShadow: 'none', marginBottom: 10 }} onClick={function () { setVista('soporte'); }}>Ayuda y soporte</button>
+<button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #e3e6ef', boxShadow: 'none', marginBottom: 10 }} onClick={function () { irTab('mensajes'); }}>Ayuda y soporte</button>
 <button className="gbtn full" style={{ background: '#fff', color: '#b3261e', border: '1.5px solid #f0c8c2', boxShadow: 'none' }} onClick={salir}>Cerrar sesión</button>
 <EliminarCuenta redirigir="/" />
 <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>

@@ -149,8 +149,7 @@ export default function MensajesCliente({ usuario, maestros }) {
 
       {soporte && (
         <div style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 400, display: 'flex', flexDirection: 'column' }}>
-          <button onClick={function () { setSoporte(false); setRefresh(function (n) { return n + 1; }); }} style={{ position: 'absolute', top: 14, left: 12, zIndex: 2, background: 'rgba(255,255,255,.16)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer' }}>{'←'}</button>
-          <SoporteCliente usuario={usuario} />
+          <SoporteCliente usuario={usuario} onBack={function () { setSoporte(false); setRefresh(function (n) { return n + 1; }); }} />
         </div>
       )}
     </div>

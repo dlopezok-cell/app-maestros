@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 // Chat de soporte del CLIENTE con el equipo (admin). Tabla: mensajes_soporte.
 // autor 'cliente' = el propio cliente; 'admin' = soporte.
-export default function SoporteCliente({ usuario }) {
+export default function SoporteCliente({ usuario, onBack }) {
   const [msgs, setMsgs] = useState([]);
   const [txt, setTxt] = useState('');
   const [cargado, setCargado] = useState(false);
@@ -35,6 +35,7 @@ export default function SoporteCliente({ usuario }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)', minHeight: 420 }}>
       <div style={{ background: '#1c2030', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,.14)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer', flex: 'none' }}>{'\u2190'}</button>}
         <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F4AC}'}</div>
         <div><div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Soporte MaestrosEnLínea</div><div style={{ color: '#9aa1b5', fontSize: 11 }}>Escríbenos cualquier duda</div></div>
       </div>
