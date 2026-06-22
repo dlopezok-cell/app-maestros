@@ -9,6 +9,7 @@ import AgenteIA from '../AgenteIA';
 import EmbudoMaestros from '../EmbudoMaestros';
 import CaptacionPanel from '../CaptacionPanel';
 import PlantillasMeta from '../PlantillasMeta';
+import AdsPanel from '../AdsPanel';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -27,6 +28,7 @@ const SECCIONES = [
   { id: 'resumen', icono: '\u{1F4CA}', nombre: 'Resumen', cat: 'resumen' },
   { id: 'comunicados', icono: '\u{1F4E2}', nombre: 'Comunicados', cat: 'resumen' },
   { id: 'campana', icono: '\u{1F4E3}', nombre: 'Campaña', cat: 'marketing' },
+  { id: 'ads', icono: '\u{1F4C8}', nombre: 'Anuncios Ads', cat: 'marketing' },
   { id: 'extraer', icono: '\u{1F5FA}\u{FE0F}', nombre: 'Extraer de Maps', cat: 'marketing' },
   { id: 'agenteia', icono: '\u{1F916}', nombre: 'Agente IA', cat: 'marketing' },
   { id: 'captacion', icono: '\u{1F3AF}', nombre: 'Captaci\u00f3n auto', cat: 'marketing' },
@@ -1370,6 +1372,7 @@ export default function Admin() {
       )}
     {seccion === 'embudo' && <EmbudoMaestros maestros={maestros} perfiles={perfiles} verifs={verifs} interesados={interesados} onAprobarMaestro={aprobarMaestro} onRechazar={rechazar} onReactivar={function (m) { suspender(m, false); }} onRecargar={cargarTodo} />}
     {seccion === 'campana' && <CampanaMaestros />}
+      {seccion === 'ads' && <AdsPanel />}
       {seccion === 'extraer' && <MapsExtractor />}
       {seccion === 'captacion' && <CaptacionPanel />}
       {seccion === 'plantillas' && <PlantillasMeta />}
