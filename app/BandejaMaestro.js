@@ -2,12 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
-import SoporteCliente from './SoporteCliente';
+import MensajesMaestro from './MensajesMaestro';
 
-// Bandeja de mensajes del CLIENTE (estilo WhatsApp). Lista las conversaciones
-// (un hilo = presupuesto + maestro) con el último mensaje y los no leídos,
-// y abre el chat existente (ChatCotizacion) al tocar una.
-// Arriba, fijo, el contacto "Soporte MaestrosEnLínea".
+// Bandeja de mensajes del MAESTRO. Lista sus conversaciones con clientes
+// (un hilo = presupuesto) y arriba, fijo, el contacto "Soporte MaestrosEnLínea".
 
 function cuando(iso) {
   if (!iso) return '';
@@ -17,7 +15,6 @@ function cuando(iso) {
   if (d.toDateString() === ayer.toDateString()) return 'Ayer';
   return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' });
 }
-
 function preview(m) {
   if (m.texto && m.texto.trim()) return m.texto.trim();
   var t = (m.media_tipo || '').toLowerCase();
@@ -34,11 +31,9 @@ function FilaSoporte({ onClick, noLeidos }) {
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" /></svg>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontWeight: 800, fontSize: 14.5, color: '#0b1426' }}>Soporte MaestrosEnLínea <span style={{ fontSize: 11 }}>📌</span></span>
-        </div>
+        <div style={{ fontWeight: 800, fontSize: 14.5, color: '#0b1426' }}>Soporte MaestrosEnLínea <span style={{ fontSize: 11 }}>📌</span></div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 3 }}>
-          <span style={{ fontSize: 12.5, color: '#5b6275', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>Equipo de ayuda · escríbenos cualquier duda</span>
+          <span style={{ fontSize: 12.5, color: '#5b6275', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>Equipo de ayuda · dudas de tu ficha, pagos o verificación</span>
           {noLeidos > 0 && <span style={{ flex: 'none', background: '#2563eb', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 999, minWidth: 20, height: 20, lineHeight: '20px', textAlign: 'center', padding: '0 6px', boxSizing: 'border-box' }}>{noLeidos > 9 ? '9+' : noLeidos}</span>}
         </div>
       </div>
@@ -46,7 +41,7 @@ function FilaSoporte({ onClick, noLeidos }) {
   );
 }
 
-export default function MensajesCliente({ usuario, maestros }) {
+export default function BandejaMaestro({ usuario }) {
   const [hilos, setHilos] = useState([]);
   const [info, setInfo] = useState({});
   const [cargando, setCargando] = useState(true);
@@ -58,7 +53,7 @@ export default function MensajesCliente({ usuario, maestros }) {
   useEffect(function () {
     if (!usuario) return;
     supabase.from('mensajes_soporte').select('id', { count: 'exact', head: true })
-      .eq('cliente_id', usuario.id).eq('autor', 'admin').eq('leido', false)
+      .eq('maestro_id', usuario.id).eq('autor', 'admin').eq('leido', false)
       .then(function (r) { setSoporteNL(r.count || 0); });
   }, [usuario, soporte, refresh]);
 
@@ -67,33 +62,32 @@ export default function MensajesCliente({ usuario, maestros }) {
     var activo = true;
     (async function () {
       setCargando(true);
-      var pres = await supabase.from('presupuestos').select('id, titulo').eq('cliente_id', usuario.id);
-      var lista = pres.data || [];
-      var ids = lista.map(function (p) { return p.id; });
-      var tit = {}; lista.forEach(function (p) { tit[p.id] = p.titulo || ''; });
-      if (!ids.length) { if (activo) { setHilos([]); setCargando(false); } return; }
-
       var msgs = await supabase.from('mensajes')
         .select('presupuesto_id, maestro_id, autor_rol, texto, media_tipo, leido, creado_en')
-        .in('presupuesto_id', ids)
+        .eq('maestro_id', usuario.id)
         .order('creado_en', { ascending: false });
       var data = msgs.data || [];
+      if (!data.length) { if (activo) { setHilos([]); setCargando(false); } return; }
 
       var map = {};
       data.forEach(function (m) {
-        var k = m.presupuesto_id + '|' + m.maestro_id;
-        if (!map[k]) map[k] = { presupuestoId: m.presupuesto_id, maestroId: m.maestro_id, titulo: tit[m.presupuesto_id] || '', last: m, unread: 0 };
-        if (m.autor_rol !== 'cliente' && !m.leido) map[k].unread++;
+        var k = m.presupuesto_id;
+        if (!map[k]) map[k] = { presupuestoId: m.presupuesto_id, last: m, unread: 0 };
+        if (m.autor_rol === 'cliente' && !m.leido) map[k].unread++;
       });
       var arr = Object.keys(map).map(function (k) { return map[k]; });
       arr.sort(function (a, b) { return new Date(b.last.creado_en) - new Date(a.last.creado_en); });
 
+      var pids = arr.map(function (h) { return h.presupuestoId; });
+      var pres = await supabase.from('presupuestos').select('id, cliente_id, titulo').in('id', pids);
+      var byP = {}; (pres.data || []).forEach(function (p) { byP[p.id] = p; });
+      arr.forEach(function (h) { var p = byP[h.presupuestoId] || {}; h.clienteId = p.cliente_id; h.titulo = p.titulo || ''; });
+
+      var clientes = arr.map(function (h) { return h.clienteId; }).filter(function (id, i, s) { return id && s.indexOf(id) === i; });
       var nombres = {};
-      (maestros || []).forEach(function (m) { nombres[m.id] = { nombre: m.nombre || 'Maestro', foto: m.foto_url || null }; });
-      var faltan = arr.map(function (h) { return h.maestroId; }).filter(function (id, i, s) { return s.indexOf(id) === i && !nombres[id]; });
-      if (faltan.length) {
-        var mm = await supabase.from('maestros').select('id, nombre, foto_url').in('id', faltan);
-        (mm.data || []).forEach(function (m) { nombres[m.id] = { nombre: m.nombre || 'Maestro', foto: m.foto_url || null }; });
+      if (clientes.length) {
+        var pf = await supabase.from('perfiles').select('id, nombre').in('id', clientes);
+        (pf.data || []).forEach(function (p) { nombres[p.id] = p.nombre || 'Cliente'; });
       }
 
       if (activo) { setInfo(nombres); setHilos(arr); setCargando(false); }
@@ -102,13 +96,14 @@ export default function MensajesCliente({ usuario, maestros }) {
   }, [usuario, refresh]);
 
   function abrir(h) {
-    var nom = (info[h.maestroId] && info[h.maestroId].nombre) || 'Maestro';
-    setAbierto({ presupuestoId: h.presupuestoId, maestroId: h.maestroId, titulo: nom });
+    setAbierto({ presupuestoId: h.presupuestoId, titulo: info[h.clienteId] || 'Cliente' });
   }
   function cerrar() { setAbierto(null); setRefresh(function (n) { return n + 1; }); }
 
   return (
     <div>
+      <div className="darkhead"><div className="dh1">{'\u{1F4AC} Mensajes'}</div><h2 style={{ margin: '8px 0 2px' }}>Tus conversaciones</h2><div className="dh2">Chatea con tus clientes y con soporte</div></div>
+
       <FilaSoporte onClick={function () { setSoporte(true); }} noLeidos={soporteNL} />
 
       {cargando && <div style={{ padding: '24px 16px', color: '#9aa1b5', fontSize: 13 }}>Cargando conversaciones…</div>}
@@ -116,23 +111,21 @@ export default function MensajesCliente({ usuario, maestros }) {
       {!cargando && hilos.length === 0 && (
         <div style={{ textAlign: 'center', padding: '40px 30px', color: '#9aa1b5' }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>{'\u{1F4AC}'}</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#5b6275' }}>Aún no tienes conversaciones con maestros</div>
-          <div style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.5 }}>Cuando converses con un maestro desde tus cotizaciones, tus chats aparecerán aquí. Para cualquier duda, escríbenos a Soporte arriba.</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#5b6275' }}>Aún no tienes conversaciones con clientes</div>
+          <div style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.5 }}>Cuando cotices y converses con un cliente, tus chats aparecerán aquí. Para cualquier duda, escríbenos a Soporte arriba.</div>
         </div>
       )}
 
       {!cargando && hilos.map(function (h) {
-        var d = info[h.maestroId] || { nombre: 'Maestro', foto: null };
-        var prefijo = h.last.autor_rol === 'cliente' ? 'Tú: ' : '';
+        var nom = info[h.clienteId] || 'Cliente';
+        var prefijo = h.last.autor_rol === 'cliente' ? '' : 'Tú: ';
         return (
-          <div key={h.presupuestoId + '|' + h.maestroId} onClick={function () { abrir(h); }}
+          <div key={h.presupuestoId} onClick={function () { abrir(h); }}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #eef1f7', background: '#fff' }}>
-            {d.foto
-              ? <img src={d.foto} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', flex: 'none' }} />
-              : <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg,#e7f0fb,#dbe7fb)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flex: 'none' }}>{d.nombre.charAt(0).toUpperCase()}</div>}
+            <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg,#e7f0fb,#dbe7fb)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flex: 'none' }}>{nom.charAt(0).toUpperCase()}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontWeight: 800, fontSize: 14.5, color: '#0b1426', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nombre}</span>
+                <span style={{ fontWeight: 800, fontSize: 14.5, color: '#0b1426', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nom}</span>
                 <span style={{ fontSize: 11, color: h.unread > 0 ? '#2563eb' : '#9aa1b5', fontWeight: h.unread > 0 ? 800 : 400, flex: 'none' }}>{cuando(h.last.creado_en)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 3 }}>
@@ -145,12 +138,12 @@ export default function MensajesCliente({ usuario, maestros }) {
         );
       })}
 
-      {abierto && <ChatCotizacion usuario={usuario} presupuestoId={abierto.presupuestoId} maestroId={abierto.maestroId} miRol="cliente" titulo={abierto.titulo} onClose={cerrar} />}
+      {abierto && <ChatCotizacion usuario={usuario} presupuestoId={abierto.presupuestoId} maestroId={usuario.id} miRol="maestro" titulo={abierto.titulo} onClose={cerrar} />}
 
       {soporte && (
         <div style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 400, display: 'flex', flexDirection: 'column' }}>
           <button onClick={function () { setSoporte(false); setRefresh(function (n) { return n + 1; }); }} style={{ position: 'absolute', top: 14, left: 12, zIndex: 2, background: 'rgba(255,255,255,.16)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', fontSize: 18, cursor: 'pointer' }}>{'←'}</button>
-          <SoporteCliente usuario={usuario} />
+          <MensajesMaestro usuario={usuario} />
         </div>
       )}
     </div>
