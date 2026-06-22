@@ -60,9 +60,10 @@ export default function Landing({ of, comuna }) {
 
       <section style={{ background: NAVY, color: '#fff', padding: '34px 18px 40px' }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <span style={{ display: 'inline-block', background: 'rgba(34,211,238,.15)', color: CYAN, border: '1px solid rgba(34,211,238,.4)', borderRadius: 999, padding: '5px 12px', fontSize: 12.5, fontWeight: 800, marginBottom: 12 }}>🇨🇱 Startup chilena · La primera plataforma en Chile para cotizar maestros</span>
           <p style={{ color: CYAN, fontWeight: 700, fontSize: 13, margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>{of.servicio}{comuna ? ' · ' + comuna.nombre : ' · Chile'}</p>
           <h1 style={{ fontSize: 32, fontWeight: 800, margin: '8px 0 10px', lineHeight: 1.2 }}>{titulo}</h1>
-          <p style={{ fontSize: 17, color: '#aab4cf', margin: '0 0 22px' }}>¿Cansado de cobros sorpresa o de que no llegue nadie? Pide presupuesto gratis, compara y <b style={{ color: '#fff' }}>paga seguro</b>: el precio que apruebas es el que pagas.</p>
+          <p style={{ fontSize: 17, color: '#aab4cf', margin: '0 0 22px' }}>Pide en un solo lugar y te llegan varios presupuestos. Comparas, eliges al maestro <b style={{ color: '#fff' }}>mejor evaluado</b> y <b style={{ color: '#fff' }}>pagas seguro</b>: el precio que apruebas es el que pagas, sin sorpresas.</p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Btn href="/" primary>Crear cuenta y pedir presupuesto</Btn>
             <Btn href="#como">Ver cómo funciona</Btn>
@@ -72,11 +73,12 @@ export default function Landing({ of, comuna }) {
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 18px 50px' }}>
         <H2>Una nueva forma de contratar {servL}</H2>
-        <p style={{ margin: '0 0 18px', color: MUT }}>Contratar un maestro solía ser una apuesta: precios que cambian al final, no saber a quién le abres la puerta y pagar por adelantado sin garantía. <b>MaestrosEnLínea lo da vuelta.</b></p>
+        <p style={{ margin: '0 0 18px', color: MUT }}>Contratar un maestro solía ser una apuesta: precios que cambian al final, no saber a quién le abres la puerta y pagar por adelantado sin garantía. <b>MaestrosEnLínea es la primera plataforma en Chile que lo da vuelta:</b> pides en un solo lugar, te llegan presupuestos de maestros verificados y eliges al mejor evaluado.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
-          <Pilar icon="💸" titulo="Sin sorpresas en el precio" texto="Recibes presupuestos claros y detallados antes de aceptar. Lo que ves es lo que pagas, sin cobros ocultos." />
-          <Pilar icon="✅" titulo="Tú apruebas el presupuesto" texto="Comparas cotizaciones y eliges. Nada se hace ni se cobra sin tu aprobación previa." />
-          <Pilar icon="🔒" titulo="Pago 100% seguro" texto="Tu dinero queda protegido por la plataforma y solo se libera cuando confirmas que el trabajo quedó bien." />
+          <Pilar icon="📍" titulo="Pide en un solo lugar" texto="Publica tu necesidad una vez y te llegan varios presupuestos. Sin llamar a diez maestros ni perseguir cotizaciones." />
+          <Pilar icon="💸" titulo="Sin sorpresas en el precio" texto="Recibes presupuestos claros y detallados, y tú apruebas antes de pagar. Lo que ves es lo que pagas, sin cobros ocultos." />
+          <Pilar icon="⭐" titulo="Maestros verificados" texto="Profesionales con identidad verificada. Comparas sus evaluaciones y eliges al mejor calificado para tu trabajo." />
+          <Pilar icon="🔒" titulo="Protegemos tu pago" texto="Tu dinero queda protegido por la plataforma y solo se libera al maestro cuando confirmas que el trabajo quedó bien." />
         </div>
 
         <h2 id="como" style={{ fontSize: 22, fontWeight: 800, color: NAVY, margin: '34px 0 14px' }}>Cómo funciona</h2>
