@@ -14,6 +14,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   const [oculto, setOculto] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [cotizarOpen, setCotizarOpen] = useState(false);
+  const [zoomImg, setZoomImg] = useState(null);
   const [grabando, setGrabando] = useState(false);
   const [vp, setVp] = useState(null);
   const finRef = useRef(null);
@@ -167,7 +168,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
     if (!tipo && m.foto_url) tipo = 'imagen';
     if (tipo === 'audio') return <audio src={url} controls style={{ width: 210, maxWidth: '64vw', height: 38 }} />;
     if (tipo === 'video') return <video src={url} controls playsInline style={{ width: 210, maxWidth: '64vw', borderRadius: 12, display: 'block', background: '#000' }} />;
-    return <img src={url} alt="" style={{ width: 210, maxWidth: '64vw', borderRadius: 12, display: 'block' }} />;
+    return <img src={url} alt="" onClick={function () { setZoomImg(url); }} style={{ width: 210, maxWidth: '64vw', borderRadius: 12, display: 'block', cursor: 'pointer' }} />;
   }
 
   return (
@@ -241,6 +242,13 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       </div>
 
       {cotizarOpen && <CotizadorChat usuario={usuario} presupuestoId={presupuestoId} maestroId={maestroId} titulo={otro} onClose={function () { setCotizarOpen(false); }} />}
+
+      {zoomImg && (
+        <div onClick={function () { setZoomImg(null); }} style={{ position: 'fixed', inset: 0, zIndex: 800, background: 'rgba(0,0,0,.92)', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '60px 12px 40px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+          <img src={zoomImg} alt="" onClick={function (e) { e.stopPropagation(); }} style={{ width: '100%', maxWidth: 560, height: 'auto', display: 'block', borderRadius: 8 }} />
+          <button onClick={function () { setZoomImg(null); }} style={{ position: 'fixed', top: 'calc(14px + env(safe-area-inset-top, 0px))', right: 16, width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,.18)', color: '#fff', border: 'none', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>{'×'}</button>
+        </div>
+      )}
     </div>
   );
 }
