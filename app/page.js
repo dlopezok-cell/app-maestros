@@ -62,6 +62,8 @@ var sp = new URLSearchParams(window.location.search);
 if (sp.get('app') === '1') { try { window.localStorage.setItem('ml_app', '1'); } catch (e) {} }
 var pg = sp.get('pago');
 if (pg) { setPagoMsg(pg); setVista('mias'); window.history.replaceState({}, '', '/'); }
+var ver = sp.get('ver');
+if (ver === 'mias') { try { window.localStorage.setItem('ml_app', '1'); } catch (e) {} setDestinoLogin('mias'); setVista('mias'); window.history.replaceState({}, '', '/'); }
 }
 supabase.from('catalogos').select('valor, slug').eq('tipo', 'especialidad').eq('activo', true).order('orden', { ascending: true })
 .then(function (r) { setCats(r.data || []); });
