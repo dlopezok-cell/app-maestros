@@ -20,6 +20,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   const imgRef = useRef(null);
   const vidRef = useRef(null);
   const recRef = useRef(null);
+  const inpRef = useRef(null);
 
   // Fija el chat a la zona visible real: al abrir el teclado en el móvil,
   // visualViewport encoge y se desplaza; anclamos top+alto para que el campo
@@ -191,7 +192,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       </div>
 
       {/* Mensajes */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 12px 6px' }}>
+      <div onTouchStart={function () { if (inpRef.current) inpRef.current.blur(); }} style={{ flex: 1, overflowY: 'auto', padding: '14px 12px 6px' }}>
         {!cargado && <div style={{ fontSize: 13, color: '#9aa1b5', textAlign: 'center', marginTop: 20 }}>Cargando conversación...</div>}
         {cargado && mensajes.length === 0 && (
           <div style={{ background: '#fff', color: '#6b7184', fontSize: 12.5, lineHeight: 1.5, borderRadius: 14, padding: '12px 14px', textAlign: 'center', maxWidth: 300, margin: '12px auto', boxShadow: '0 2px 10px rgba(20,20,50,.06)' }}>
@@ -231,9 +232,9 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       {/* Barra de entrada */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', background: '#fff', boxShadow: '0 -2px 12px rgba(20,20,50,.06)' }}>
         <button onClick={function () { setAttachOpen(!attachOpen); }} style={ico}>{attachOpen ? '×' : '＋'}</button>
-        <input value={texto} onChange={function (e) { setTexto(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarTexto(); }} placeholder={grabando ? 'Grabando audio…' : 'Escribe un mensaje'} disabled={grabando} style={{ flex: 1, height: 42, border: 'none', borderRadius: 22, padding: '0 16px', fontSize: 16, background: grabando ? '#ffecec' : '#f3f3f8', color: grabando ? '#d3422a' : '#1c1f2b', outline: 'none', boxSizing: 'border-box' }} />
+        <input ref={inpRef} value={texto} onChange={function (e) { setTexto(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarTexto(); }} placeholder={grabando ? 'Grabando audio…' : 'Escribe un mensaje'} disabled={grabando} style={{ flex: 1, height: 42, border: 'none', borderRadius: 22, padding: '0 16px', fontSize: 16, background: grabando ? '#ffecec' : '#f3f3f8', color: grabando ? '#d3422a' : '#1c1f2b', outline: 'none', boxSizing: 'border-box' }} />
         {texto.trim()
-          ? <button onClick={enviarTexto} disabled={enviando} style={{ width: 46, height: 46, borderRadius: '50%', border: 'none', background: 'linear-gradient(150deg,#ff6a3d,#ff4d2e)', color: '#fff', fontSize: 19, cursor: 'pointer', flexShrink: 0, opacity: enviando ? 0.6 : 1, boxShadow: '0 6px 16px rgba(255,90,60,.4)' }}>{'➤'}</button>
+          ? <button onMouseDown={function (e) { e.preventDefault(); }} onClick={enviarTexto} disabled={enviando} style={{ width: 46, height: 46, borderRadius: '50%', border: 'none', background: 'linear-gradient(150deg,#ff6a3d,#ff4d2e)', color: '#fff', fontSize: 19, cursor: 'pointer', flexShrink: 0, opacity: enviando ? 0.6 : 1, boxShadow: '0 6px 16px rgba(255,90,60,.4)' }}>{'➤'}</button>
           : <button onClick={grabar} title="Grabar audio" style={{ width: 46, height: 46, borderRadius: '50%', border: 'none', background: grabando ? '#d3422a' : 'linear-gradient(150deg,#ff6a3d,#ff4d2e)', color: '#fff', fontSize: 19, cursor: 'pointer', flexShrink: 0, boxShadow: '0 6px 16px rgba(255,90,60,.35)' }}>{grabando ? '⏹' : '🎤'}</button>}
         <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={function (e) { elegir(e, 'imagen'); }} />
         <input ref={vidRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={function (e) { elegir(e, 'video'); }} />

@@ -11,6 +11,7 @@ export default function MensajesMaestro({ usuario, onBack }) {
   const [enviando, setEnviando] = useState(false);
   const [vp, setVp] = useState(null);
   const finRef = useRef(null);
+  const inpRef = useRef(null);
 
   // Fija el chat exactamente a la zona visible: cuando se abre el teclado en el
   // móvil, visualViewport encoge y se desplaza; anclamos top+alto a esa zona
@@ -54,7 +55,7 @@ export default function MensajesMaestro({ usuario, onBack }) {
         <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#ff5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{'\u{1F6E0}'}</div>
         <div><div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Soporte MaestrosEnLínea</div><div style={{ color: '#9aa1b5', fontSize: 11 }}>Escríbenos cualquier duda</div></div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', background: '#f5f6fa', padding: 16 }}>
+      <div onTouchStart={function () { if (inpRef.current) inpRef.current.blur(); }} style={{ flex: 1, overflowY: 'auto', background: '#f5f6fa', padding: 16 }}>
         {!cargado && <div style={{ fontSize: 13, color: '#9aa1b5' }}>Cargando...</div>}
         {cargado && msgs.length === 0 && <div style={{ background: '#fff', borderRadius: 14, padding: '10px 13px', fontSize: 13.5, color: '#1c1f2b', maxWidth: '82%', boxShadow: '0 1px 1px rgba(0,0,0,.05)' }}>¡Bienvenido! Cualquier duda sobre tu ficha, verificación o cómo recibir más trabajos, escríbenos por aquí 👋</div>}
         {msgs.map(function (m) {
@@ -70,9 +71,9 @@ export default function MensajesMaestro({ usuario, onBack }) {
         })}
         <div ref={finRef} />
       </div>
-      <div style={{ display: 'flex', gap: 8, padding: '10px 12px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', borderTop: '1px solid #eee', background: '#fff', alignItems: 'center' }}>
-        <input value={txt} onChange={function (e) { setTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviar(); }} placeholder="Escribe un mensaje..." style={{ flex: 1, background: '#f1f1f5', border: 'none', borderRadius: 999, padding: '11px 15px', fontSize: 16, outline: 'none' }} />
-        <button onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#ff5a3c', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
+      <div style={{ display: 'flex', gap: 8, padding: '10px 12px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', borderTop: '1px solid #eee', background: '#fff', alignItems: 'center' }}>
+        <input ref={inpRef} value={txt} onChange={function (e) { setTxt(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviar(); }} placeholder="Escribe un mensaje..." style={{ flex: 1, background: '#f1f1f5', border: 'none', borderRadius: 999, padding: '11px 15px', fontSize: 16, outline: 'none' }} />
+        <button onMouseDown={function (e) { e.preventDefault(); }} onClick={enviar} disabled={enviando} style={{ width: 42, height: 42, borderRadius: '50%', background: '#ff5a3c', color: '#fff', border: 'none', fontSize: 16, cursor: 'pointer' }}>{'➤'}</button>
       </div>
     </div>
   );
