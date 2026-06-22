@@ -86,7 +86,7 @@ export async function POST(req) {
           '<p style="color:#5b6275;font-size:13px">El pago queda <b>protegido</b> y se libera cuando el cliente confirme que el trabajo quedó listo.</p>',
           'Ver en mi agenda', SITE + '/maestros'
         );
-        try { await transport.sendMail({ from: '"MaestrosEnLínea" <' + user + '>', to: toMaestro, subject: 'Te agendaron y pagaron un trabajo \u{1F389}', html: htmlM }); } catch (e) {}
+        try { await transport.sendMail({ from: '"\u{1F6E0}️ MaestrosEnLínea" <' + user + '>', to: toMaestro, subject: 'Te agendaron y pagaron un trabajo \u{1F389}', html: htmlM }); } catch (e) {}
       }
       if (toCliente) {
         const htmlC = plantilla(
@@ -96,7 +96,7 @@ export async function POST(req) {
           '<p style="color:#5b6275;font-size:13px">Tu dinero queda <b>protegido</b> hasta que confirmes que el trabajo quedó listo.</p>',
           'Ver mis cotizaciones', SITE_APP
         );
-        try { await transport.sendMail({ from: '"MaestrosEnLínea" <' + user + '>', to: toCliente, subject: '✅ Tu pago fue confirmado', html: htmlC }); } catch (e) {}
+        try { await transport.sendMail({ from: '"\u{1F6E0}️ MaestrosEnLínea" <' + user + '>', to: toCliente, subject: '✅ Tu pago fue confirmado', html: htmlC }); } catch (e) {}
       }
       return Response.json({ ok: true });
     } else if (tipo === 'cotizacion') {
@@ -112,7 +112,7 @@ export async function POST(req) {
         '¡Recibiste una cotización! \u{1F389}',
         '<p>' + (maestro || 'Un maestro') + ' te envió un presupuesto' + (monto ? ' por <b>' + monto + '</b>' : '') + ' para tu solicitud de <b>' + (p.oficio || 'servicio') + '</b>.</p>' +
         (p.descripcion ? '<p style="color:#5b6275">“' + p.descripcion + '”</p>' : ''),
-        'Ver mi cotización', SITE
+        'Ver mi cotización', SITE + '/?app=1&ver=mias&cot=' + body.presupuestoId
       );
     } else if (tipo === 'presupuesto_maestro') {
       // Avisar a UN maestro que le llego una solicitud directa
@@ -180,7 +180,7 @@ export async function POST(req) {
       host: 'smtp.zoho.com', port: 465, secure: true,
       auth: { user, pass },
     });
-    await transport.sendMail({ from: '"MaestrosEnLínea" <' + user + '>', to, subject, html });
+    await transport.sendMail({ from: '"\u{1F6E0}️ MaestrosEnLínea" <' + user + '>', to, subject, html });
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 200 });
