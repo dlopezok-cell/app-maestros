@@ -1,4 +1,5 @@
 'use client';
+// redeploy perfiles maestros 1782152900
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import CampanaMaestros from '../CampanaMaestros';
