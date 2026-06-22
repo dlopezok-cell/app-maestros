@@ -4,15 +4,14 @@ import { supabase } from '../lib/supabase';
 
 // Cotizador abierto DESDE el chat (botón "Cotizar este trabajo" del menú +).
 // Mismo cotizador del maestro (ítems, IVA, incluye, validez, garantía, Redactar IA).
-// Al enviar: 1) registra la cotización (tabla cotizaciones, igual que la pestaña),
-// 2) dibuja la cotización como imagen PNG (canvas, sin librerías) y la publica en el
-// chat como un mensaje con imagen, para que al cliente le llegue ahí mismo.
+// Al enviar: registra la cotización (tabla cotizaciones, igual que la pestaña) y
+// publica en el chat un mensaje tipo 'cotizacion'. En el chat se ve como una
+// tarjeta-resumen con botón "Ver cotización" que abre la cotización REAL.
 
 var INCLUYE_OPC = ['Materiales', 'Mano de obra', 'Visita técnica', 'Retiro de escombros'];
 var VALIDEZ_OPC = ['15 días', '30 días'];
 var GARANTIA_OPC = ['Sin garantía', '1 mes', '2 meses', '3 meses'];
 var IVA = 0.19;
-var FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 export default function CotizadorChat({ usuario, presupuestoId, maestroId, titulo, onClose }) {
   const [pres, setPres] = useState(null);
@@ -94,90 +93,9 @@ export default function CotizadorChat({ usuario, presupuestoId, maestroId, titul
     setPropuestaIA(null);
   }
 
-  // ---------- Imagen PNG de la cotización (canvas, sin librerías) ----------
-  function generarBlob() {
-    var W = 680, ML = 32, MR = W - 32, cw = W - 64;
-    var fechaStr = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
-    var its = lineas.filter(function (x) { return x.desc && Number(x.valor) > 0; });
-    var d = { cliente: clienteDe(), trabajo: tituloDe(pres), items: its, neto: neto(), iva: ivaMonto(), comision: comisionMonto(), total: total(), tuRecibes: neto() + ivaMonto(), incluye: incluye, validez: validez, garantia: garantia, descripcion: (descripcion || '').trim() };
-
-    function lineSeg(ctx, x1, y1, x2, y2, color) { ctx.beginPath(); ctx.strokeStyle = color || '#eef0f5'; ctx.lineWidth = 1; ctx.moveTo(x1, y1 + 0.5); ctx.lineTo(x2, y2 + 0.5); ctx.stroke(); }
-    function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-    function wrap(ctx, text, maxW, font) {
-      ctx.font = font; var words = (text || '').split(/\s+/); var lines = []; var cur = '';
-      for (var i = 0; i < words.length; i++) { var t = cur ? cur + ' ' + words[i] : words[i]; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = words[i]; } else { cur = t; } }
-      if (cur) lines.push(cur); return lines.length ? lines : [''];
-    }
-    function trunc(ctx, text, maxW, font) { ctx.font = font; if (ctx.measureText(text).width <= maxW) return text; var t = text; while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; }
-
-    function render(ctx) {
-      function T(t, x, y, o) { o = o || {}; ctx.font = (o.w ? o.w + ' ' : '') + (o.s || 13) + 'px ' + FONT; ctx.fillStyle = o.c || '#1c2030'; ctx.textAlign = o.a || 'left'; ctx.fillText(t, x, y); }
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, 4000);
-      ctx.fillStyle = '#19222F'; ctx.fillRect(0, 0, W, 76);
-      T('MaestrosEnLínea', ML, 47, { w: 'bold', s: 22, c: '#ffffff' });
-      T('COTIZACIÓN', MR, 35, { w: 'bold', s: 14, c: '#ffffff', a: 'right' });
-      T(fechaStr, MR, 56, { s: 11, c: '#9aa6b4', a: 'right' });
-      var y = 106;
-      T('PARA', ML, y, { s: 10, c: '#9aa1b5', w: 'bold' });
-      T('TRABAJO', MR, y, { s: 10, c: '#9aa1b5', w: 'bold', a: 'right' });
-      T(d.cliente, ML, y + 21, { s: 15, w: 'bold' });
-      T(trunc(ctx, d.trabajo, 250, 'bold 14px ' + FONT), MR, y + 21, { s: 14, w: 'bold', a: 'right' });
-      y += 44; lineSeg(ctx, ML, y, MR, y); y += 24;
-      T('DETALLE DE COSTOS', ML, y, { s: 11, c: '#7c8499', w: 'bold' }); y += 22;
-      d.items.forEach(function (it) {
-        T(trunc(ctx, it.desc, cw - 110, '13.5px ' + FONT), ML, y + 15, { s: 13.5 });
-        T(plata(it.valor), MR, y + 15, { s: 13.5, w: 'bold', a: 'right' });
-        lineSeg(ctx, ML, y + 26, MR, y + 26, '#f1f3f7'); y += 26;
-      });
-      y += 12;
-      function kv(k, v) { T(k, MR - 150, y + 14, { s: 12.5, c: '#7c8499' }); T(v, MR, y + 14, { s: 12.5, c: '#7c8499', a: 'right' }); y += 22; }
-      kv('Neto', plata(d.neto));
-      kv('IVA (19%)', plata(d.iva));
-      if (d.comision > 0) kv('MaestrosEnLínea (' + comisionPct + '%)', plata(d.comision));
-      y += 8;
-      rr(ctx, ML, y, cw, 54, 12); ctx.fillStyle = '#f2f5fa'; ctx.fill();
-      T('Total al cliente', ML + 16, y + 26, { s: 14, w: 'bold' });
-      T(plata(d.total), MR - 16, y + 31, { s: 22, w: 'bold', a: 'right' });
-      T('Tú recibes ' + plata(d.tuRecibes), MR - 16, y + 47, { s: 11, c: '#0d9456', a: 'right' });
-      y += 54 + 24;
-      if (d.incluye.length) {
-        T('INCLUYE', ML, y, { s: 11, c: '#7c8499', w: 'bold' }); y += 20;
-        var incLines = wrap(ctx, d.incluye.map(function (x) { return '•  ' + x; }).join('     '), cw, '13px ' + FONT);
-        incLines.forEach(function (ln) { T(ln, ML, y + 13, { s: 13, c: '#2b2f3a' }); y += 20; });
-        y += 10;
-      }
-      T('Validez', ML, y + 12, { s: 9.5, c: '#9aa1b5', w: 'bold' });
-      T(d.validez, ML, y + 31, { s: 13, w: 'bold' });
-      T('Garantía', ML + 190, y + 12, { s: 9.5, c: '#9aa1b5', w: 'bold' });
-      T(d.garantia, ML + 190, y + 31, { s: 13, w: 'bold' });
-      y += 46;
-      if (d.descripcion) {
-        T('TRABAJO A REALIZAR', ML, y, { s: 11, c: '#7c8499', w: 'bold' }); y += 19;
-        var dl = wrap(ctx, d.descripcion, cw, '13px ' + FONT);
-        dl.forEach(function (ln) { T(ln, ML, y + 14, { s: 13, c: '#2b2f3a' }); y += 19; });
-        y += 8;
-      }
-      y += 12; lineSeg(ctx, ML, y, MR, y); y += 20;
-      T('Cotización generada en MaestrosEnLínea · ' + fechaStr, ML, y, { s: 10, c: '#9aa1b5' });
-      return y + 16;
-    }
-
-    return new Promise(function (resolve) {
-      var tmp = document.createElement('canvas'); tmp.width = W; tmp.height = 3000;
-      var bottom = render(tmp.getContext('2d'));
-      var H = Math.ceil(bottom);
-      var c = document.createElement('canvas'); var DPR = 2;
-      c.width = W * DPR; c.height = H * DPR;
-      var ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
-      render(ctx);
-      c.toBlob(function (b) { resolve(b); }, 'image/png');
-    });
-  }
-
   function enviar() {
     var n = neto();
     if (n <= 0) { setMsg('Agrega al menos un ítem con su precio.'); return; }
-    if (!pres) { setMsg('Cargando el trabajo, espera un segundo…'); return; }
     setEnviando(true); setMsg(null);
     var cond = 'Validez ' + validez + (garantia && garantia !== 'Sin garantía' ? '. Garantía ' + garantia : '');
     var resumen = (incluye.length ? 'Incluye: ' + incluye.join(', ') + '. ' : '') + cond;
@@ -191,27 +109,16 @@ export default function CotizadorChat({ usuario, presupuestoId, maestroId, titul
       presupuesto_id: presupuestoId, maestro_id: maestroId, monto: total(), mensaje: resumen.trim() || null, detalle: detalle,
     }).then(function (rc) {
       if (rc.error) { setMsg('Error al registrar: ' + rc.error.message); setEnviando(false); return; }
-      // 2) generar imagen y publicarla en el chat
-      generarBlob().then(function (blob) {
-        if (!blob) { finalizar(null); return; }
-        var path = usuario.id + '/cotizacion_' + Date.now() + '.png';
-        supabase.storage.from('presupuestos').upload(path, blob, { contentType: 'image/png', upsert: true }).then(function (up) {
-          if (up.error) { finalizar(null); return; }
-          var url = supabase.storage.from('presupuestos').getPublicUrl(path).data.publicUrl;
-          finalizar(url);
-        }).catch(function () { finalizar(null); });
-      }).catch(function () { finalizar(null); });
-    });
-
-    function finalizar(url) {
-      var payload = { presupuesto_id: presupuestoId, maestro_id: maestroId, autor_rol: 'maestro', texto: 'Cotización: ' + plata(total()) };
-      if (url) { payload.media_url = url; payload.media_tipo = 'imagen'; }
-      supabase.from('mensajes').insert(payload).then(function () {
+      // 2) publicar la tarjeta de cotización en el chat (mensaje tipo 'cotizacion')
+      supabase.from('mensajes').insert({
+        presupuesto_id: presupuestoId, maestro_id: maestroId, autor_rol: 'maestro',
+        media_tipo: 'cotizacion', texto: 'Cotización: ' + plata(total()),
+      }).then(function () {
         try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'cotizacion', presupuestoId: presupuestoId, maestroId: maestroId, monto: total() }) }); } catch (e) {}
         setEnviando(false);
         if (onClose) onClose();
       });
-    }
+    });
   }
 
   // ---------- UI ----------

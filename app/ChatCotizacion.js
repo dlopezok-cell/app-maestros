@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import CotizadorChat from './CotizadorChat';
+import VerCotizacion from './VerCotizacion';
 
 // Chat cliente <-> maestro, a pantalla completa, con look propio de la marca.
 // Texto + imagen + video + audio (grabado), sonido y notificación al recibir.
@@ -14,6 +15,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   const [oculto, setOculto] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [cotizarOpen, setCotizarOpen] = useState(false);
+  const [verCotOpen, setVerCotOpen] = useState(false);
   const [zoomImg, setZoomImg] = useState(null);
   const [grabando, setGrabando] = useState(false);
   const [vp, setVp] = useState(null);
@@ -205,6 +207,25 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
           var prev = mensajes[i - 1];
           var nuevoDia = !prev || dia(prev.creado_en) !== dia(m.creado_en);
           var media = burbujaMedia(m, mio);
+          if (m.media_tipo === 'cotizacion') {
+            var montoTxt = (m.texto || 'Cotización').replace('Cotización:', '').trim() || 'Cotización';
+            return (
+              <div key={m.id}>
+                {nuevoDia && <div style={{ textAlign: 'center', margin: '8px 0 12px' }}><span style={{ background: '#e7e3f3', color: '#6b6391', fontSize: 10.5, fontWeight: 700, borderRadius: 10, padding: '4px 12px' }}>{dia(m.creado_en)}</span></div>}
+                <div style={{ display: 'flex', justifyContent: mio ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
+                  <div style={{ width: 232, maxWidth: '82%', border: '1.5px solid #cbe0fb', borderRadius: 16, background: '#fff', padding: 12, boxShadow: '0 2px 8px rgba(20,20,50,.07)' }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 800, color: '#D85A30', letterSpacing: 0.4 }}>{'\u{1F9FE} COTIZACIÓN'}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 7 }}>
+                      <span style={{ fontSize: 11.5, color: '#7c8499' }}>Total (IVA incl.)</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: '#1c1f2b' }}>{montoTxt}</span>
+                    </div>
+                    <button onClick={function () { setVerCotOpen(true); }} style={{ width: '100%', marginTop: 11, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 11, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'\u{1F441}️ Ver cotización'}</button>
+                    <div style={{ fontSize: 10, color: '#9aa1b5', textAlign: 'right', marginTop: 6 }}>{hora(m.creado_en)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
           return (
             <div key={m.id}>
               {nuevoDia && <div style={{ textAlign: 'center', margin: '8px 0 12px' }}><span style={{ background: '#e7e3f3', color: '#6b6391', fontSize: 10.5, fontWeight: 700, borderRadius: 10, padding: '4px 12px' }}>{dia(m.creado_en)}</span></div>}
@@ -242,6 +263,8 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       </div>
 
       {cotizarOpen && <CotizadorChat usuario={usuario} presupuestoId={presupuestoId} maestroId={maestroId} titulo={otro} onClose={function () { setCotizarOpen(false); }} />}
+
+      {verCotOpen && <VerCotizacion usuario={usuario} presupuestoId={presupuestoId} maestroId={maestroId} miRol={miRol} titulo={miRol === 'cliente' ? otro : (titulo || 'Cliente')} onClose={function () { setVerCotOpen(false); }} />}
 
       {zoomImg && (
         <div onClick={function () { setZoomImg(null); }} style={{ position: 'fixed', inset: 0, zIndex: 800, background: 'rgba(0,0,0,.92)', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '60px 12px 40px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
