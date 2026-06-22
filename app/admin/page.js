@@ -12,6 +12,7 @@ import CaptacionPanel from '../CaptacionPanel';
 import PlantillasMeta from '../PlantillasMeta';
 import AdsPanel from '../AdsPanel';
 import MaestrosPerfiles from '../MaestrosPerfiles';
+import SoportePanel from '../SoportePanel';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
@@ -40,6 +41,7 @@ const SECCIONES = [
   { id: 'pedidos', icono: '\u{1F9FE}', nombre: 'Pedidos', cat: 'operaciones' },
   { id: 'reservas', icono: '\u{1F4C5}', nombre: 'Reservas', cat: 'operaciones' },
   { id: 'mensajes', icono: '\u{1F4AC}', nombre: 'Mensajes', cat: 'operaciones' },
+  { id: 'soporte', icono: '\u{1F6DF}', nombre: 'Soporte', cat: 'operaciones' },
   { id: 'disputas', icono: '\u{1F6A9}', nombre: 'Disputas', cat: 'operaciones' },
   { id: 'pagos', icono: '\u{1F4B0}', nombre: 'Pagos', cat: 'finanzas' },
   { id: 'liberar', icono: '\u{1F513}', nombre: 'Por liberar', cat: 'finanzas' },
@@ -453,6 +455,7 @@ export default function Admin() {
   const pendientes = verifs.filter(function (v) { return v.estado === 'pendiente'; });
   const verifSinFicha = pendientes.filter(function (v) { return !maestros.some(function (m) { return m.id === v.user_id; }); });
   const soporteNoLeidos = msop.filter(function (m) { return m.autor === 'maestro' && !m.leido; }).length;
+  const soporteTotal = msop.filter(function (m) { return m.autor !== 'admin' && !m.leido; }).length;
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const reservasHoy = reservas.filter(function (r) { return new Date(r.creado_en) >= hoy; }).length;
@@ -559,7 +562,7 @@ export default function Admin() {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {secs.map(function (s) {
                   const on = seccion === s.id;
-                  const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'liberar' ? porLiberarCount : 0;
+                  const badge = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'soporte' ? soporteTotal : s.id === 'liberar' ? porLiberarCount : 0;
                   return (
                     <button key={s.id} onClick={function () { setSeccion(s.id); }}
                       style={{ fontSize: 12, fontWeight: 800, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: on ? '#2563eb' : '#fff', color: on ? '#fff' : '#7c8499', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #eee' }}>
@@ -1377,6 +1380,7 @@ export default function Admin() {
     {seccion === 'campana' && <CampanaMaestros />}
       {seccion === 'ads' && <AdsPanel />}
       {seccion === 'perfiles' && <MaestrosPerfiles />}
+      {seccion === 'soporte' && <SoportePanel />}
       {seccion === 'extraer' && <MapsExtractor />}
       {seccion === 'captacion' && <CaptacionPanel />}
       {seccion === 'plantillas' && <PlantillasMeta />}
