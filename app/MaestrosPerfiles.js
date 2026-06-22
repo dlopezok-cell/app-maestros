@@ -22,10 +22,10 @@ function waNumero(t) {
 }
 
 // ---- Plantillas de mensaje ----
-function plFoto(n) { return 'Hola ' + (n || '') + ' 👋 Te saludamos de MaestrosEnLínea. Notamos que a tu perfil le falta la *foto de perfil*. Una buena foto genera más confianza y te llegan más pedidos. Entra a la app → Mi perfil y súbela 🙌'; }
-function plDocs(n) { return 'Hola ' + (n || '') + ' 👋 Somos MaestrosEnLínea. Para completar tu verificación nos faltan tus *documentos* (carnet + selfie). Súbelos en la app → Verificación y obtienes tu sello de *Maestro Verificado* ✅, que te posiciona mejor ante los clientes.'; }
-function plAmbos(n) { return 'Hola ' + (n || '') + ' 👋 Te escribimos de MaestrosEnLínea. Para que tu perfil quede completo te faltan dos cosas: tu *foto de perfil* y tus *documentos* (carnet + selfie). Súbelos en la app → Mi perfil / Verificación. Así obtienes tu sello de Verificado ✅ y recibes más pedidos 🙌'; }
-function plLibre(n) { return 'Hola ' + (n || '') + ' 👋 Te saludamos de MaestrosEnLínea. ¿Cómo va todo con la plataforma? Cualquier duda, aquí estamos para ayudarte 🙌'; }
+function plFoto(n) { return 'Hola ' + (n || '') + ', te saludamos de MaestrosEnLínea. Notamos que a tu perfil le falta la *foto de perfil*. Una buena foto genera más confianza y te llegan más pedidos. Entra a la app, ve a Mi perfil y súbela.'; }
+function plDocs(n) { return 'Hola ' + (n || '') + ', somos MaestrosEnLínea. Para completar tu verificación nos faltan tus *documentos* (carnet + selfie). Súbelos en la app, en la sección Verificación, y obtienes tu sello de *Maestro Verificado*, que te posiciona mejor ante los clientes.'; }
+function plAmbos(n) { return 'Hola ' + (n || '') + ', te escribimos de MaestrosEnLínea. Para que tu perfil quede completo te faltan dos cosas: tu *foto de perfil* y tus *documentos* (carnet + selfie). Súbelos en la app, en Mi perfil y en Verificación. Así obtienes tu sello de Verificado y recibes más pedidos.'; }
+function plLibre(n) { return 'Hola ' + (n || '') + ', te saludamos de MaestrosEnLínea. ¿Cómo va todo con la plataforma? Cualquier duda, aquí estamos para ayudarte.'; }
 
 const PLANTILLAS = [
   { id: 'auto', nombre: 'Automática (según lo que falta)' },
