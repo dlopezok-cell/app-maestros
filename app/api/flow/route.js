@@ -83,9 +83,12 @@ async function registrarSiPagado(token) {
       .update({ estado: 'pagado' })
       .eq('id', opt.reservaId)
       .eq('estado', 'pendiente_pago')
-      .select('id');
+      .select('id, presupuesto_id');
     const gane = !!(upd.data && upd.data.length);
     if (gane) {
+      // Cerrar el presupuesto asociado (antes lo hacía el botón "Aceptar").
+      const presId = upd.data[0].presupuesto_id;
+      if (presId) { try { await admin.from('presupuestos').update({ estado: 'cerrado' }).eq('id', presId); } catch {} }
       // Avisar a maestro y cliente (fire-and-forget; no frena el webhook).
       try {
         await fetch(SITE + '/api/notificar', {
