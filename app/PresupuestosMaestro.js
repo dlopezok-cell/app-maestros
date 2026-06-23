@@ -1,11 +1,31 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import ChatCotizacion from './ChatCotizacion';
 import MediaCarrusel from './MediaCarrusel';
 
 var INCLUYE_OPC = ['Materiales', 'Mano de obra', 'Visita técnica', 'Retiro de escombros'];
 var VALIDEZ_OPC = ['15 días', '30 días'];
+// Desplaza el centro del circulo (Airbnb-style) para que la casa exacta no quede en el centro.
+function jitterCoord(lat, lng, id) {
+  var h = 2166136261; var sId = String(id || '');
+  for (var i = 0; i < sId.length; i++) { h = (h ^ sId.charCodeAt(i)) >>> 0; h = (h * 16777619) >>> 0; }
+  var ang = (h % 360) * Math.PI / 180;
+  var dist = 0.006 + ((h >>> 8) % 100) / 100 * 0.006;
+  var dLat = dist * Math.cos(ang);
+  var dLng = dist * Math.sin(ang) / Math.max(0.2, Math.cos(lat * Math.PI / 180));
+  return [lat + dLat, lng + dLng];
+}
+function cargarLeaflet(cb) {
+  if (typeof window === 'undefined') return;
+  if (window.L) { cb(); return; }
+  if (!document.getElementById('leaflet-css')) {
+    var lk = document.createElement('link'); lk.id = 'leaflet-css'; lk.rel = 'stylesheet'; lk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lk);
+  }
+  var ex = document.getElementById('leaflet-js');
+  if (ex) { var t = setInterval(function () { if (window.L) { clearInterval(t); cb(); } }, 120); return; }
+  var sc = document.createElement('script'); sc.id = 'leaflet-js'; sc.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; sc.onload = function () { cb(); }; document.body.appendChild(sc);
+}
 var GARANTIA_OPC = ['Sin garantía', '1 mes', '2 meses', '3 meses'];
 var IVA = 0.19;
 
@@ -45,6 +65,28 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
   const [enviando, setEnviando] = useState(false);
   const [chatId, setChatId] = useState(null);
   const [noLeidos, setNoLeidos] = useState({});
+  const [mapaOpen, setMapaOpen] = useState(false);
+  const mapRef = useRef(null);
+
+  useEffect(function () {
+    if (vista !== 'detalle' || !mapaOpen || !sel || sel.lat == null || sel.lng == null) {
+      if (mapRef.current) { try { mapRef.current.remove(); } catch (e) {} mapRef.current = null; }
+      return;
+    }
+    cargarLeaflet(function () {
+      var el = document.getElementById('mapa-zona');
+      if (!el || !window.L) return;
+      if (mapRef.current) { try { mapRef.current.remove(); } catch (e) {} mapRef.current = null; }
+      var c = jitterCoord(Number(sel.lat), Number(sel.lng), sel.id);
+      var map = window.L.map(el, { zoomControl: false, scrollWheelZoom: false, attributionControl: false });
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+      var circ = window.L.circle(c, { radius: 3000, color: '#2563eb', weight: 2, fillColor: '#2563eb', fillOpacity: 0.14 }).addTo(map);
+      map.fitBounds(circ.getBounds(), { padding: [12, 12] });
+      mapRef.current = map;
+      setTimeout(function () { try { map.invalidateSize(); } catch (e) {} }, 200);
+    });
+    return function () { if (mapRef.current) { try { mapRef.current.remove(); } catch (e) {} mapRef.current = null; } };
+  }, [vista, mapaOpen, sel]);
 
   function cargar(oficios) {
     supabase.from('presupuestos').select('*, cotizaciones(*)')
@@ -120,7 +162,7 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
       });
   }
 
-  function abrirDetalle(p) { setSel(p); setVista('detalle'); setMsg(null); window.scrollTo(0, 0); }
+  function abrirDetalle(p) { setSel(p); setVista('detalle'); setMapaOpen(false); setMsg(null); window.scrollTo(0, 0); }
   function volverLista() { setVista('lista'); setSel(null); }
 
   function abrirCotizar(p) {
@@ -463,6 +505,27 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
           <div style={{ padding: '14px 16px' }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#5b6275', marginBottom: 4 }}>Lo que pide el cliente</div>
             <div style={{ fontSize: 14, color: '#2b2f3a', lineHeight: 1.55 }}>{sel.descripcion || 'Sin descripción.'}</div>
+
+            <button onClick={function () { setMapaOpen(function (v) { return !v; }); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: '#eef6ff', border: '1px solid #d4e6fb', borderRadius: 12, padding: '11px 13px', marginTop: 14, cursor: 'pointer', textAlign: 'left' }}>
+              <span style={{ fontSize: 18 }}>{'\u{1F4CD}'}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 10.5, color: '#2b5168' }}>Comuna del trabajo</span>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#16294f' }}>{sel.comuna || 'No indicada'}</span>
+              </span>
+              {(sel.lat != null && sel.lng != null) && <span style={{ fontSize: 11, color: '#2563eb', fontWeight: 800 }}>{mapaOpen ? 'Ocultar' : 'Ver zona'}</span>}
+              {(sel.lat != null && sel.lng != null) && <span style={{ fontSize: 13, color: '#2563eb' }}>{mapaOpen ? '\u25B4' : '\u25BE'}</span>}
+            </button>
+
+            {mapaOpen && (sel.lat != null && sel.lng != null) && (
+              <div style={{ marginTop: 10 }}>
+                <div id="mapa-zona" style={{ width: '100%', height: 180, borderRadius: 12, overflow: 'hidden', border: '1px solid #eef0f5', background: '#e8edf2' }} />
+                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 6, lineHeight: 1.5 }}>{'\u{1F4CD}'} Zona aproximada (radio ~3 km). La dirección exacta aparece en tu Agenda cuando el cliente paga.</div>
+              </div>
+            )}
+            {mapaOpen && (sel.lat == null || sel.lng == null) && (
+              <div style={{ fontSize: 11.5, color: '#9aa1b5', marginTop: 8 }}>Esta solicitud no tiene ubicación en el mapa; te guiamos por comuna.</div>
+            )}
+
             <div style={{ fontSize: 10.5, color: '#b6bccb', marginTop: 12, background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 10, padding: '9px 11px' }}>{'\u{1F512}'} La dirección exacta y el teléfono aparecen en tu Agenda cuando el cliente paga.</div>
             {resp && <div style={{ fontSize: 13, color: '#0d9456', fontWeight: 800, marginTop: 14 }}>{'✓ Ya enviaste tu cotización'}</div>}
           </div>
