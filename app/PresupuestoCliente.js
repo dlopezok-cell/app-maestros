@@ -604,7 +604,6 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 {s === 'cancelado' && <div style={{ fontSize: 11.5, color: '#9aa1b5', fontWeight: 700, marginTop: 6 }}>Cancelada</div>}
                 {puedeConfirmar && (
                   <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 11.5, color: '#2b4a86', background: '#eef3fd', border: '1px solid #d4e0f7', borderRadius: 10, padding: '8px 10px', marginBottom: 8 }}>{'\u{1F512}'} Tu pago de {plata(rv.precio)} está protegido. Se libera al maestro solo cuando confirmes que el trabajo quedó listo.</div>
                     <button className="gbtn full" style={{ opacity: confirmando === rv.id ? 0.6 : 1 }} disabled={confirmando === rv.id} onClick={function () { confirmarTrabajo(rv.id); }}>{confirmando === rv.id ? 'Confirmando...' : '✓ Confirmar trabajo terminado'}</button>
                   </div>
                 )}
