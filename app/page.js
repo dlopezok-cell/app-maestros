@@ -205,9 +205,9 @@ return (
 </div>
 <div style={{ flex: 'none', width: 70, textAlign: 'center', cursor: 'pointer' }} onClick={function () { irTab('cotizar'); }}>
 <div style={{ width: 54, height: 54, margin: '-28px auto 3px', borderRadius: 18, background: 'linear-gradient(135deg,#22d3ee,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(37,99,235,.45)', border: '4px solid #fff' }}>
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8" /><path d="M15 18h-5" /><path d="M10 6h8v4h-8V6Z" /></svg>
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect x="2" y="6" width="14" height="12" rx="2" ry="2" /></svg>
 </div>
-<span style={{ fontSize: 10.5, fontWeight: 800, color: '#2563eb' }}>Cotizar</span>
+<span style={{ display: 'block', fontSize: 10, fontWeight: 800, color: '#2563eb', lineHeight: 1.1 }}>Pedir<br />presupuesto</span>
 </div>
 <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
 <div style={tabSt(onMsg)} onClick={function () { irTab('mensajes'); }}>
