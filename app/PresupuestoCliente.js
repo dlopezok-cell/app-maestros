@@ -596,16 +596,8 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                 )}
 
                 {pagado && !completo && (
-                  <div style={{ marginTop: 8 }}>
-                    {fijarKey === rv.id ? (
-                      <div style={{ background: '#fff', border: '1px solid #eef0f5', borderRadius: 12, padding: 12 }}>
-                        <div style={{ fontSize: 12, color: '#5b6275', marginBottom: 8 }}>Fecha y hora acordadas con el maestro:</div>
-                        <input type="datetime-local" value={fijarFecha} onChange={function (e) { setFijarFecha(e.target.value); }} style={{ ...inp, marginBottom: 8 }} />
-                        <button className="gbtn full" onClick={function () { fijarFechaReserva(rv.id); }}>Guardar fecha</button>
-                      </div>
-                    ) : (
-                      <button onClick={function () { setFijarKey(rv.id); setFijarFecha(''); setMsg(null); }} style={{ width: '100%', background: '#fff', color: '#0d9456', border: '1.5px solid #bfe6cf', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{rv.fecha_hora ? '\u{1F4C5} Cambiar fecha' : '\u{1F4C5} Fijar fecha acordada'}</button>
-                    )}
+                  <div style={{ marginTop: 8, background: '#eef6ff', border: '1px solid #d4e6fb', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: '#2b5168', lineHeight: 1.55 }}>
+                    {'\u{1F4C5}'} Ahora agenda directamente con el maestro (chat, llamada o WhatsApp) y pónganse de acuerdo en la fecha. {'\u{1F512}'} Recuerda que tu pago está protegido: se libera al maestro solo cuando confirmes que el trabajo quedó listo.
                   </div>
                 )}
 

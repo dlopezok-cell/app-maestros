@@ -401,7 +401,11 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
             <div style={{ background: '#f7f9fc', border: '1px solid #eef0f5', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: '#9aa1b5' }}>Precio acordado</div>
               <div style={{ fontSize: 22, fontWeight: 800 }}>{plata(rt.precio_cotizado)}</div>
-              <div style={{ fontSize: 12, color: rt.fecha_hora ? '#0d7a4f' : '#b07a1e', fontWeight: 700, marginTop: 4 }}>{rt.fecha_hora ? ('\u{1F4C5} ' + fecha(rt.fecha_hora)) : '\u{1F4C5} Fecha por coordinar'}</div>
+              <div style={{ fontSize: 12, color: '#b07a1e', fontWeight: 700, marginTop: 4 }}>{'\u{1F4C5} Fecha por coordinar'}</div>
+            </div>
+
+            <div style={{ background: '#eef6ff', border: '1px solid #d4e6fb', borderRadius: 12, padding: '11px 13px', marginBottom: 16, fontSize: 12.5, color: '#2b5168', lineHeight: 1.55 }}>
+              {'\u{1F4C5}'} Coordina la fecha directamente con el cliente (chat, llamada o WhatsApp). {'\u{1F512}'} El pago ya está protegido y se libera a tu cuenta cuando el cliente confirme que el trabajo quedó listo.
             </div>
 
             <div style={{ fontSize: 12, fontWeight: 800, color: '#5b6275', marginBottom: 8 }}>Datos de contacto</div>
