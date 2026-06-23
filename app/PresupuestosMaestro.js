@@ -11,7 +11,7 @@ function jitterCoord(lat, lng, id) {
   var h = 2166136261; var sId = String(id || '');
   for (var i = 0; i < sId.length; i++) { h = (h ^ sId.charCodeAt(i)) >>> 0; h = (h * 16777619) >>> 0; }
   var ang = (h % 360) * Math.PI / 180;
-  var dist = 0.006 + ((h >>> 8) % 100) / 100 * 0.006;
+  var dist = 0.002 + ((h >>> 8) % 100) / 100 * 0.002;
   var dLat = dist * Math.cos(ang);
   var dLng = dist * Math.sin(ang) / Math.max(0.2, Math.cos(lat * Math.PI / 180));
   return [lat + dLat, lng + dLng];
@@ -77,7 +77,7 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
         mapTypeControl: false, fullscreenControl: false
       });
       var circle = new window.google.maps.Circle({
-        map: map, center: center, radius: 3000,
+        map: map, center: center, radius: 1000,
         strokeColor: '#2563eb', strokeOpacity: 0.85, strokeWeight: 2,
         fillColor: '#2563eb', fillOpacity: 0.15
       });
@@ -529,7 +529,7 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
             {mapaOpen && (sel.lat != null && sel.lng != null) && (
               <div style={{ marginTop: 10 }}>
                 <div id="mapa-zona" style={{ width: '100%', height: 230, borderRadius: 12, border: '1px solid #eef0f5', background: '#e8edf2', overflow: 'hidden' }} />
-                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 6, lineHeight: 1.5 }}>{'\u{1F4CD}'} Zona aproximada (radio ~3 km) — usa dos dedos para acercar y arrastra para moverte. La dirección exacta aparece en tu Agenda cuando el cliente paga.</div>
+                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 6, lineHeight: 1.5 }}>{'\u{1F4CD}'} Zona aproximada (radio ~1 km) — usa dos dedos para acercar y arrastra para moverte. La dirección exacta aparece en tu Agenda cuando el cliente paga.</div>
               </div>
             )}
             {mapaOpen && (sel.lat == null || sel.lng == null) && (
