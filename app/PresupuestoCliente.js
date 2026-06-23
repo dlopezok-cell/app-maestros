@@ -283,26 +283,34 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
     if (!usuario || !usuario.email) { setMsg('Inicia sesión con tu correo para poder pagar.'); return; }
     setPagando(true);
     setMsg('Generando el pago seguro...');
-    // Crea la reserva en "pendiente_pago" y manda al checkout de Flow.
-    // El webhook /api/flow la marca "pagado" cuando el pago se confirma.
-    supabase.from('reservas').insert({
-      cliente_id: usuario.id,
-      maestro_id: c.maestro_id,
-      presupuesto_id: s.id,
-      descripcion_problema: s.descripcion,
-      direccion: s.direccion,
-      estado: 'pendiente_pago',
-      precio_cotizado: c.monto || null,
-      link_video: s.video_url || null,
-    }).select().single().then(function (r) {
-      if (r.error) { setMsg('Error: ' + r.error.message); setPagando(false); return; }
-      fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ monto: c.monto, descripcion: 'Trabajo a domicilio', reservaId: r.data.id, maestroId: c.maestro_id, email: usuario.email, tipo: 'trabajo' }) })
+    function irAPagar(reservaId) {
+      fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ monto: c.monto, descripcion: 'Trabajo a domicilio', reservaId: reservaId, maestroId: c.maestro_id, email: usuario.email, tipo: 'trabajo' }) })
         .then(function (resp) { return resp.json(); })
         .then(function (d) {
           if (d && d.init_point) { window.location.href = d.init_point; return; }
           setMsg('No se pudo iniciar el pago: ' + ((d && d.error) || 'inténtalo de nuevo.')); setPagando(false);
         })
         .catch(function () { setMsg('No se pudo conectar con el pago. Inténtalo de nuevo.'); setPagando(false); });
+    }
+    // Evita reservas duplicadas: si ya hay PAGADA no recobra; si hay PENDIENTE reusa esa.
+    supabase.from('reservas').select('id, estado').eq('cliente_id', usuario.id).eq('presupuesto_id', s.id).then(function (rx) {
+      var ex = rx.data || [];
+      if (ex.some(function (x) { return (x.estado || '').toLowerCase() === 'pagado'; })) { setPagando(false); setMsg('Ya pagaste esta cotización. Está en "Pagadas".'); cargarReservas(); return; }
+      var pend = ex.filter(function (x) { return (x.estado || '').toLowerCase() === 'pendiente_pago'; })[0];
+      if (pend) { irAPagar(pend.id); return; }
+      supabase.from('reservas').insert({
+        cliente_id: usuario.id,
+        maestro_id: c.maestro_id,
+        presupuesto_id: s.id,
+        descripcion_problema: s.descripcion,
+        direccion: s.direccion,
+        estado: 'pendiente_pago',
+        precio_cotizado: c.monto || null,
+        link_video: s.video_url || null,
+      }).select().single().then(function (r) {
+        if (r.error) { setMsg('Error: ' + r.error.message); setPagando(false); return; }
+        irAPagar(r.data.id);
+      });
     });
   }
 
@@ -736,7 +744,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                         <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 10 }}>{'\u{1F512}'} Al aceptar pasas al pago seguro con Flow. Tu dinero queda protegido hasta que confirmes que el trabajo quedó listo.</div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={function () { setChatKey(chatKey === ck ? null : ck); }} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 10, padding: 10, fontWeight: 800, fontSize: 12.5, cursor: 'pointer' }}>{'\u{1F4AC} Conversar' + (unread > 0 ? ' · ' + unread : '')}</button>
-                          <button className="gbtn" style={{ flex: 1.3, padding: 10, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { aceptarYPagar(s, c); }}>{pagando ? 'Generando pago…' : 'Aceptar y pagar'}</button>
+                          <button className="gbtn" style={{ flex: 1.3, padding: 10, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={function () { aceptarYPagar(s, c); }}>{pagando ? 'Generando pago\u2026' : 'Aceptar y pagar'}</button>
                         </div>
                         {msg && <p style={{ fontSize: 12, fontWeight: 600, textAlign: 'center', margin: '8px 0 0', color: (msg.indexOf('Error') >= 0 || msg.indexOf('No se pudo') >= 0) ? '#b3261e' : '#0d9456' }}>{msg}</p>}
                       </div>

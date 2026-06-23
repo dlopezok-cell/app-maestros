@@ -80,9 +80,11 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
           setEsMaestro(true); setMisOficios(ofs); cargar(ofs);
           supabase.rpc('agenda_maestro').then(function (ra) {
             var rows = ra.error ? [] : (ra.data || []);
-            supabase.from('reservas').select('id, presupuesto_id').eq('maestro_id', usuario.id).then(function (rb) {
-              var mp = {}; (rb.data || []).forEach(function (x) { mp[x.id] = x.presupuesto_id; });
+            supabase.from('reservas').select('id, presupuesto_id, estado').eq('maestro_id', usuario.id).then(function (rb) {
+              var mp = {}; var est = {}; (rb.data || []).forEach(function (x) { mp[x.id] = x.presupuesto_id; est[x.id] = (x.estado || '').toLowerCase(); });
               rows.forEach(function (r) { if (!r.presupuesto_id) r.presupuesto_id = mp[r.id]; });
+              // Solo trabajos realmente PAGADOS (no "pendiente_pago"): evita mostrar como aceptado algo sin pago.
+              rows = rows.filter(function (r) { return (est[r.id] || (r.estado || '').toLowerCase()) === 'pagado'; });
               var pids = rows.map(function (r) { return r.presupuesto_id; }).filter(Boolean);
               if (pids.length) {
                 supabase.from('presupuestos').select('id, titulo').in('id', pids).then(function (rp) {
