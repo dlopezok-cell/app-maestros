@@ -16,16 +16,6 @@ function jitterCoord(lat, lng, id) {
   var dLng = dist * Math.sin(ang) / Math.max(0.2, Math.cos(lat * Math.PI / 180));
   return [lat + dLat, lng + dLng];
 }
-function cargarLeaflet(cb) {
-  if (typeof window === 'undefined') return;
-  if (window.L) { cb(); return; }
-  if (!document.getElementById('leaflet-css')) {
-    var lk = document.createElement('link'); lk.id = 'leaflet-css'; lk.rel = 'stylesheet'; lk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lk);
-  }
-  var ex = document.getElementById('leaflet-js');
-  if (ex) { var t = setInterval(function () { if (window.L) { clearInterval(t); cb(); } }, 120); return; }
-  var sc = document.createElement('script'); sc.id = 'leaflet-js'; sc.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; sc.onload = function () { cb(); }; document.body.appendChild(sc);
-}
 var GARANTIA_OPC = ['Sin garantía', '1 mes', '2 meses', '3 meses'];
 var IVA = 0.19;
 
@@ -67,6 +57,45 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
   const [noLeidos, setNoLeidos] = useState({});
   const [mapaOpen, setMapaOpen] = useState(false);
   const mapRef = useRef(null);
+
+  // Mapa INTERACTIVO de Google Maps (zoom con dos dedos + arrastrar). Usa la misma
+  // llave (NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) y SDK que ya carga el autocompletado de
+  // direcciones. Circulo de ~3 km con centro desplazado (estilo Airbnb) para no
+  // revelar la casa exacta.
+  useEffect(function () {
+    if (vista !== 'detalle' || !mapaOpen || !sel || sel.lat == null || sel.lng == null) return;
+    var cancel = false;
+    function init() {
+      if (cancel) return;
+      var el = document.getElementById('mapa-zona');
+      if (!el || !(window.google && window.google.maps)) return;
+      var c = jitterCoord(Number(sel.lat), Number(sel.lng), sel.id);
+      var center = { lat: c[0], lng: c[1] };
+      var map = new window.google.maps.Map(el, {
+        center: center, zoom: 13, gestureHandling: 'greedy', clickableIcons: false,
+        disableDefaultUI: true, zoomControl: true, streetViewControl: false,
+        mapTypeControl: false, fullscreenControl: false
+      });
+      var circle = new window.google.maps.Circle({
+        map: map, center: center, radius: 3000,
+        strokeColor: '#2563eb', strokeOpacity: 0.85, strokeWeight: 2,
+        fillColor: '#2563eb', fillOpacity: 0.15
+      });
+      try { map.fitBounds(circle.getBounds()); } catch (e) {}
+      mapRef.current = map;
+    }
+    if (window.google && window.google.maps) { init(); return function () { cancel = true; }; }
+    var key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    var existing = document.getElementById('gmaps-sdk');
+    if (existing) {
+      var iv = setInterval(function () { if (window.google && window.google.maps) { clearInterval(iv); init(); } }, 250);
+      return function () { cancel = true; clearInterval(iv); };
+    }
+    var s = document.createElement('script'); s.id = 'gmaps-sdk';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&libraries=places&language=es&region=CL';
+    s.async = true; s.onload = init; document.head.appendChild(s);
+    return function () { cancel = true; };
+  }, [vista, mapaOpen, sel]);
 
 
   function cargar(oficios) {
@@ -499,8 +528,8 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
 
             {mapaOpen && (sel.lat != null && sel.lng != null) && (
               <div style={{ marginTop: 10 }}>
-                <img src={'/api/mapa-zona?lat=' + sel.lat + '&lng=' + sel.lng + '&id=' + encodeURIComponent(sel.id)} alt="Zona aproximada del trabajo" style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 12, border: '1px solid #eef0f5', background: '#e8edf2', display: 'block' }} />
-                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 6, lineHeight: 1.5 }}>{'\u{1F4CD}'} Zona aproximada (radio ~3 km). La dirección exacta aparece en tu Agenda cuando el cliente paga.</div>
+                <div id="mapa-zona" style={{ width: '100%', height: 230, borderRadius: 12, border: '1px solid #eef0f5', background: '#e8edf2', overflow: 'hidden' }} />
+                <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 6, lineHeight: 1.5 }}>{'\u{1F4CD}'} Zona aproximada (radio ~3 km) — usa dos dedos para acercar y arrastra para moverte. La dirección exacta aparece en tu Agenda cuando el cliente paga.</div>
               </div>
             )}
             {mapaOpen && (sel.lat == null || sel.lng == null) && (
