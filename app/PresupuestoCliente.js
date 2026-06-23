@@ -38,6 +38,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
   const [miaSel, setMiaSel] = useState(null);       // solicitud expandida en la lista
   const [tabMia, setTabMia] = useState('activas');  // 'activas' | 'pagadas'
   const [presMap, setPresMap] = useState({});       // reserva.id -> presupuesto_id
+  const [presTit, setPresTit] = useState({});       // reserva.id -> titulo del presupuesto
   const [chatPagado, setChatPagado] = useState(null); // chat de un trabajo pagado {presupuestoId, maestroId, titulo, telefono}
   const [infoPago, setInfoPago] = useState(false);  // modal "pago protegido"
   const [pagando, setPagando] = useState(false);
@@ -138,7 +139,16 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
       .then(function (r) { var ds = r.error ? [] : (r.data || []); setDirecciones(ds); var p = ds.find(function (x) { return x.principal; }) || ds[0] || null; if (p) setDirSel(p); });
     cargarReservas();
     supabase.from('reservas').select('id, presupuesto_id').eq('cliente_id', usuario.id)
-      .then(function (r) { var m = {}; (r.data || []).forEach(function (x) { m[x.id] = x.presupuesto_id; }); setPresMap(m); });
+      .then(function (r) {
+        var rows = r.data || []; var m = {}; rows.forEach(function (x) { m[x.id] = x.presupuesto_id; }); setPresMap(m);
+        var pids = rows.map(function (x) { return x.presupuesto_id; }).filter(Boolean);
+        if (pids.length) {
+          supabase.from('presupuestos').select('id, titulo, oficio').in('id', pids).then(function (rp) {
+            var tm = {}; (rp.data || []).forEach(function (pp) { tm[pp.id] = (pp.titulo && pp.titulo.trim()) ? pp.titulo : (pp.oficio ? (pp.oficio.charAt(0).toUpperCase() + pp.oficio.slice(1)) : 'Trabajo'); });
+            var byRes = {}; rows.forEach(function (x) { if (tm[x.presupuesto_id]) byRes[x.id] = tm[x.presupuesto_id]; }); setPresTit(byRes);
+          });
+        }
+      });
     supabase.from('resenas').select('maestro_id').eq('cliente_id', usuario.id)
       .then(function (r) { setResenas(r.data || []); });
     cargarSolicitudes();
@@ -571,7 +581,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
                   <b style={{ fontSize: 13 }}>{rv.maestro_nombre || nombreMaestro(rv.maestro_id)}</b>
                   <b style={{ fontSize: 14, color: '#1c1f2b' }}>{plata(rv.precio)}</b>
                 </div>
-                <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{rv.descripcion}</div>
+                <div style={{ fontSize: 12, color: '#7c8499', margin: '3px 0' }}>{presTit[rv.id] || rv.titulo || rv.descripcion}</div>
                 <div style={{ fontSize: 11, color: rv.fecha_hora ? '#0d7a4f' : '#b07a1e', fontWeight: 700 }}>{rv.fecha_hora ? '\u{1F4C5} ' + fecha(rv.fecha_hora) : '\u{1F4C5} Fecha por coordinar'}</div>
 
                 {pagado && rv.maestro_telefono && (

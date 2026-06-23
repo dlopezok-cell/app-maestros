@@ -119,7 +119,7 @@ export default function VerCotizacion({ usuario, presupuestoId, maestroId, miRol
                 {msg && <div style={{ fontSize: 12.5, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#5b6275', marginBottom: 8 }}>{msg}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={onClose} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'\u{1F4AC} Conversar'}</button>
-                  <button className="gbtn" style={{ flex: 1.3, padding: 12, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={aceptar}>{pagando ? 'Aceptando…' : 'Aceptar'}</button>
+                  <button className="gbtn" style={{ flex: 1.3, padding: 12, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={aceptar}>{pagando ? 'Generando pago…' : 'Aceptar y pagar'}</button>
                 </div>
               </div>
             )}
