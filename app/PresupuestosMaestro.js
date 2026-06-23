@@ -68,25 +68,6 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
   const [mapaOpen, setMapaOpen] = useState(false);
   const mapRef = useRef(null);
 
-  useEffect(function () {
-    if (vista !== 'detalle' || !mapaOpen || !sel || sel.lat == null || sel.lng == null) {
-      if (mapRef.current) { try { mapRef.current.remove(); } catch (e) {} mapRef.current = null; }
-      return;
-    }
-    cargarLeaflet(function () {
-      var el = document.getElementById('mapa-zona');
-      if (!el || !window.L) return;
-      if (mapRef.current) { try { mapRef.current.remove(); } catch (e) {} mapRef.current = null; }
-      var c = jitterCoord(Number(sel.lat), Number(sel.lng), sel.id);
-      var map = window.L.map(el, { zoomControl: false, scrollWheelZoom: false, attributionControl: false });
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
-      var circ = window.L.circle(c, { radius: 3000, color: '#2563eb', weight: 2, fillColor: '#2563eb', fillOpacity: 0.14 }).addTo(map);
-      map.fitBounds(circ.getBounds(), { padding: [12, 12] });
-      mapRef.current = map;
-      setTimeout(function () { try { map.invalidateSize(); } catch (e) {} }, 200);
-    });
-    return function () { if (mapRef.current) { try { mapRef.current.remove(); } catch (e) {} mapRef.current = null; } };
-  }, [vista, mapaOpen, sel]);
 
   function cargar(oficios) {
     supabase.from('presupuestos').select('*, cotizaciones(*)')
@@ -518,7 +499,7 @@ export default function PresupuestosMaestro({ usuario, pedidoDestacado }) {
 
             {mapaOpen && (sel.lat != null && sel.lng != null) && (
               <div style={{ marginTop: 10 }}>
-                <div id="mapa-zona" style={{ width: '100%', height: 180, borderRadius: 12, overflow: 'hidden', border: '1px solid #eef0f5', background: '#e8edf2' }} />
+                <img src={'/api/mapa-zona?lat=' + sel.lat + '&lng=' + sel.lng + '&id=' + encodeURIComponent(sel.id)} alt="Zona aproximada del trabajo" style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 12, border: '1px solid #eef0f5', background: '#e8edf2', display: 'block' }} />
                 <div style={{ fontSize: 11, color: '#9aa1b5', marginTop: 6, lineHeight: 1.5 }}>{'\u{1F4CD}'} Zona aproximada (radio ~3 km). La dirección exacta aparece en tu Agenda cuando el cliente paga.</div>
               </div>
             )}
