@@ -35,21 +35,28 @@ export default function VerCotizacion({ usuario, presupuestoId, maestroId, miRol
 
   function aceptar() {
     if (!cot || !cot.monto) { setMsg('El maestro aún no puso un precio. Pídeselo en el chat.'); return; }
-    setPagando(true); setMsg('Aceptando la cotización...');
+    if (!usuario || !usuario.email) { setMsg('Inicia sesión con tu correo para poder pagar.'); return; }
+    setPagando(true); setMsg('Generando el pago seguro...');
+    // Crea la reserva en "pendiente_pago" y manda al checkout de Flow.
+    // El webhook /api/flow la marca "pagado" cuando el pago se confirma.
     supabase.from('reservas').insert({
       cliente_id: usuario.id,
       maestro_id: maestroId,
       presupuesto_id: presupuestoId,
       descripcion_problema: pres ? pres.descripcion : null,
       direccion: pres ? pres.direccion : null,
-      estado: 'pagado',
+      estado: 'pendiente_pago',
       precio_cotizado: cot.monto || null,
       link_video: pres ? (pres.video_url || null) : null,
     }).select().single().then(function (r) {
       if (r.error) { setMsg('Error: ' + r.error.message); setPagando(false); return; }
-      supabase.from('presupuestos').update({ estado: 'cerrado' }).eq('id', presupuestoId).then(function () {});
-      try { fetch('/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'trabajo_pagado', reservaId: r.data.id, monto: cot.monto }) }); } catch (e) {}
-      setPagando(false); setAceptado(true); setMsg(null);
+      fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ monto: cot.monto, descripcion: (titulo ? ('Trabajo: ' + titulo) : 'Trabajo a domicilio'), reservaId: r.data.id, maestroId: maestroId, email: usuario.email, tipo: 'trabajo' }) })
+        .then(function (resp) { return resp.json(); })
+        .then(function (d) {
+          if (d && d.init_point) { window.location.href = d.init_point; return; }
+          setMsg('No se pudo iniciar el pago: ' + ((d && d.error) || 'inténtalo de nuevo.')); setPagando(false);
+        })
+        .catch(function () { setMsg('No se pudo conectar con el pago. Inténtalo de nuevo.'); setPagando(false); });
     });
   }
 
@@ -100,11 +107,11 @@ export default function VerCotizacion({ usuario, presupuestoId, maestroId, miRol
 
             {miRol === 'cliente' && !aceptado && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 10 }}>{'\u{1F4C5}'} Al aceptar se revela el contacto del maestro y coordinan fecha y pago directamente.</div>
+                <div style={{ fontSize: 11.5, color: '#7c8499', marginBottom: 10 }}>{'\u{1F512}'} Al aceptar pasas al pago seguro con Flow. Tu dinero queda protegido hasta que confirmes que el trabajo quedó listo.</div>
                 {msg && <div style={{ fontSize: 12.5, color: msg.indexOf('Error') >= 0 ? '#b3261e' : '#5b6275', marginBottom: 8 }}>{msg}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={onClose} style={{ flex: 1, background: '#fff', color: '#2563eb', border: '1.5px solid #dbe7fb', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>{'\u{1F4AC} Conversar'}</button>
-                  <button className="gbtn" style={{ flex: 1.3, padding: 12, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={aceptar}>{pagando ? 'Aceptando…' : 'Aceptar'}</button>
+                  <button className="gbtn" style={{ flex: 1.3, padding: 12, opacity: pagando ? 0.6 : 1 }} disabled={pagando} onClick={aceptar}>{pagando ? 'Generando pago…' : 'Aceptar y pagar'}</button>
                 </div>
               </div>
             )}
