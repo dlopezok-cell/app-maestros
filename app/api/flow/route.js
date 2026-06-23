@@ -1,14 +1,12 @@
 // app/api/flow/route.js
-// Maneja dos cosas de Flow según ?action=:
-//  - confirmar: webhook servidor-a-servidor. Flow avisa que un pago cambió; verificamos
-//    su estado real con getStatus y, si está pagado, lo registramos y avisamos a las partes.
-//  - retorno: el navegador del usuario vuelve aquí tras pagar; lo mandamos de regreso a la app.
+// Webhook + retorno de Flow. Empareja el pago con la reserva por flow_order
+// (commerceOrder guardado al crear el pago), marca la reserva como pagada,
+// cierra el presupuesto, avisa por correo y registra el pago (best-effort).
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
-// Dominio canónico de producción (no dependemos de env para no devolver al dominio equivocado).
 const SITE = 'https://www.maestrosenlinea.cl';
 
 function firmar(params, secret) {
@@ -18,7 +16,6 @@ function firmar(params, secret) {
   return crypto.createHmac('sha256', secret).update(cadena).digest('hex');
 }
 
-// Mismo desglose de comisiones que usaba Mercado Pago.
 function desglose(monto) {
   const comision = Math.round(monto * 0.10 * 1.19);
   const pasarela = Math.round(monto * 0.0235 * 1.19);
@@ -37,30 +34,48 @@ async function estadoFlow(token) {
   return await r.json();
 }
 
-// Registra el pago (idempotente) y, SOLO la primera vez que la reserva pasa de
-// "pendiente_pago" a "pagado", avisa por correo al maestro y al cliente.
-async function registrarSiPagado(token) {
-  const st = await estadoFlow(token);
-  // status: 1 pendiente, 2 pagado, 3 rechazado, 4 anulado
-  if (!st || st.status !== 2) return st;
-
-  const monto = Math.round(Number(st.amount) || 0);
-  const d = desglose(monto);
-  let opt = {};
-  try { opt = JSON.parse(st.optional || '{}'); } catch {}
-
+// Aplica el pago a partir de un estado YA verificado como pagado (status 2).
+async function aplicarPago(st) {
+  if (!st || st.status !== 2) { console.log('flow: estado no pagado', st && st.status); return; }
   const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supaUrl || !serviceKey) return st;
-
+  if (!supaUrl || !serviceKey) { console.error('flow: faltan envs de Supabase'); return; }
   const admin = createClient(supaUrl, serviceKey);
 
-  // 1) Registrar el pago (idempotente por flowOrder).
-  await admin.from('pagos').upsert(
-    {
+  const monto = Math.round(Number(st.amount) || 0);
+  let opt = {};
+  try { opt = JSON.parse(st.optional || '{}'); } catch {}
+  const commerceOrder = st.commerceOrder || null;
+  console.log('flow.aplicarPago', { commerceOrder, reservaId: opt.reservaId, monto });
+
+  // 1) Marcar la reserva pagada (atómico, idempotente). Empareja por flow_order o por id.
+  let q = admin.from('reservas').update({ estado: 'pagado' }).eq('estado', 'pendiente_pago');
+  if (commerceOrder) q = q.eq('flow_order', commerceOrder);
+  else if (opt.reservaId) q = q.eq('id', opt.reservaId);
+  else { console.error('flow: sin commerceOrder ni reservaId'); }
+  const upd = await q.select('id, presupuesto_id, maestro_id');
+  if (upd.error) console.error('flow: error update reserva', upd.error.message);
+  const reserva = (upd.data && upd.data[0]) || null;
+
+  if (reserva) {
+    if (reserva.presupuesto_id) {
+      try { await admin.from('presupuestos').update({ estado: 'cerrado' }).eq('id', reserva.presupuesto_id); }
+      catch (e) { console.error('flow: error cerrar presupuesto', e && e.message); }
+    }
+    try {
+      await fetch(SITE + '/api/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'trabajo_pagado', reservaId: reserva.id, monto }) });
+    } catch (e) { console.error('flow: error notificar', e && e.message); }
+  } else {
+    console.log('flow: reserva ya pagada o no encontrada (idempotente)');
+  }
+
+  // 2) Registrar el pago (idempotente, best-effort).
+  try {
+    const d = desglose(monto);
+    const rp = await admin.from('pagos').upsert({
       mp_payment_id: 'flow_' + (st.flowOrder || st.commerceOrder),
-      reserva_id: opt.reservaId || null,
-      maestro_id: opt.maestroId || null,
+      reserva_id: (reserva && reserva.id) || opt.reservaId || null,
+      maestro_id: (reserva && reserva.maestro_id) || opt.maestroId || null,
       tipo: opt.tipo || 'trabajo',
       email: st.payer || null,
       descripcion: st.subject || null,
@@ -70,70 +85,33 @@ async function registrarSiPagado(token) {
       retencion_sii: d.retencion,
       liquido_maestro: d.liquido,
       estado: 'pagado',
-    },
-    { onConflict: 'mp_payment_id' }
-  );
-
-  // 2) Marcar la reserva como pagada de forma ATÓMICA: solo gana quien la pasa
-  //    de 'pendiente_pago' a 'pagado'. Así el correo se envía una sola vez aunque
-  //    Flow llame al webhook varias veces o coincida con el retorno del usuario.
-  if (opt.reservaId) {
-    const upd = await admin
-      .from('reservas')
-      .update({ estado: 'pagado' })
-      .eq('id', opt.reservaId)
-      .eq('estado', 'pendiente_pago')
-      .select('id, presupuesto_id');
-    const gane = !!(upd.data && upd.data.length);
-    if (gane) {
-      // Cerrar el presupuesto asociado (antes lo hacía el botón "Aceptar").
-      const presId = upd.data[0].presupuesto_id;
-      if (presId) { try { await admin.from('presupuestos').update({ estado: 'cerrado' }).eq('id', presId); } catch {} }
-      // Avisar a maestro y cliente (fire-and-forget; no frena el webhook).
-      try {
-        await fetch(SITE + '/api/notificar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo: 'trabajo_pagado', reservaId: opt.reservaId, monto }),
-        });
-      } catch {}
-    }
-  }
-  return st;
+    }, { onConflict: 'mp_payment_id' });
+    if (rp.error) console.error('flow: error upsert pago', rp.error.message);
+  } catch (e) { console.error('flow: throw upsert pago', e && e.message); }
 }
 
 export async function POST(req) {
   const action = new URL(req.url).searchParams.get('action');
-
   let token = null;
-  try {
-    const form = await req.formData();
-    token = form.get('token');
-  } catch {}
+  try { const form = await req.formData(); token = form.get('token'); } catch {}
 
   if (action === 'retorno') {
-    // El usuario vuelve desde Flow. Lo mandamos de regreso a la app (con ?app=1 para
-    // saltar la portada "PRONTO") y ?pago= para mostrar el mensaje de confirmación.
     let estado = 'pendiente';
     try {
       if (token) {
         const st = await estadoFlow(token);
         estado = st && st.status === 2 ? 'ok' : (st && st.status === 3 ? 'fallo' : 'pendiente');
-        // Registramos también aquí por si el webhook se demora.
-        if (st && st.status === 2) await registrarSiPagado(token);
+        if (st && st.status === 2) await aplicarPago(st);
       }
-    } catch {}
+    } catch (e) { console.error('flow.retorno error', e && e.message); }
     return Response.redirect(SITE + '/?app=1&pago=' + estado, 303);
   }
 
-  // action === 'confirmar' (webhook). Respondemos 200 siempre para que Flow no reintente sin fin.
+  // confirmar (webhook). Respondemos 200 siempre.
   try {
-    if (token) await registrarSiPagado(token);
-  } catch {}
+    if (token) { const st = await estadoFlow(token); await aplicarPago(st); }
+  } catch (e) { console.error('flow.confirmar error', e && e.message); }
   return new Response('ok', { status: 200 });
 }
 
-export async function GET() {
-  // Health check / verificación de endpoint.
-  return new Response('ok', { status: 200 });
-}
+export async function GET() { return new Response('ok', { status: 200 }); }
