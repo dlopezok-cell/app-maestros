@@ -35,12 +35,39 @@ export default function UsuariosPanel({ categorias }) {
     if (!cats.length) { setMsg('Selecciona al menos una categoría.'); return; }
     // Resumen siempre incluido para que tengan una pantalla de inicio.
     if (cats.indexOf('resumen') < 0) cats.unshift('resumen');
+    var yaExiste = (usuarios || []).some(function (u) { return (u.email || '').toLowerCase() === em; });
     setGuardando(true); setMsg('Guardando…');
     var r = await supabase.from('panel_usuarios').upsert({ email: em, nombre: nombre.trim() || em, categorias: cats, activo: true }, { onConflict: 'email' });
+    if (r.error) { setGuardando(false); setMsg('Error: ' + r.error.message); return; }
+    setNombre(''); setEmail(''); setSel({});
+    if (!yaExiste) {
+      // Usuario NUEVO: le mandamos el enlace de acceso al correo automáticamente.
+      var env = await enviarEnlace(em);
+      setMsg(env.ok
+        ? ('¡Usuario guardado! Le enviamos el enlace de acceso a ' + em + '. Si no lo ve en unos minutos, que revise la carpeta de spam.')
+        : ('Usuario guardado, pero no se pudo enviar el correo (' + env.error + '). Puede entrar igual desde /admin con "Entrar con enlace por correo", o usa el botón "Enviar enlace".'));
+    } else {
+      setMsg('¡Cambios guardados! El acceso de ' + em + ' sigue activo. (Usa "Enviar enlace" si quiere recibir el correo de nuevo.)');
+    }
     setGuardando(false);
-    if (r.error) { setMsg('Error: ' + r.error.message); return; }
-    setNombre(''); setEmail(''); setSel({}); setMsg('¡Usuario guardado! Entrará con el enlace por correo en /admin.');
     cargar();
+  }
+
+  async function enviarEnlace(em) {
+    var origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://www.maestrosenlinea.cl';
+    try {
+      var res = await supabase.auth.signInWithOtp({ email: em, options: { emailRedirectTo: origin + '/admin', shouldCreateUser: true } });
+      if (res && res.error) return { ok: false, error: res.error.message };
+      return { ok: true };
+    } catch (e) { return { ok: false, error: (e && e.message) || 'error' }; }
+  }
+
+  async function reenviar(u) {
+    setMsg('Enviando enlace de acceso a ' + u.email + '…');
+    var env = await enviarEnlace((u.email || '').toLowerCase());
+    setMsg(env.ok
+      ? ('Enlace enviado a ' + u.email + '. Si no llega en unos minutos, que revise spam.')
+      : ('No se pudo enviar: ' + env.error));
   }
 
   async function editar(u) {
@@ -121,6 +148,7 @@ export default function UsuariosPanel({ categorias }) {
                       <span style={{ color: u.activo ? '#0d9456' : '#9ca3af', fontWeight: 700 }}>{u.activo ? 'Activo' : 'Inactivo'}</span>
                     </td>
                     <td style={{ padding: '9px 11px', fontSize: 12, borderTop: '1px solid #f1f1f1', whiteSpace: 'nowrap' }}>
+                      <button onClick={function () { reenviar(u); }} style={{ border: '1px solid #cfe0fb', background: '#eef5ff', color: '#1d4ed8', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700, marginRight: 6 }}>{'✉️ Enviar enlace'}</button>
                       <button onClick={function () { editar(u); }} style={{ border: '1px solid #e5e7eb', background: '#fff', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700, marginRight: 6 }}>Editar</button>
                       <button onClick={function () { alternarActivo(u); }} style={{ border: '1px solid #e5e7eb', background: '#fff', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700, marginRight: 6 }}>{u.activo ? 'Desactivar' : 'Activar'}</button>
                       <button onClick={function () { eliminar(u); }} style={{ border: '1px solid #f0c8c2', background: '#fff', color: '#b3261e', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Quitar</button>
