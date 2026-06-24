@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/captar-programados", "schedule": "0 14 * * *" },
-    { "path": "/api/captar-followup", "schedule": "0 15 * * *" }
+    { "path": "/api/captar-followup", "schedule": "0 15 * * *" },
+    { "path": "/api/notif-programados", "schedule": "30 14 * * *" }
   ]
 }
