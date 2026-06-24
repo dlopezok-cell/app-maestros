@@ -671,6 +671,47 @@ export default function Admin() {
             </div>
           </div>
 
+          {(function () {
+            var DEFW = [
+              { k: 'hero', n: 'Pedir presupuesto por video' },
+              { k: 'pasos', n: 'Cómo funciona (3 pasos)' },
+              { k: 'especialidades', n: 'Especialidades' },
+              { k: 'trabajo', n: 'Trabajo destacado' },
+              { k: 'destacados', n: 'Maestros destacados' }
+            ];
+            var NOM = {}; DEFW.forEach(function (d) { NOM[d.k] = d.n; });
+            var raw = portada && portada.home_widgets;
+            if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { raw = null; } }
+            var lst = Array.isArray(raw) ? raw.filter(function (w) { return w && NOM[w.k]; }).map(function (w) { return { k: w.k, on: w.on !== false }; }) : [];
+            DEFW.forEach(function (d) { if (!lst.some(function (w) { return w.k === d.k; })) lst.push({ k: d.k, on: true }); });
+            function setW(nl) { setPortada(function (p) { return Object.assign({}, p, { home_widgets: nl }); }); }
+            function toggleW(i) { var nl = lst.slice(); nl[i] = { k: nl[i].k, on: !nl[i].on }; setW(nl); }
+            function moverW(i, d) { var j = i + d; if (j < 0 || j >= lst.length) return; var nl = lst.slice(); var t = nl[i]; nl[i] = nl[j]; nl[j] = t; setW(nl); }
+            return (
+              <div style={card}>
+                <b style={{ fontSize: 14 }}>{'\u{1F9F1} Constructor del Home'}</b>
+                <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Activa o apaga cada bloque del inicio y ordénalo con {'▲▼'}. El buscador (cabecera) y el pie quedan siempre. Guarda para aplicar.</div>
+                {lst.map(function (w, i) {
+                  return (
+                    <div key={w.k} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #eef0f5', borderRadius: 12, padding: '10px 12px', marginBottom: 8, opacity: w.on ? 1 : 0.55 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <button onClick={function () { moverW(i, -1); }} disabled={i === 0} style={{ border: 'none', background: '#f3f3f8', borderRadius: 6, width: 26, height: 18, cursor: i === 0 ? 'default' : 'pointer', color: '#5b6275', fontSize: 11, lineHeight: 1 }}>{'▲'}</button>
+                        <button onClick={function () { moverW(i, 1); }} disabled={i === lst.length - 1} style={{ border: 'none', background: '#f3f3f8', borderRadius: 6, width: 26, height: 18, cursor: i === lst.length - 1 ? 'default' : 'pointer', color: '#5b6275', fontSize: 11, lineHeight: 1 }}>{'▼'}</button>
+                      </div>
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#1c1f2b' }}>{NOM[w.k]}</span>
+                      <span style={{ fontSize: 11, color: '#9aa1b5', minWidth: 48, textAlign: 'right' }}>{w.on ? 'Visible' : 'Oculto'}</span>
+                      <button onClick={function () { toggleW(i); }} style={{ flexShrink: 0, position: 'relative', width: 52, height: 28, borderRadius: 20, border: 'none', cursor: 'pointer', background: w.on ? '#2563eb' : '#cfd3df' }}>
+                        <span style={{ position: 'absolute', top: 3, left: w.on ? 27 : 3, width: 22, height: 22, borderRadius: '50%', background: '#fff', transition: '.15s' }} />
+                      </button>
+                    </div>
+                  );
+                })}
+                <button onClick={function () { guardarPortada({ home_widgets: lst }); }} style={{ marginTop: 4, width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar orden del Home</button>
+                {portadaMsg && <div style={{ fontSize: 12.5, color: '#0d9456', marginTop: 8, fontWeight: 700 }}>{portadaMsg}</div>}
+              </div>
+            );
+          })()}
+
           <div style={card}>
             <b style={{ fontSize: 14 }}>Contenido de la portada</b>
             <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Edita lo que se muestra y guarda. Cambia al instante en la portada pública.</div>
