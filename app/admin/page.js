@@ -553,6 +553,25 @@ export default function Admin() {
       </div>
 
       <div style={{ marginBottom: 16 }}>
+        <style>{'.mel-adminnav-mobile{display:none} @media (max-width:640px){.mel-adminnav-mobile{display:block} .mel-adminnav-desktop{display:none}}'}</style>
+        <div className="mel-adminnav-mobile">
+          <label style={{ fontSize: 10, fontWeight: 800, color: '#b3b8c6', textTransform: 'uppercase', letterSpacing: '.05em', margin: '0 2px 4px', display: 'block' }}>Sección</label>
+          <select value={seccion} onChange={function (e) { setSeccion(e.target.value); }} style={{ width: '100%', fontSize: 15, fontWeight: 700, padding: '13px 14px', borderRadius: 12, border: '1.5px solid #e4e4ef', background: '#fff', color: '#1c1f2b', boxSizing: 'border-box' }}>
+            {CATEGORIAS.filter(function (categoria) { return esSuper || cats.indexOf(categoria.id) >= 0; }).map(function (categoria) {
+              var secsM = SECCIONES.filter(function (s) { return s.cat === categoria.id && (esSuper || !s.soloSuper); });
+              if (!secsM.length) return null;
+              return (
+                <optgroup key={categoria.id} label={categoria.icono + ' ' + categoria.nombre}>
+                  {secsM.map(function (s) {
+                    var b = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'soporte' ? soporteTotal : s.id === 'liberar' ? porLiberarCount : 0;
+                    return <option key={s.id} value={s.id}>{s.icono + ' ' + s.nombre + (b > 0 ? ' (' + b + ')' : '')}</option>;
+                  })}
+                </optgroup>
+              );
+            })}
+          </select>
+        </div>
+        <div className="mel-adminnav-desktop">
         {CATEGORIAS.filter(function (categoria) { return esSuper || cats.indexOf(categoria.id) >= 0; }).map(function (categoria) {
           var secs = SECCIONES.filter(function (s) { return s.cat === categoria.id && (esSuper || !s.soloSuper); });
           if (!secs.length) return null;
@@ -575,6 +594,7 @@ export default function Admin() {
             </div>
           );
         })}
+        </div>
       </div>
 
       {msg && <p style={{ color: '#b3261e', fontSize: 13 }}>{msg}</p>}
