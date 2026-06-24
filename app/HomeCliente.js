@@ -125,6 +125,10 @@ export default function HomeCliente(props) {
           <p>Pide en un solo lugar y te llegan varios presupuestos de maestros verificados. Eliges al mejor evaluado y pagas seguro, sin sorpresas.</p>
           <button className="hc-btn">Grabar video →</button>
         </div>
+      </div>
+    ),
+    confianza: (
+      <div className="hc-sec">
         <div className="hc-trustrip">
           <span>{ICON.shield}Maestros verificados</span>
           <span>{ICON.checkc}Sin sorpresas en el precio</span>
@@ -221,6 +225,10 @@ export default function HomeCliente(props) {
           <div><b>Maestros verificados</b><p>Revisamos antecedentes de cada maestro antes de sumarlo.</p></div>
         </div>
 
+      </div>
+    ),
+    eres_maestro: (
+      <div className="hc-sec">
         <a className="hc-mbanner" href="/maestros">
           <span>{ICON.mega}</span>
           <div className="hc-tx"><b>¿Eres maestro?</b><p>Súmate gratis · 0% comisión de Fundador.</p></div>
@@ -229,9 +237,10 @@ export default function HomeCliente(props) {
       </div>
     ),
   };
-  var ORDEN_DEF = ['hero', 'pasos', 'especialidades', 'trabajo', 'destacados'];
+  var ORDEN_DEF = ['hero', 'confianza', 'pasos', 'especialidades', 'trabajo', 'destacados', 'eres_maestro'];
   var rawW = props.homeWidgets;
   if (typeof rawW === 'string') { try { rawW = JSON.parse(rawW); } catch (e) { rawW = null; } }
+  var verBuscador = !(Array.isArray(rawW) && rawW.some(function (w) { return w && w.k === 'buscador' && w.on === false; }));
   var orden = Array.isArray(rawW) ? rawW.filter(function (w) { return w && BLOQUES[w.k]; }).map(function (w) { return { k: w.k, on: w.on !== false }; }) : null;
   if (!orden) { orden = ORDEN_DEF.map(function (k) { return { k: k, on: true }; }); }
   else { ORDEN_DEF.forEach(function (k) { if (!orden.some(function (w) { return w.k === k; })) orden.push({ k: k, on: true }); }); }
@@ -246,10 +255,12 @@ export default function HomeCliente(props) {
           
         </div>
         <div className="hc-tagline">🇨🇱 La primera plataforma en Chile · pide, compara y paga seguro</div>
-        <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
-          {ICON.search}
-          <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" enterKeyHint="search" />
-        </form>
+        {verBuscador && (
+          <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
+            {ICON.search}
+            <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" enterKeyHint="search" />
+          </form>
+        )}
       </div>
 
       {orden.filter(function (w) { return w.on; }).map(function (w) { return <div key={w.k} style={{ display: 'contents' }}>{BLOQUES[w.k]}</div>; })}
