@@ -138,15 +138,27 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
 
   function grabar() {
     if (recRef.current) { try { recRef.current.stop(); } catch (e) {} return; }
-    if (!navigator.mediaDevices || !window.MediaRecorder) { alert('Tu navegador no soporta grabar audio.'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { alert('Tu navegador no soporta grabar audio.'); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-      var mr = new MediaRecorder(stream); var chunks = [];
+      // iOS (Safari/WKWebView) SOLO graba en mp4/aac; Android y escritorio usan webm/ogg.
+      // Elegimos el primer formato realmente soportado para que el audio se grabe y se reproduzca bien.
+      var cands = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
+      var mime = '';
+      for (var i = 0; i < cands.length; i++) {
+        try { if (window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(cands[i])) { mime = cands[i]; break; } } catch (e) {}
+      }
+      var mr;
+      try { mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); }
+      catch (e1) { try { mr = new MediaRecorder(stream); } catch (e2) { stream.getTracks().forEach(function (t) { t.stop(); }); alert('Tu navegador no soporta grabar audio.'); return; } }
+      var chunks = [];
       mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
       mr.onstop = function () {
-        var blob = new Blob(chunks, { type: 'audio/webm' });
+        var real = String(mr.mimeType || mime || 'audio/mp4').split(';')[0];
+        var ext = real.indexOf('mp4') >= 0 ? 'm4a' : (real.indexOf('aac') >= 0 ? 'aac' : (real.indexOf('ogg') >= 0 ? 'ogg' : 'webm'));
+        var blob = new Blob(chunks, { type: real });
         stream.getTracks().forEach(function (t) { t.stop(); });
         recRef.current = null; setGrabando(false);
-        if (blob.size > 0) subir(blob, 'audio', 'webm', 'audio/webm');
+        if (blob.size > 0) subir(blob, 'audio', ext, real);
       };
       mr.start(); recRef.current = mr; setGrabando(true);
     }).catch(function () { alert('No pudimos acceder al micrófono. Revisa los permisos.'); });
