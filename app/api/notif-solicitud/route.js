@@ -80,6 +80,14 @@ export async function POST(req) {
       return ofs.indexOf(p.oficio) >= 0;
     });
 
+    // Tope: avisar como máximo a N maestros por solicitud (def 10). Mezcla al azar
+    // para repartir los avisos entre los maestros que calzan y no saturar siempre a los mismos.
+    const MAX = parseInt(process.env.NOTIF_SOLICITUD_MAX || '10', 10) || 10;
+    if (maestros.length > MAX) {
+      for (let s = maestros.length - 1; s > 0; s--) { const k = Math.floor(Math.random() * (s + 1)); const tmp = maestros[s]; maestros[s] = maestros[k]; maestros[k] = tmp; }
+      maestros = maestros.slice(0, MAX);
+    }
+
     const lang = (token && maestros.length) ? await langDe(token, TEMPLATE) : 'es';
     let enviados = 0, encolados = 0;
     for (let i = 0; i < maestros.length; i++) {
