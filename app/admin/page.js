@@ -673,11 +673,14 @@ export default function Admin() {
 
           {(function () {
             var DEFW = [
+              { k: 'buscador', n: 'Buscador (cabecera)' },
               { k: 'hero', n: 'Pedir presupuesto por video' },
+              { k: 'confianza', n: 'Tira de confianza' },
               { k: 'pasos', n: 'Cómo funciona (3 pasos)' },
               { k: 'especialidades', n: 'Especialidades' },
               { k: 'trabajo', n: 'Trabajo destacado' },
-              { k: 'destacados', n: 'Maestros destacados' }
+              { k: 'destacados', n: 'Maestros destacados' },
+              { k: 'eres_maestro', n: '¿Eres maestro? (banner)' }
             ];
             var NOM = {}; DEFW.forEach(function (d) { NOM[d.k] = d.n; });
             var raw = portada && portada.home_widgets;
