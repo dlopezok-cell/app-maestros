@@ -509,6 +509,7 @@ cats={cats} oficio={oficio} setOficio={setOficio}
 q={q} setQ={setQ} lista={lista} EMO={EMO} plata={plata}
 nombreM={nombreM} fotoM={fotoM} oficiosM={oficiosM} ofNombre={ofNombre} ratingDe={ratingDe}
 onMaestro={abrirFicha} onCotizar={function () { irTab('cotizar'); }} onBuscar={buscar}
+homeWidgets={portada && portada.home_widgets}
 />
 {aviso && (
 <div onClick={function () { try { window.localStorage.setItem('mel_aviso_v1', '1'); } catch (e) {} setAviso(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(8,15,32,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>

@@ -113,22 +113,8 @@ export default function HomeCliente(props) {
   function onCotizar() { if (props.onCotizar) props.onCotizar(); }
   function onMaestro(m) { if (props.onMaestro) props.onMaestro(m); }
 
-  return (
-    <div className="hcli">
-      <style>{CSS}</style>
-
-      <div className="hc-appbar">
-        <div className="hc-row">
-          <div className="hc-brand">{ICON.compass} MaestrosEnLínea</div>
-          
-        </div>
-        <div className="hc-tagline">🇨🇱 La primera plataforma en Chile · pide, compara y paga seguro</div>
-        <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
-          {ICON.search}
-          <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" enterKeyHint="search" />
-        </form>
-      </div>
-
+  var BLOQUES = {
+    hero: (
       <div className="hc-sec">
         <div className="hc-videohero" onClick={onCotizar}>
           <img className="hc-herobg" src={FOTO_PORTADA} alt="" />
@@ -145,7 +131,8 @@ export default function HomeCliente(props) {
           <span>{ICON.lock}Protegemos tu pago</span>
         </div>
       </div>
-
+    ),
+    pasos: (
       <div className="hc-sec">
         <h4>¿Cómo funciona?</h4>
         <div className="hc-hsteps">
@@ -163,7 +150,8 @@ export default function HomeCliente(props) {
           </div>
         </div>
       </div>
-
+    ),
+    especialidades: (
       <div className="hc-sec">
         <h4>¿Qué necesitas?</h4>
         <div className="hc-cats">
@@ -179,7 +167,8 @@ export default function HomeCliente(props) {
           })}
         </div>
       </div>
-
+    ),
+    trabajo: (
       <div className="hc-sec">
         <div className="hc-seehead"><h4>Proyectos destacados</h4></div>
         <div className="hc-proj">
@@ -198,7 +187,8 @@ export default function HomeCliente(props) {
           <div className="hc-bc"><b className="hc-ptitle">Mantención del hogar</b><div className="hc-prow"><span className="hc-desc">Arreglos y mejoras con maestros verificados</span><span className="hc-go">Pronto</span></div></div>
         </div>
       </div>
-
+    ),
+    destacados: (
       <div className="hc-sec">
         <div className="hc-seehead"><h4>Maestros destacados</h4></div>
         <div className="hc-hscroll">
@@ -237,7 +227,32 @@ export default function HomeCliente(props) {
           <span className="hc-cta2">Quiero unirme</span>
         </a>
       </div>
+    ),
+  };
+  var ORDEN_DEF = ['hero', 'pasos', 'especialidades', 'trabajo', 'destacados'];
+  var rawW = props.homeWidgets;
+  if (typeof rawW === 'string') { try { rawW = JSON.parse(rawW); } catch (e) { rawW = null; } }
+  var orden = Array.isArray(rawW) ? rawW.filter(function (w) { return w && BLOQUES[w.k]; }).map(function (w) { return { k: w.k, on: w.on !== false }; }) : null;
+  if (!orden) { orden = ORDEN_DEF.map(function (k) { return { k: k, on: true }; }); }
+  else { ORDEN_DEF.forEach(function (k) { if (!orden.some(function (w) { return w.k === k; })) orden.push({ k: k, on: true }); }); }
 
+  return (
+    <div className="hcli">
+      <style>{CSS}</style>
+
+      <div className="hc-appbar">
+        <div className="hc-row">
+          <div className="hc-brand">{ICON.compass} MaestrosEnLínea</div>
+          
+        </div>
+        <div className="hc-tagline">🇨🇱 La primera plataforma en Chile · pide, compara y paga seguro</div>
+        <form className="hc-search" onSubmit={function (e) { e.preventDefault(); if (props.onBuscar) props.onBuscar(props.q || ''); }}>
+          {ICON.search}
+          <input value={props.q || ''} onChange={function (e) { if (props.setQ) props.setQ(e.target.value); }} placeholder="¿Qué necesitas arreglar o remodelar?" enterKeyHint="search" />
+        </form>
+      </div>
+
+      {orden.filter(function (w) { return w.on; }).map(function (w) { return <div key={w.k} style={{ display: 'contents' }}>{BLOQUES[w.k]}</div>; })}
       <div className="hc-footer" style={{ paddingBottom: 2 }}>
         <a href="/servicios/gasfiteria">Gasfíter</a> · <a href="/servicios/electricidad">Electricista</a> · <a href="/servicios/pintura">Pintor</a> · <a href="/servicios/cerrajeria">Cerrajero</a> · <a href="/servicios/calefont">Calefont</a> · <a href="/servicios">Ver todos los servicios</a>
       </div>
