@@ -106,6 +106,10 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       setEnviando(false);
       if (r.error) return;
       setMensajes(function (prev) { return prev.some(function (x) { return x.id === r.data.id; }) ? prev : prev.concat([r.data]); });
+      // Si escribe el CLIENTE, avisamos por WhatsApp al maestro (con enfriamiento en el server).
+      if (miRol === 'cliente' && presupuestoId && maestroId) {
+        try { fetch('/api/notif-mensaje', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: presupuestoId, maestro_id: maestroId }) }).catch(function () {}); } catch (e) {}
+      }
     });
   }
 

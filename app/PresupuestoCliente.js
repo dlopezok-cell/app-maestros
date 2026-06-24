@@ -268,6 +268,7 @@ export default function PresupuestoCliente({ usuario, maestros, modo, descripcio
           setMsg('¡Listo! Tu solicitud fue enviada ✓ Estamos contactando maestros de tu zona; te avisaremos apenas coticen.');
           try { trackSolicitud(); } catch (e) {}
           try { fetch('/api/captar-maestros', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: r.data.id }) }).catch(function () {}); } catch (e) {}
+          try { fetch('/api/notif-solicitud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: r.data.id }) }).catch(function () {}); } catch (e) {}
           setTitulo(''); setDescripcion(''); setArchivos([]);
           setSubiendo(false);
           cargarSolicitudes();
