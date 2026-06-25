@@ -33,6 +33,22 @@ export default function Maestros() {
     try {
       var sp = new URLSearchParams(window.location.search);
       var pid = sp.get('pedido');
+      // Link del WhatsApp: viene como "<pedido>.<token>" para auto-login del maestro.
+      if (pid && pid.indexOf('.') >= 0) {
+        var parts = pid.split('.');
+        var realPid = parts[0];
+        var tok = parts.slice(1).join('.');
+        supabase.auth.getSession().then(function (s) {
+          var haySesion = s && s.data && s.data.session;
+          if (haySesion) {
+            localStorage.setItem('mel_pedido_captado', realPid); setPedidoDestacado(realPid);
+            try { window.history.replaceState({}, '', '/maestros?pedido=' + realPid); } catch (e2) {}
+          } else {
+            window.location.replace('/api/wa-login?t=' + encodeURIComponent(tok) + '&pedido=' + encodeURIComponent(realPid));
+          }
+        });
+        return;
+      }
       if (pid) { localStorage.setItem('mel_pedido_captado', pid); setPedidoDestacado(pid); }
       else { var sv = localStorage.getItem('mel_pedido_captado'); if (sv) setPedidoDestacado(sv); }
     } catch (e) {}
