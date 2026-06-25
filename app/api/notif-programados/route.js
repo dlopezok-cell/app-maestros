@@ -7,7 +7,8 @@ export const maxDuration = 60;
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const WABA_ID = process.env.WHATSAPP_WABA_ID || '3112654475791357';
-const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud';
+const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud_link';
+const LINK = 'https://www.maestrosenlinea.cl/maestros?pedido=';
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 function normFono(t) { let d = String(t || '').replace(/[^0-9]/g, ''); if (!d) return ''; if (d.indexOf('56') === 0 && d.length >= 11) return d; if (d.length === 9 && d[0] === '9') return '56' + d; if (d.length === 8) return '569' + d; if (d.length === 11 && d.indexOf('569') === 0) return d; return d.indexOf('56') === 0 ? d : '56' + d; }
@@ -37,8 +38,7 @@ async function run() {
     const to = normFono(fr.data && fr.data.telefono);
     if (!p || !m || !to) { await sb.from('wa_notif').update({ estado: 'error' }).eq('id', row.id); continue; }
     const body = { messaging_product: 'whatsapp', to: to, type: 'template', template: { name: TEMPLATE, language: { code: lang }, components: [
-      { type: 'body', parameters: [ { type: 'text', text: String(m.nombre || 'maestro') }, { type: 'text', text: String(p.oficio || '') }, { type: 'text', text: String(p.comuna || '') } ] },
-      { type: 'button', sub_type: 'url', index: '0', parameters: [ { type: 'text', text: String(row.presupuesto_id) } ] }
+      { type: 'body', parameters: [ { type: 'text', text: String(m.nombre || 'maestro') }, { type: 'text', text: String(p.oficio || '') }, { type: 'text', text: String(p.comuna || '') }, { type: 'text', text: LINK + String(row.presupuesto_id) } ] }
     ] } };
     const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json().catch(function () { return {}; });
