@@ -14,6 +14,7 @@ const TEMPLATE = process.env.NOTIF_MENSAJE_TEMPLATE || 'nuevo_mensaje';
 const COOLDOWN_MIN = 30;
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
+function normFono(t) { let d = String(t || '').replace(/[^0-9]/g, ''); if (!d) return ''; if (d.indexOf('56') === 0 && d.length >= 11) return d; if (d.length === 9 && d[0] === '9') return '56' + d; if (d.length === 8) return '569' + d; if (d.length === 11 && d.indexOf('569') === 0) return d; return d.indexOf('56') === 0 ? d : '56' + d; }
 function chileMin() {
   try { const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date()); let h = 0, m = 0; for (const p of parts) { if (p.type === 'hour') h = parseInt(p.value, 10); if (p.type === 'minute') m = parseInt(p.value, 10); } return (h % 24) * 60 + m; } catch (e) { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
 }
@@ -38,16 +39,19 @@ export async function POST(req) {
     const cfgr = await sb.from('home_config').select('captacion_hora_ini, captacion_hora_fin').eq('id', 1).maybeSingle();
     if (!enHorario(cfgr.data || {})) return Response.json({ ok: true, skipped: 'fuera_horario' }, { status: 200 });
 
-    const mr = await sb.from('maestros').select('nombre, telefono').eq('id', mid).maybeSingle();
+    const mr = await sb.from('maestros').select('nombre').eq('id', mid).maybeSingle();
     const maestro = mr.data;
-    if (!maestro || !maestro.telefono) return Response.json({ ok: true, skipped: 'sin telefono' }, { status: 200 });
+    if (!maestro) return Response.json({ ok: true, skipped: 'sin maestro' }, { status: 200 });
+    // El teléfono vive en 'perfiles' (perfiles.id == maestros.id).
+    const fr = await sb.from('perfiles').select('telefono').eq('id', mid).maybeSingle();
+    const to = normFono(fr.data && fr.data.telefono);
+    if (!to) return Response.json({ ok: true, skipped: 'sin telefono' }, { status: 200 });
     const pr = await sb.from('presupuestos').select('titulo, oficio').eq('id', pid).maybeSingle();
     const trabajo = (pr.data && (pr.data.titulo || pr.data.oficio)) || 'tu cotización';
 
     const token = process.env.WHATSAPP_TOKEN, phoneId = process.env.WHATSAPP_PHONE_ID;
     if (!token || !phoneId) return Response.json({ ok: true, skipped: 'sin wa' }, { status: 200 });
     const lang = await langDe(token, TEMPLATE);
-    const to = String(maestro.telefono).replace(/[^0-9]/g, '');
 
     const body = {
       messaging_product: 'whatsapp', to: to, type: 'template',
