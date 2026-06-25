@@ -5,14 +5,23 @@
 // se encola 'pendiente' y lo envía el cron /api/notif-programados al abrir la ventana.
 // Dedup por (tipo, presupuesto_id, maestro_id) en wa_notif.
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const WABA_ID = process.env.WHATSAPP_WABA_ID || '3112654475791357';
-const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud_link';
-const LINK = 'https://www.maestrosenlinea.cl/maestros?pedido=';
+const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud';
+
+// Crea un token de un solo uso para auto-login del maestro al abrir el link del botón.
+// El botón apunta a /maestros?pedido=<id>.<token>; la página lo cambia por sesión (magic link).
+async function tokenLogin(sb, maestroId, pedidoId) {
+  const tk = (randomUUID() + randomUUID()).replace(/-/g, '');
+  const expira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  try { await sb.from('wa_login').insert({ token: tk, maestro_id: maestroId, presupuesto_id: pedidoId, expira: expira }); } catch (e) {}
+  return tk;
+}
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 
@@ -51,13 +60,14 @@ async function langDe(token, nombre) {
   } catch (e) { return 'es'; }
 }
 
-async function enviar(token, phoneId, lang, to, nombre, oficio, comuna, pedidoId) {
+async function enviar(token, phoneId, lang, to, nombre, oficio, comuna, btnParam) {
   const body = {
     messaging_product: 'whatsapp', to: to, type: 'template',
     template: {
       name: TEMPLATE, language: { code: lang },
       components: [
-        { type: 'body', parameters: [ { type: 'text', text: String(nombre || 'maestro') }, { type: 'text', text: String(oficio || '') }, { type: 'text', text: String(comuna || '') }, { type: 'text', text: LINK + String(pedidoId) } ] }
+        { type: 'body', parameters: [ { type: 'text', text: String(nombre || 'maestro') }, { type: 'text', text: String(oficio || '') }, { type: 'text', text: String(comuna || '') } ] },
+        { type: 'button', sub_type: 'url', index: '0', parameters: [ { type: 'text', text: String(btnParam) } ] }
       ]
     }
   };
@@ -120,7 +130,8 @@ export async function POST(req) {
       const to = fono[m.id];
       if (!to) continue;
       if (dentro && token && phoneId) {
-        const res = await enviar(token, phoneId, lang, to, m.nombre, p.oficio, p.comuna, pid);
+        const tk = await tokenLogin(sb, m.id, pid);
+        const res = await enviar(token, phoneId, lang, to, m.nombre, p.oficio, p.comuna, pid + '.' + tk);
         await sb.from('wa_notif').insert({ tipo: 'solicitud', presupuesto_id: pid, maestro_id: m.id, estado: res.ok ? 'enviado' : 'error' });
         if (res.ok) enviados++;
       } else {
