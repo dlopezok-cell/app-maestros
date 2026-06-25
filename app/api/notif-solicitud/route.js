@@ -84,9 +84,8 @@ export async function POST(req) {
 
     // Maestros con el oficio del pedido. La zona se evalúa en JS: si el maestro definió
     // comunas, debe cubrir la del pedido; si no definió ninguna, atiende en cualquier comuna.
-    const mr = await sb.from('maestros').select('id, nombre, oficios, oficio, comunas, activo, suspendido, rating_promedio, total_trabajos');
+    const mr = await sb.from('maestros').select('id, nombre, oficios, oficio, comunas, suspendido, rating_promedio, total_trabajos');
     let maestros = (mr.data || []).filter(function (m) {
-      if (m.activo === false) return false;
       if (m.suspendido === true) return false;
       const ofs = (m.oficios && m.oficios.length) ? m.oficios : (m.oficio ? [m.oficio] : []);
       if (ofs.indexOf(p.oficio) < 0) return false;
