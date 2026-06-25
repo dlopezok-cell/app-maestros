@@ -15,6 +15,17 @@ const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud';
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 
+// Normaliza un teléfono chileno a formato internacional (56XXXXXXXXX) para WhatsApp.
+function normFono(t) {
+  let d = String(t || '').replace(/[^0-9]/g, '');
+  if (!d) return '';
+  if (d.indexOf('56') === 0 && d.length >= 11) return d;
+  if (d.length === 9 && d[0] === '9') return '56' + d;
+  if (d.length === 8) return '569' + d;
+  if (d.length === 11 && d.indexOf('569') === 0) return d;
+  return d.indexOf('56') === 0 ? d : '56' + d;
+}
+
 function chileMin() {
   try {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
@@ -73,16 +84,25 @@ export async function POST(req) {
 
     // Maestros con el oficio del pedido. La zona se evalúa en JS: si el maestro definió
     // comunas, debe cubrir la del pedido; si no definió ninguna, atiende en cualquier comuna.
-    const mr = await sb.from('maestros').select('id, nombre, telefono, oficios, oficio, comunas, activo, suspendido, rating_promedio, total_trabajos');
+    const mr = await sb.from('maestros').select('id, nombre, oficios, oficio, comunas, activo, suspendido, rating_promedio, total_trabajos');
     let maestros = (mr.data || []).filter(function (m) {
       if (m.activo === false) return false;
       if (m.suspendido === true) return false;
-      if (!m.telefono) return false;
       const ofs = (m.oficios && m.oficios.length) ? m.oficios : (m.oficio ? [m.oficio] : []);
       if (ofs.indexOf(p.oficio) < 0) return false;
       const cubre = !m.comunas || m.comunas.length === 0 || m.comunas.indexOf(p.comuna) >= 0;
       return cubre;
     });
+
+    // El teléfono del maestro vive en 'perfiles' (perfiles.id == maestros.id). Solo dejamos
+    // los que tienen teléfono cargado.
+    const fono = {};
+    if (maestros.length) {
+      const ids = maestros.map(function (m) { return m.id; });
+      const pr2 = await sb.from('perfiles').select('id, telefono').in('id', ids);
+      (pr2.data || []).forEach(function (pp) { const t = normFono(pp.telefono); if (t) fono[pp.id] = t; });
+    }
+    maestros = maestros.filter(function (m) { return !!fono[m.id]; });
 
     // Tope: avisar como máximo a N maestros por solicitud (def 10), priorizando los de
     // mejor calificación (rating_promedio); a igual rating, los de más trabajos hechos.
@@ -98,7 +118,7 @@ export async function POST(req) {
       const m = maestros[i];
       const ya = await sb.from('wa_notif').select('id', { count: 'exact', head: true }).eq('tipo', 'solicitud').eq('presupuesto_id', pid).eq('maestro_id', m.id);
       if ((ya.count || 0) > 0) continue;
-      const to = String(m.telefono).replace(/[^0-9]/g, '');
+      const to = fono[m.id];
       if (!to) continue;
       if (dentro && token && phoneId) {
         const res = await enviar(token, phoneId, lang, to, m.nombre, p.oficio, p.comuna, pid);
