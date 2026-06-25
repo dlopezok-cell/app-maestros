@@ -72,21 +72,22 @@ export async function POST(req) {
     const dentro = enHorario(cfgr.data || {});
 
     // Maestros que cubren esa comuna (su zona). Filtramos oficio en JS (oficios[] o legacy oficio).
-    const mr = await sb.from('maestros').select('id, nombre, telefono, oficios, oficio, comunas, activo').contains('comunas', [p.comuna]);
+    const mr = await sb.from('maestros').select('id, nombre, telefono, oficios, oficio, comunas, activo, suspendido, rating_promedio, total_trabajos').contains('comunas', [p.comuna]);
     let maestros = (mr.data || []).filter(function (m) {
       if (m.activo === false) return false;
+      if (m.suspendido === true) return false;
       if (!m.telefono) return false;
       const ofs = (m.oficios && m.oficios.length) ? m.oficios : (m.oficio ? [m.oficio] : []);
       return ofs.indexOf(p.oficio) >= 0;
     });
 
-    // Tope: avisar como máximo a N maestros por solicitud (def 10). Mezcla al azar
-    // para repartir los avisos entre los maestros que calzan y no saturar siempre a los mismos.
+    // Tope: avisar como máximo a N maestros por solicitud (def 10), priorizando los de
+    // mejor calificación (rating_promedio); a igual rating, los de más trabajos hechos.
+    maestros.sort(function (a, b) {
+      return (b.rating_promedio || 0) - (a.rating_promedio || 0) || (b.total_trabajos || 0) - (a.total_trabajos || 0);
+    });
     const MAX = parseInt(process.env.NOTIF_SOLICITUD_MAX || '10', 10) || 10;
-    if (maestros.length > MAX) {
-      for (let s = maestros.length - 1; s > 0; s--) { const k = Math.floor(Math.random() * (s + 1)); const tmp = maestros[s]; maestros[s] = maestros[k]; maestros[k] = tmp; }
-      maestros = maestros.slice(0, MAX);
-    }
+    if (maestros.length > MAX) maestros = maestros.slice(0, MAX);
 
     const lang = (token && maestros.length) ? await langDe(token, TEMPLATE) : 'es';
     let enviados = 0, encolados = 0;
