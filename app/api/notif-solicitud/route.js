@@ -11,7 +11,8 @@ export const maxDuration = 60;
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const WABA_ID = process.env.WHATSAPP_WABA_ID || '3112654475791357';
-const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud';
+const TEMPLATE = process.env.NOTIF_SOLICITUD_TEMPLATE || 'nueva_solicitud_link';
+const LINK = 'https://www.maestrosenlinea.cl/maestros?pedido=';
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 
@@ -56,8 +57,7 @@ async function enviar(token, phoneId, lang, to, nombre, oficio, comuna, pedidoId
     template: {
       name: TEMPLATE, language: { code: lang },
       components: [
-        { type: 'body', parameters: [ { type: 'text', text: String(nombre || 'maestro') }, { type: 'text', text: String(oficio || '') }, { type: 'text', text: String(comuna || '') } ] },
-        { type: 'button', sub_type: 'url', index: '0', parameters: [ { type: 'text', text: String(pedidoId) } ] }
+        { type: 'body', parameters: [ { type: 'text', text: String(nombre || 'maestro') }, { type: 'text', text: String(oficio || '') }, { type: 'text', text: String(comuna || '') }, { type: 'text', text: LINK + String(pedidoId) } ] }
       ]
     }
   };
