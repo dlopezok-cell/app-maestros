@@ -12,8 +12,10 @@ export default function AccesoMaestro() {
   const [msg, setMsg] = useState(null);
   const [ok, setOk] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [acepta, setAcepta] = useState(false);
 
   function crear() {
+    if (!acepta) { setMsg('Para crear tu cuenta debes aceptar los Términos y la política de tolerancia cero.'); return; }
     if (!nombre.trim()) { setMsg('Escribe tu nombre'); return; }
     if (email.indexOf('@') < 1) { setMsg('Escribe un correo válido'); return; }
     if (pass.length < 6) { setMsg('La contraseña debe tener al menos 6 caracteres'); return; }
@@ -46,6 +48,7 @@ export default function AccesoMaestro() {
   }
 
   function conGoogle() {
+    if (!acepta) { setMsg('Para continuar debes aceptar los Términos y la política de tolerancia cero.'); return; }
     supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
   }
 
@@ -59,6 +62,7 @@ export default function AccesoMaestro() {
     });
   }
   function conApple() {
+    if (!acepta) { setMsg('Para continuar debes aceptar los Términos y la política de tolerancia cero.'); return; }
     supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: window.location.href } });
   }
 
@@ -107,6 +111,11 @@ export default function AccesoMaestro() {
           {modo === 'entrar' && <div style={{ textAlign: 'right', margin: '-2px 0 8px' }}><button onClick={recuperar} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', padding: 0 }}>¿Olvidaste tu contraseña?</button></div>}
 
           {msg && <p style={{ fontSize: 12.5, color: '#b3261e', margin: '2px 0 10px', textAlign: 'left' }}>{msg}</p>}
+
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, textAlign: 'left', background: '#f6f8fc', border: '1.5px solid ' + (acepta ? '#2563eb' : '#e1e6ef'), borderRadius: 12, padding: '11px 12px', marginBottom: 12, cursor: 'pointer' }}>
+            <input type="checkbox" checked={acepta} onChange={function (e) { setAcepta(e.target.checked); }} style={{ width: 20, height: 20, marginTop: 1, flexShrink: 0, accentColor: '#2563eb' }} />
+            <span style={{ fontSize: 12, lineHeight: 1.45, color: '#3a4256' }}>Acepto los <a href="/terminos" target="_blank" style={{ color: '#2563eb', fontWeight: 700 }}>Términos y Condiciones</a> y la <b>política de tolerancia cero</b>: no se permite contenido ofensivo ni usuarios abusivos. El contenido objetable y las cuentas que incumplan serán removidos.</span>
+          </label>
 
           {modo === 'crear'
             ? <button onClick={crear} disabled={cargando} style={{ ...btnP, opacity: cargando ? 0.6 : 1 }}>Crear mi cuenta de maestro</button>

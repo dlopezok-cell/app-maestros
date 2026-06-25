@@ -170,6 +170,27 @@ export async function POST(req) {
         '<p style="white-space:pre-wrap">' + (body.mensaje || '') + '</p>',
         'Abrir mi panel', SITE + '/maestros'
       );
+    } else if (tipo === 'moderacion') {
+      // Aviso al EQUIPO (desarrollador) de un reporte o bloqueo en el chat.
+      const accion = body.accion === 'bloqueo' ? 'Bloqueo de usuario' : 'Reporte de contenido';
+      let cliId = null, oficio = '';
+      try {
+        const r = await admin.from('presupuestos').select('cliente_id, oficio').eq('id', body.presupuestoId).maybeSingle();
+        if (r.data) { cliId = r.data.cliente_id; oficio = r.data.oficio || ''; }
+      } catch (e) {}
+      const clienteNom = await nombreDe(cliId);
+      const maestroNom = await nombreDe(body.maestroId);
+      to = user; // bandeja del equipo (hola@maestrosenlinea.cl)
+      subject = '🚨 ' + accion + ' en el chat';
+      html = plantilla(
+        '🚨 ' + accion,
+        '<p>Un usuario realizó esta acción en el chat y requiere revisión.</p>' +
+        '<p><b>Acción:</b> ' + accion + '</p>' +
+        '<p><b>Quién la hizo:</b> ' + (body.reportanteRol === 'maestro' ? 'el maestro' : 'el cliente') + '</p>' +
+        (body.motivo ? '<p><b>Motivo:</b> ' + String(body.motivo).replace(/[<>]/g, '') + '</p>' : '') +
+        '<p style="color:#5b6275;font-size:13px"><b>Conversación:</b> presupuesto ' + (body.presupuestoId || '?') + ' · maestro ' + (maestroNom || body.maestroId || '?') + (clienteNom ? ' · cliente ' + clienteNom : '') + (oficio ? ' · ' + oficio : '') + '</p>',
+        'Abrir panel de moderación', SITE + '/admin'
+      );
     } else {
       return Response.json({ error: 'tipo desconocido' }, { status: 400 });
     }

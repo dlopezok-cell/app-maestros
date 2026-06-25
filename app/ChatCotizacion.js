@@ -18,6 +18,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   const [verCotOpen, setVerCotOpen] = useState(false);
   const [zoomImg, setZoomImg] = useState(null);
   const [grabando, setGrabando] = useState(false);
+  const [bloqueado, setBloqueado] = useState(false);
   const [vp, setVp] = useState(null);
   const finRef = useRef(null);
   const imgRef = useRef(null);
@@ -66,10 +67,16 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
   }
 
   function cargar() {
-    supabase.from('mensajes').select('*')
-      .eq('presupuesto_id', presupuestoId).eq('maestro_id', maestroId)
-      .order('creado_en', { ascending: true })
-      .then(function (r) { setMensajes(r.data || []); setCargado(true); marcarLeidos(); });
+    // Si YA bloqueé esta conversación, no muestro su contenido (queda fuera de mi feed).
+    supabase.from('bloqueos').select('id')
+      .eq('presupuesto_id', presupuestoId).eq('maestro_id', maestroId).eq('bloqueador_id', usuario.id)
+      .limit(1).then(function (b) {
+        if (b.data && b.data.length) { setBloqueado(true); setMensajes([]); setCargado(true); return; }
+        supabase.from('mensajes').select('*')
+          .eq('presupuesto_id', presupuestoId).eq('maestro_id', maestroId)
+          .order('creado_en', { ascending: true })
+          .then(function (r) { setMensajes(r.data || []); setCargado(true); marcarLeidos(); });
+      });
   }
 
   useEffect(function () {
@@ -79,6 +86,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: 'presupuesto_id=eq.' + presupuestoId }, function (payload) {
         var m = payload.new;
         if (m.maestro_id !== maestroId) return;
+        if (bloqueado) return; // usuario bloqueado: no recibimos su contenido
         setMensajes(function (prev) { return prev.some(function (x) { return x.id === m.id; }) ? prev : prev.concat([m]); });
         if (m.autor_rol !== miRol) { marcarLeidos(); beep(); notificar(m.texto); }
       })
@@ -89,7 +97,11 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
 
   useEffect(function () { if (finRef.current) finRef.current.scrollIntoView({ block: 'end' }); }, [mensajes]);
 
-  // Oculta datos de contacto (correos, links, @usuarios, teléfonos 8+ dígitos)
+  // Filtro de contenido objetable (groserías/insultos). Censura la palabra con •••.
+  // Lista base ampliable; cubre raíces frecuentes en español para moderar el chat.
+  var MALAS = ['cor\\s*nud[oa]s?', 'concha\\s*tu\\s*madre', 'ctm', 'cs?m', 'huev[oó]n(?:es|as)?', 'we[oó]n(?:es|as)?', 'conch[ae]s?', 'maric[oó]n(?:es)?', 'marac[oa]s?', 'put[oa]s?', 'put[ae]ad[ao]s?', 'mierdas?', 'pendej[oa]s?', 'imb[eé]cil(?:es)?', 'est[uú]pid[oa]s?', 'idiotas?', 'gil(?:es|ipollas)?', 'pelot[uú]d[oa]s?', 'cul(?:i|ia)?[ao]s?', 'verg[ao]s?', 'cabr[oó]n(?:es)?', 'cag[oó]n(?:es)?', 'tarad[oa]s?', 'zorr[ao]s?', 'fuck(?:ing|ed|er)?', 'shit', 'bitch', 'asshole'];
+  var reGroseria = new RegExp('\\b(?:' + MALAS.join('|') + ')\\b', 'gi');
+  // Oculta datos de contacto (correos, links, @usuarios, teléfonos 8+ dígitos) y censura groserías.
   function limpiar(s) {
     if (!s) return s;
     var out = s;
@@ -97,6 +109,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
     out = out.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '•••');
     out = out.replace(/@[a-z0-9_.]{2,}/gi, '•••');
     out = out.replace(/[+(]?\d[\d\s().\-]{6,}\d/g, function (m) { return m.replace(/\D/g, '').length >= 8 ? '•••' : m; });
+    out = out.replace(reGroseria, '•••');
     return out;
   }
 
@@ -170,11 +183,37 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
 
   function hora(f) { return f ? new Date(f).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''; }
   function dia(f) { return f ? new Date(f).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }) : ''; }
+  // Avisa por correo al equipo (desarrollador) de un reporte o bloqueo.
+  function avisarEquipo(accion, motivo) {
+    try {
+      fetch('/api/notificar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'moderacion', accion: accion, presupuestoId: presupuestoId, maestroId: maestroId, reportanteRol: miRol, motivo: motivo || '' })
+      }).catch(function () {});
+    } catch (e) {}
+  }
   function reportar() {
     var motivo = window.prompt('¿Qué quieres reportar de esta conversación? (lo revisa el equipo)', '');
     if (!motivo) return;
     supabase.from('denuncias').insert({ presupuesto_id: presupuestoId, maestro_id: maestroId, reportante_id: usuario.id, reportante_rol: miRol, motivo: motivo.trim() })
-      .then(function (r) { window.alert(r.error ? ('No se pudo enviar: ' + r.error.message) : 'Gracias, recibimos tu reporte.'); });
+      .then(function (r) {
+        avisarEquipo('reporte', motivo.trim());
+        window.alert(r.error ? ('No se pudo enviar: ' + r.error.message) : 'Gracias, recibimos tu reporte. Nuestro equipo lo revisará.');
+      });
+  }
+  // Bloquear al otro usuario: guarda el bloqueo, avisa al equipo y quita su contenido al instante.
+  function bloquear() {
+    var quien = miRol === 'cliente' ? 'este maestro' : 'este cliente';
+    if (!window.confirm('¿Bloquear a ' + quien + '? Dejarás de ver sus mensajes y ya no podrá contactarte. Avisaremos a nuestro equipo.')) return;
+    supabase.from('bloqueos').insert({ presupuesto_id: presupuestoId, maestro_id: maestroId, bloqueador_id: usuario.id, bloqueador_rol: miRol, motivo: 'Bloqueo desde el chat' })
+      .then(function (r) {
+        if (r.error) { window.alert('No se pudo bloquear: ' + r.error.message); return; }
+        avisarEquipo('bloqueo', 'El usuario bloqueó la conversación');
+        setBloqueado(true);   // quita su contenido del feed al instante
+        setMensajes([]);
+        setAttachOpen(false);
+        window.alert('Usuario bloqueado. No verás más su contenido.');
+      });
   }
 
   var ico = { width: 42, height: 42, borderRadius: '50%', border: 'none', background: '#f3f3f8', color: '#5b6275', fontSize: 19, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
@@ -202,23 +241,33 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
           <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{otro}</div>
           <div style={{ fontSize: 11, color: '#27c46b', fontWeight: 700 }}>en línea</div>
         </div>
-        <button onClick={reportar} title="Reportar" style={{ border: 'none', background: '#f3f3f8', width: 36, height: 36, borderRadius: '50%', fontSize: 15, cursor: 'pointer', color: '#8a5a00' }}>{'⚠'}</button>
+        {!bloqueado && <button onClick={reportar} title="Reportar contenido" style={{ border: 'none', background: '#f3f3f8', width: 36, height: 36, borderRadius: '50%', fontSize: 15, cursor: 'pointer', color: '#8a5a00' }}>{'⚠'}</button>}
+        {!bloqueado && <button onClick={bloquear} title="Bloquear usuario" style={{ border: 'none', background: '#fdecec', width: 36, height: 36, borderRadius: '50%', fontSize: 15, cursor: 'pointer', color: '#c0271a' }}>{'🚫'}</button>}
       </div>
 
       {/* Aviso de privacidad */}
+      {!bloqueado && (
       <div style={{ background: oculto ? '#fff3cd' : '#fbf7ee', color: oculto ? '#8a5a00' : '#8a7a3a', fontSize: 10.5, lineHeight: 1.4, padding: '6px 12px', textAlign: 'center' }}>
         {oculto ? '⚠️ Ocultamos un dato de contacto. El teléfono y la dirección se comparten al pagar.' : '🔒 Mantén la conversación aquí. Teléfonos y correos se ocultan hasta pagar.'}
       </div>
+      )}
 
       {/* Mensajes */}
       <div onTouchStart={function () { if (inpRef.current) inpRef.current.blur(); }} style={{ flex: 1, overflowY: 'auto', padding: '14px 12px 6px' }}>
+        {bloqueado && (
+          <div style={{ background: '#fff', color: '#6b7184', fontSize: 13, lineHeight: 1.55, borderRadius: 14, padding: '20px 18px', textAlign: 'center', maxWidth: 320, margin: '24px auto', boxShadow: '0 2px 10px rgba(20,20,50,.06)' }}>
+            <div style={{ fontSize: 38, marginBottom: 8 }}>{'🚫'}</div>
+            <div style={{ fontWeight: 800, color: '#1c1f2b', marginBottom: 6 }}>Usuario bloqueado</div>
+            Ya no verás los mensajes ni el contenido de este usuario. Avisamos a nuestro equipo para que lo revise.
+          </div>
+        )}
         {!cargado && <div style={{ fontSize: 13, color: '#9aa1b5', textAlign: 'center', marginTop: 20 }}>Cargando conversación...</div>}
-        {cargado && mensajes.length === 0 && (
+        {cargado && !bloqueado && mensajes.length === 0 && (
           <div style={{ background: '#fff', color: '#6b7184', fontSize: 12.5, lineHeight: 1.5, borderRadius: 14, padding: '12px 14px', textAlign: 'center', maxWidth: 300, margin: '12px auto', boxShadow: '0 2px 10px rgba(20,20,50,.06)' }}>
             {miRol === 'maestro' ? 'Pregúntale al cliente lo que necesites para cotizar bien: ¿qué material?, ¿qué piso?, pídele una foto o video de cerca.' : 'Escríbele al maestro, mándale fotos, un video o un audio para explicar mejor el problema. 👋'}
           </div>
         )}
-        {mensajes.map(function (m, i) {
+        {!bloqueado && mensajes.map(function (m, i) {
           var mio = m.autor_rol === miRol;
           var prev = mensajes[i - 1];
           var nuevoDia = !prev || dia(prev.creado_en) !== dia(m.creado_en);
@@ -259,7 +308,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       </div>
 
       {/* Menú adjuntar */}
-      {attachOpen && (
+      {attachOpen && !bloqueado && (
         <div style={{ position: 'absolute', bottom: 70, left: 12, background: '#fff', borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,.2)', padding: 6, zIndex: 5 }}>
           {miRol === 'maestro' && <button onClick={function () { setAttachOpen(false); setCotizarOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: 200, border: 'none', background: '#fff5f2', padding: '11px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 800, color: '#ff5a3c', cursor: 'pointer', marginBottom: 4 }}>{'🧾'} Cotizar este trabajo</button>}
           <button onClick={function () { if (imgRef.current) imgRef.current.click(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: 200, border: 'none', background: 'none', padding: '11px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 700, color: '#1c1f2b', cursor: 'pointer' }}>{'🖼️'} Foto</button>
@@ -268,6 +317,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       )}
 
       {/* Barra de entrada */}
+      {!bloqueado && (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', background: '#fff', boxShadow: '0 -2px 12px rgba(20,20,50,.06)' }}>
         <button onClick={function () { setAttachOpen(!attachOpen); }} style={ico}>{attachOpen ? '×' : '＋'}</button>
         <input ref={inpRef} value={texto} onChange={function (e) { setTexto(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') enviarTexto(); }} placeholder={grabando ? 'Grabando audio…' : 'Escribe un mensaje'} disabled={grabando} style={{ flex: 1, height: 42, border: 'none', borderRadius: 22, padding: '0 16px', fontSize: 16, background: grabando ? '#ffecec' : '#f3f3f8', color: grabando ? '#d3422a' : '#1c1f2b', outline: 'none', boxSizing: 'border-box' }} />
@@ -277,6 +327,7 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
         <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={function (e) { elegir(e, 'imagen'); }} />
         <input ref={vidRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={function (e) { elegir(e, 'video'); }} />
       </div>
+      )}
 
       {cotizarOpen && <CotizadorChat usuario={usuario} presupuestoId={presupuestoId} maestroId={maestroId} titulo={otro} onClose={function () { setCotizarOpen(false); }} />}
 

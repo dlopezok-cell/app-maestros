@@ -34,6 +34,7 @@ const [orden, setOrden] = useState('cerca');
 const [gIdx, setGIdx] = useState(-1);
 const [destinoLogin, setDestinoLogin] = useState('cuenta');
 const [authTab, setAuthTab] = useState('ingresar');
+const [acepta, setAcepta] = useState(false);
 const [rolPre, setRolPre] = useState(null);
 const [email, setEmail] = useState('');
 const [pass, setPass] = useState('');
@@ -103,6 +104,7 @@ else setAuthMsg('Te enviamos un correo para recuperar tu contraseña. Ábrelo y 
 });
 }
 function entrar() {
+if (authTab === 'crear' && !acepta) { setAuthMsg('Para crear tu cuenta debes aceptar los Términos y la política de tolerancia cero.'); return; }
 setAuthMsg('Procesando...');
 var fn = authTab === 'ingresar'
 ? supabase.auth.signInWithPassword({ email: email.trim(), password: pass })
@@ -114,9 +116,11 @@ setUsuario(r.data.user); setAuthMsg(null); setVista(destinoLogin); window.scroll
 });
 }
 function conGoogle() {
+if (!acepta) { setAuthMsg('Para continuar debes aceptar los Términos y la política de tolerancia cero.'); return; }
 supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined } });
 }
 function conApple() {
+if (!acepta) { setAuthMsg('Para continuar debes aceptar los Términos y la política de tolerancia cero.'); return; }
 supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined } });
 }
 function salir() { supabase.auth.signOut().then(function () { setUsuario(null); setVista('inicio'); }); }
@@ -300,6 +304,10 @@ if (vista === 'acceso') return (
 <input type="password" value={pass} onChange={function (e) { setPass(e.target.value); }} placeholder="Contraseña" style={{ width: '100%', padding: 13, border: '1.5px solid #ddd', borderRadius: 12, fontSize: 14, marginBottom: 10, boxSizing: 'border-box' }} />
 {authTab === 'ingresar' && <div style={{ textAlign: 'right', margin: '-4px 0 10px' }}><button onClick={recuperar} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', padding: 0 }}>¿Olvidaste tu contraseña?</button></div>}
 {authMsg && <p style={{ fontSize: 13, color: authMsg.indexOf('correo') >= 0 ? '#0d9456' : '#b3261e', margin: '2px 0 8px' }}>{authMsg}</p>}
+<label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, textAlign: 'left', background: '#f6f8fc', border: '1.5px solid ' + (acepta ? '#2563eb' : '#e1e6ef'), borderRadius: 12, padding: '11px 12px', marginBottom: 12, cursor: 'pointer' }}>
+<input type="checkbox" checked={acepta} onChange={function (e) { setAcepta(e.target.checked); }} style={{ width: 20, height: 20, marginTop: 1, flexShrink: 0, accentColor: '#2563eb' }} />
+<span style={{ fontSize: 12, lineHeight: 1.45, color: '#3a4256' }}>Acepto los <a href="/terminos" target="_blank" style={{ color: '#2563eb', fontWeight: 700 }}>Términos y Condiciones</a> y la <b>política de tolerancia cero</b>: no se permite contenido ofensivo ni usuarios abusivos. El contenido objetable y las cuentas que incumplan serán removidos.</span>
+</label>
 <button className="gbtn full" onClick={entrar}>{authTab === 'ingresar' ? 'Ingresar' : 'Crear cuenta'}</button>
 <div style={{ textAlign: 'center', color: '#9aa1b5', fontSize: 12, margin: '8px 0' }}>o</div>
 <button className="gbtn full" style={{ background: '#fff', color: '#1c1f2b', border: '1.5px solid #ddd', boxShadow: 'none' }} onClick={conGoogle}>{'\u{1F310} Continuar con Google'}</button>

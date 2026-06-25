@@ -37,8 +37,10 @@ export default function Terminos() {
         <h3 style={h3}>6. Conducta y uso prohibido</h3>
         <p>No está permitido usar la Plataforma para fines ilegales; ofrecer servicios que no puedes cumplir; suplantar a terceros; ni <b>acordar pagos o contacto por fuera</b> para evadir comisiones cuando el contacto se originó dentro de la Plataforma. Para tu seguridad, el chat oculta números de teléfono, correos y enlaces hasta que el trabajo esté pagado.</p>
 
-        <h3 style={h3}>7. Contenido de los usuarios</h3>
-        <p>Eres responsable del contenido que publicas (mensajes, fotos, videos, reseñas). Al publicarlo, otorgas a MaestrosEnLínea una licencia limitada para mostrarlo dentro de la Plataforma con el fin de prestar el servicio. No se permite contenido ofensivo, difamatorio, falso o que infrinja derechos de terceros. Puedes <b>reportar</b> contenido o <b>bloquear</b> a un usuario desde el chat; revisaremos los reportes y podremos remover contenido o suspender cuentas que incumplan estos Términos.</p>
+        <h3 style={h3}>7. Contenido de los usuarios y tolerancia cero</h3>
+        <p><b>Tolerancia cero:</b> MaestrosEnLínea aplica una política de <b>tolerancia cero al contenido objetable y a los usuarios abusivos</b>. Queda estrictamente prohibido publicar contenido ofensivo, abusivo, acosador, amenazante, difamatorio, sexual, discriminatorio, ilegal, falso o que infrinja derechos de terceros, así como cualquier conducta abusiva hacia otros usuarios.</p>
+        <p>Eres responsable del contenido que publicas (mensajes, fotos, videos, reseñas). Al publicarlo, otorgas a MaestrosEnLínea una licencia limitada para mostrarlo dentro de la Plataforma con el fin de prestar el servicio.</p>
+        <p>Moderamos el contenido y puedes <b>reportar</b> contenido objetable o <b>bloquear</b> a un usuario abusivo desde el chat. Al bloquear, su contenido se retira de inmediato de tu vista y se avisa a nuestro equipo. Revisaremos los reportes en un plazo máximo de 24 horas y <b>removeremos el contenido y/o suspenderemos o eliminaremos las cuentas</b> que incumplan esta política. Al crear una cuenta o usar la Plataforma aceptas estas condiciones (EULA).</p>
 
         <h3 style={h3}>8. Verificación y reseñas</h3>
         <p>Verificamos la identidad de los maestros, pero <b>no garantizamos</b> el resultado, calidad o seguridad de cada trabajo. Recomendamos revisar las reseñas y conversar por el chat antes de agendar. Las reseñas deben reflejar experiencias reales.</p>
