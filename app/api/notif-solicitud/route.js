@@ -71,14 +71,17 @@ export async function POST(req) {
     const cfgr = await sb.from('home_config').select('captacion_hora_ini, captacion_hora_fin').eq('id', 1).maybeSingle();
     const dentro = enHorario(cfgr.data || {});
 
-    // Maestros que cubren esa comuna (su zona). Filtramos oficio en JS (oficios[] o legacy oficio).
-    const mr = await sb.from('maestros').select('id, nombre, telefono, oficios, oficio, comunas, activo, suspendido, rating_promedio, total_trabajos').contains('comunas', [p.comuna]);
+    // Maestros con el oficio del pedido. La zona se evalúa en JS: si el maestro definió
+    // comunas, debe cubrir la del pedido; si no definió ninguna, atiende en cualquier comuna.
+    const mr = await sb.from('maestros').select('id, nombre, telefono, oficios, oficio, comunas, activo, suspendido, rating_promedio, total_trabajos');
     let maestros = (mr.data || []).filter(function (m) {
       if (m.activo === false) return false;
       if (m.suspendido === true) return false;
       if (!m.telefono) return false;
       const ofs = (m.oficios && m.oficios.length) ? m.oficios : (m.oficio ? [m.oficio] : []);
-      return ofs.indexOf(p.oficio) >= 0;
+      if (ofs.indexOf(p.oficio) < 0) return false;
+      const cubre = !m.comunas || m.comunas.length === 0 || m.comunas.indexOf(p.comuna) >= 0;
+      return cubre;
     });
 
     // Tope: avisar como máximo a N maestros por solicitud (def 10), priorizando los de
