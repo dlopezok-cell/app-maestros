@@ -4,17 +4,18 @@
 // Respeta horario (home_config). Fuera de hora NO posterga (un "mensaje nuevo" viejo
 // no sirve); simplemente no envía.
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const WABA_ID = process.env.WHATSAPP_WABA_ID || '3112654475791357';
-const TEMPLATE = process.env.NOTIF_MENSAJE_TEMPLATE || 'nuevo_mensaje_link';
-const LINK = 'https://www.maestrosenlinea.cl/maestros?pedido=';
+const TEMPLATE = process.env.NOTIF_MENSAJE_TEMPLATE || 'nuevo_mensaje';
 const COOLDOWN_MIN = 30;
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
+async function tokenLogin(sb, maestroId, pedidoId) { const tk = (randomUUID() + randomUUID()).replace(/-/g, ''); const expira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); try { await sb.from('wa_login').insert({ token: tk, maestro_id: maestroId, presupuesto_id: pedidoId, expira: expira }); } catch (e) {} return tk; }
 function normFono(t) { let d = String(t || '').replace(/[^0-9]/g, ''); if (!d) return ''; if (d.indexOf('56') === 0 && d.length >= 11) return d; if (d.length === 9 && d[0] === '9') return '56' + d; if (d.length === 8) return '569' + d; if (d.length === 11 && d.indexOf('569') === 0) return d; return d.indexOf('56') === 0 ? d : '56' + d; }
 function chileMin() {
   try { const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date()); let h = 0, m = 0; for (const p of parts) { if (p.type === 'hour') h = parseInt(p.value, 10); if (p.type === 'minute') m = parseInt(p.value, 10); } return (h % 24) * 60 + m; } catch (e) { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
@@ -53,11 +54,13 @@ export async function POST(req) {
     const token = process.env.WHATSAPP_TOKEN, phoneId = process.env.WHATSAPP_PHONE_ID;
     if (!token || !phoneId) return Response.json({ ok: true, skipped: 'sin wa' }, { status: 200 });
     const lang = await langDe(token, TEMPLATE);
+    const tk = await tokenLogin(sb, mid, pid);
 
     const body = {
       messaging_product: 'whatsapp', to: to, type: 'template',
       template: { name: TEMPLATE, language: { code: lang }, components: [
-        { type: 'body', parameters: [ { type: 'text', text: String(maestro.nombre || 'maestro') }, { type: 'text', text: String(trabajo) }, { type: 'text', text: LINK + String(pid) } ] }
+        { type: 'body', parameters: [ { type: 'text', text: String(maestro.nombre || 'maestro') }, { type: 'text', text: String(trabajo) } ] },
+        { type: 'button', sub_type: 'url', index: '0', parameters: [ { type: 'text', text: String(pid) + '.' + tk } ] }
       ] }
     };
     const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
