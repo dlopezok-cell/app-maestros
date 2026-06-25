@@ -10,7 +10,8 @@ export const maxDuration = 30;
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const WABA_ID = process.env.WHATSAPP_WABA_ID || '3112654475791357';
-const TEMPLATE = process.env.NOTIF_MENSAJE_TEMPLATE || 'nuevo_mensaje';
+const TEMPLATE = process.env.NOTIF_MENSAJE_TEMPLATE || 'nuevo_mensaje_link';
+const LINK = 'https://www.maestrosenlinea.cl/maestros?pedido=';
 const COOLDOWN_MIN = 30;
 
 function admin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
@@ -56,8 +57,7 @@ export async function POST(req) {
     const body = {
       messaging_product: 'whatsapp', to: to, type: 'template',
       template: { name: TEMPLATE, language: { code: lang }, components: [
-        { type: 'body', parameters: [ { type: 'text', text: String(maestro.nombre || 'maestro') }, { type: 'text', text: String(trabajo) } ] },
-        { type: 'button', sub_type: 'url', index: '0', parameters: [ { type: 'text', text: String(pid) } ] }
+        { type: 'body', parameters: [ { type: 'text', text: String(maestro.nombre || 'maestro') }, { type: 'text', text: String(trabajo) }, { type: 'text', text: LINK + String(pid) } ] }
       ] }
     };
     const r = await fetch(GRAPH + '/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
