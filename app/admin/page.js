@@ -9,6 +9,7 @@ import MapsExtractor from '../MapsExtractor';
 import AgenteIA from '../AgenteIA';
 import EmbudoMaestros from '../EmbudoMaestros';
 import CaptacionPanel from '../CaptacionPanel';
+import { subirACloudinary } from '../../lib/cloudinary';
 import PlantillasMeta from '../PlantillasMeta';
 import AdsPanel from '../AdsPanel';
 import MaestrosPerfiles from '../MaestrosPerfiles';
@@ -98,6 +99,7 @@ export default function Admin() {
   const [liberandoId, setLiberandoId] = useState(null);
   const [portada, setPortada] = useState({ portada_activa: true, titulo: '', subtitulo: '', foto_url: '', badge: 'PRONTO', comision_pct: 0, prelanzamiento: true, aviso_titulo: 'Estamos por lanzar', aviso_texto: 'Ya puedes crear tu cuenta y explorar c\u00f3mo funciona. \u00a1S\u00e9 de los primeros!' });
   const [portadaMsg, setPortadaMsg] = useState(null);
+  const [slideSub, setSlideSub] = useState(-1);
   const [interesados, setInteresados] = useState([]);
   const [resenas, setResenas] = useState([]);
   const [mensajes, setMensajes] = useState([]);
@@ -553,25 +555,6 @@ export default function Admin() {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <style>{'.mel-adminnav-mobile{display:none} @media (max-width:640px){.mel-adminnav-mobile{display:block} .mel-adminnav-desktop{display:none}}'}</style>
-        <div className="mel-adminnav-mobile">
-          <label style={{ fontSize: 10, fontWeight: 800, color: '#b3b8c6', textTransform: 'uppercase', letterSpacing: '.05em', margin: '0 2px 4px', display: 'block' }}>Sección</label>
-          <select value={seccion} onChange={function (e) { setSeccion(e.target.value); }} style={{ width: '100%', fontSize: 15, fontWeight: 700, padding: '13px 14px', borderRadius: 12, border: '1.5px solid #e4e4ef', background: '#fff', color: '#1c1f2b', boxSizing: 'border-box' }}>
-            {CATEGORIAS.filter(function (categoria) { return esSuper || cats.indexOf(categoria.id) >= 0; }).map(function (categoria) {
-              var secsM = SECCIONES.filter(function (s) { return s.cat === categoria.id && (esSuper || !s.soloSuper); });
-              if (!secsM.length) return null;
-              return (
-                <optgroup key={categoria.id} label={categoria.icono + ' ' + categoria.nombre}>
-                  {secsM.map(function (s) {
-                    var b = s.id === 'maestros' ? pendientes.length : s.id === 'disputas' ? disputasAbiertas : s.id === 'mensajes' ? soporteNoLeidos : s.id === 'soporte' ? soporteTotal : s.id === 'liberar' ? porLiberarCount : 0;
-                    return <option key={s.id} value={s.id}>{s.icono + ' ' + s.nombre + (b > 0 ? ' (' + b + ')' : '')}</option>;
-                  })}
-                </optgroup>
-              );
-            })}
-          </select>
-        </div>
-        <div className="mel-adminnav-desktop">
         {CATEGORIAS.filter(function (categoria) { return esSuper || cats.indexOf(categoria.id) >= 0; }).map(function (categoria) {
           var secs = SECCIONES.filter(function (s) { return s.cat === categoria.id && (esSuper || !s.soloSuper); });
           if (!secs.length) return null;
@@ -594,7 +577,6 @@ export default function Admin() {
             </div>
           );
         })}
-        </div>
       </div>
 
       {msg && <p style={{ color: '#b3261e', fontSize: 13 }}>{msg}</p>}
@@ -756,6 +738,64 @@ export default function Admin() {
 
             <button onClick={function () { guardarPortada(); }} style={{ marginTop: 12, width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar portada</button>
             {portadaMsg && <p style={{ fontSize: 12.5, textAlign: 'center', color: portadaMsg.indexOf('Error') >= 0 ? '#b3261e' : '#0d9456', marginTop: 8 }}>{portadaMsg}</p>}
+          </div>
+
+          <div style={card}>
+            <b style={{ fontSize: 14 }}>{'\u{1F5BC}️ Slider de la portada'}</b>
+            <div style={{ fontSize: 12, color: '#9aa1b5', margin: '4px 0 10px' }}>Cada slide es una foto a pantalla completa con su título, botón y link. Si hay al menos un slide visible, la portada del home se muestra como slider (autoplay + deslizar).</div>
+            {(function () {
+              var slides = Array.isArray(portada.home_slides) ? portada.home_slides : (function () { try { return JSON.parse(portada.home_slides) || []; } catch (e) { return []; } })();
+              var miniBtn = { border: '1px solid #e5e7eb', background: '#fff', borderRadius: 8, padding: '4px 8px', fontSize: 11.5, cursor: 'pointer', fontWeight: 700 };
+              var lbl = { fontSize: 11.5, fontWeight: 700, color: '#5b6275', display: 'block', marginTop: 8, marginBottom: 3 };
+              var chip = { border: '1px solid #e5e7eb', background: '#f3f4f6', borderRadius: 8, padding: '4px 9px', fontSize: 11.5, cursor: 'pointer', fontWeight: 600 };
+              function setLocal(lst) { setPortada(function (p) { return Object.assign({}, p, { home_slides: lst }); }); }
+              function save(lst) { setLocal(lst); guardarPortada({ home_slides: lst }); }
+              function upd(i, k, v) { var lst = slides.slice(); var o = Object.assign({}, lst[i]); o[k] = v; lst[i] = o; setLocal(lst); }
+              function add() { setLocal(slides.concat([{ foto: '', titulo: '', cta: 'Pedir ahora', link: 'cotizar', on: true }])); }
+              function del(i) { if (!window.confirm('¿Quitar este slide?')) return; var lst = slides.slice(); lst.splice(i, 1); save(lst); }
+              function mover(i, d) { var j = i + d; if (j < 0 || j >= slides.length) return; var lst = slides.slice(); var t = lst[i]; lst[i] = lst[j]; lst[j] = t; setLocal(lst); }
+              function subir(i, file) { if (!file) return; setSlideSub(i); subirACloudinary(file).then(function (r) { upd(i, 'foto', r.url); setSlideSub(-1); }).catch(function () { setSlideSub(-1); alert('No se pudo subir la foto'); }); }
+              return (
+                <div>
+                  {slides.length === 0 && <div style={{ fontSize: 12.5, color: '#9aa1b5', marginBottom: 8 }}>{'Aún no hay slides. Agrega el primero \u{1F447}'}</div>}
+                  {slides.map(function (s, i) {
+                    return (
+                      <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 10, marginBottom: 10, background: s.on === false ? '#f7f7fb' : '#fff' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <b style={{ fontSize: 12.5 }}>{'Slide ' + (i + 1)}</b>
+                          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                            <button onClick={function () { mover(i, -1); }} style={miniBtn}>{'▲'}</button>
+                            <button onClick={function () { mover(i, 1); }} style={miniBtn}>{'▼'}</button>
+                            <button onClick={function () { upd(i, 'on', s.on === false); }} style={Object.assign({}, miniBtn, { color: s.on === false ? '#9ca3af' : '#0d9456' })}>{s.on === false ? 'Oculto' : 'Visible'}</button>
+                            <button onClick={function () { del(i); }} style={Object.assign({}, miniBtn, { color: '#b3261e' })}>Quitar</button>
+                          </div>
+                        </div>
+                        {s.foto
+                          ? <img src={s.foto} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 8 }} />
+                          : <div style={{ height: 60, borderRadius: 10, background: '#eef0f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa1b5', fontSize: 12, marginBottom: 8 }}>Sin foto</div>}
+                        <label style={lbl}>Foto</label>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input type="file" accept="image/*" onChange={function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; subir(i, f); }} style={{ fontSize: 12 }} />
+                          {slideSub === i && <span style={{ fontSize: 11.5, color: '#2563eb', fontWeight: 700 }}>{'Subiendo…'}</span>}
+                        </div>
+                        <input style={Object.assign({}, inp, { marginTop: 6 })} placeholder="o pega una URL de imagen" value={s.foto || ''} onChange={function (e) { upd(i, 'foto', e.target.value); }} />
+                        <label style={lbl}>{'Título'}</label>
+                        <input style={inp} value={s.titulo || ''} onChange={function (e) { upd(i, 'titulo', e.target.value); }} placeholder="Tu maestro, en minutos" />
+                        <label style={lbl}>{'Texto del botón'}</label>
+                        <input style={inp} value={s.cta || ''} onChange={function (e) { upd(i, 'cta', e.target.value); }} placeholder="Pedir ahora" />
+                        <label style={lbl}>{'Link / destino del botón'}</label>
+                        <input style={inp} value={s.link || ''} onChange={function (e) { upd(i, 'link', e.target.value); }} placeholder="cotizar  ·  /servicios  ·  https://..." />
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                          {[['Cotizar', 'cotizar'], ['Ver servicios', '/servicios'], ['Ser maestro', '/maestros'], ['Inicio', '/']].map(function (o) { return <button key={o[1]} onClick={function () { upd(i, 'link', o[1]); }} style={chip}>{o[0]}</button>; })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button onClick={add} style={{ width: '100%', background: '#eef5ff', color: '#1d4ed8', border: '1px solid #cfe0fb', borderRadius: 10, padding: 11, fontWeight: 800, fontSize: 13.5, cursor: 'pointer', marginBottom: 8 }}>+ Agregar slide</button>
+                  <button onClick={function () { save(slides); }} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Guardar slides</button>
+                </div>
+              );
+            })()}
           </div>
 
           <div style={card}>
