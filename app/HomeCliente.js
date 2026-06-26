@@ -1,5 +1,59 @@
 'use client';
+import { useState, useEffect, useRef } from 'react';
 import { FOTO_COCINA, FOTO_BANO, FOTO_PINTURA, FOTO_PORTADA, FOTO_MAESTRO1, FOTO_MAESTRO2, FOTO_MAESTRO3 } from './homeFotos';
+
+// Portada tipo slider de fotos full-bleed. Cada slide: { foto, titulo, cta, link, on }.
+// Autoplay 5s + swipe + flechas + puntitos. El botón/tap de cada slide va a su 'link'
+// ('cotizar' o vacío = flujo de pedir presupuesto; un path/URL = navega ahí).
+function PortadaSlider(props) {
+  var slides = props.slides || [];
+  var n = slides.length;
+  const [idx, setIdx] = useState(0);
+  var startX = useRef(null);
+  var moved = useRef(false);
+
+  useEffect(function () {
+    if (n <= 1) return;
+    var t = setInterval(function () { setIdx(function (i) { return (i + 1) % n; }); }, 5000);
+    return function () { clearInterval(t); };
+  }, [n]);
+
+  if (!n) return null;
+  var s = slides[idx % n];
+  function go(d) { setIdx(function (i) { return (i + d + n) % n; }); }
+  function irLink(sl) {
+    var link = (sl && sl.link) || '';
+    if (!link || link === 'cotizar') { if (props.onCotizar) props.onCotizar(); return; }
+    if (typeof window !== 'undefined') window.location.href = link;
+  }
+  function tStart(e) { startX.current = e.touches[0].clientX; moved.current = false; }
+  function tMove(e) { if (startX.current != null && Math.abs(e.touches[0].clientX - startX.current) > 8) moved.current = true; }
+  function tEnd(e) {
+    if (startX.current == null) return;
+    var dx = e.changedTouches[0].clientX - startX.current;
+    startX.current = null;
+    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+  }
+  return (
+    <div className="hc-sec">
+      <div className="hc-slider" onTouchStart={tStart} onTouchMove={tMove} onTouchEnd={tEnd} onClick={function () { if (!moved.current) irLink(s); }}>
+        <img className="hc-slidebg" src={s.foto || FOTO_PORTADA} alt="" />
+        <div className="hc-slideveil"></div>
+        {n > 1 && <button type="button" className="hc-arrow hc-arrL" aria-label="Anterior" onClick={function (e) { e.stopPropagation(); go(-1); }}>{'‹'}</button>}
+        {n > 1 && <button type="button" className="hc-arrow hc-arrR" aria-label="Siguiente" onClick={function (e) { e.stopPropagation(); go(1); }}>{'›'}</button>}
+        <div className="hc-slidetxt">
+          {s.titulo ? <h3>{s.titulo}</h3> : null}
+          {s.cta ? <button type="button" className="hc-sbtn" onClick={function (e) { e.stopPropagation(); irLink(s); }}>{s.cta + ' →'}</button> : null}
+        </div>
+        {n > 1 && (
+          <div className="hc-dots">
+            {slides.map(function (x, i) { return <span key={i} className={i === (idx % n) ? 'on' : ''} onClick={function (e) { e.stopPropagation(); setIdx(i); }}></span>; })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // Maestros destacados de referencia (se muestran mientras aún no hay maestros reales).
 var REF_MAESTROS = [
@@ -39,6 +93,17 @@ var CSS = `
 .hc-cam{position:absolute;right:16px;top:18px}
 .hc-cam svg{width:42px;height:42px;stroke:#fff;opacity:.8}
 .hc-btn{margin-top:14px;display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#22d3ee,#2563eb);color:#fff;font-weight:800;padding:12px 22px;border-radius:30px;font-size:14px;border:none;box-shadow:0 8px 18px rgba(37,99,235,.4);cursor:pointer}
+.hc-slider{position:relative;border-radius:20px;overflow:hidden;height:162px;box-shadow:0 8px 22px rgba(14,26,56,.32);cursor:pointer;background:#13244e;user-select:none}
+.hc-slidebg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.hc-slideveil{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,16,38,.88),rgba(8,16,38,.05) 62%);z-index:1}
+.hc-slidetxt{position:absolute;left:16px;right:16px;bottom:24px;z-index:2;color:#fff}
+.hc-slidetxt h3{font-size:19px;font-weight:800;line-height:1.18;margin:0;text-shadow:0 1px 5px rgba(0,0,0,.45)}
+.hc-sbtn{margin-top:11px;background:#fff;color:#13244e;font-weight:800;padding:9px 18px;border-radius:24px;font-size:13px;border:none;cursor:pointer}
+.hc-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.26);color:#fff;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.hc-arrL{left:9px}.hc-arrR{right:9px}
+.hc-dots{position:absolute;left:0;right:0;bottom:9px;z-index:3;display:flex;gap:5px;justify-content:center}
+.hc-dots span{width:6px;height:6px;border-radius:4px;background:rgba(255,255,255,.5);cursor:pointer;transition:width .2s}
+.hc-dots span.on{width:17px;background:#fff}
 .hc-trustrip{display:flex;justify-content:space-between;gap:6px;margin-top:13px}
 .hc-trustrip span{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;font-size:10px;font-weight:600;color:#54616f}
 .hc-trustrip svg{width:19px;height:19px;stroke:var(--azul)}
@@ -113,8 +178,16 @@ export default function HomeCliente(props) {
   function onCotizar() { if (props.onCotizar) props.onCotizar(); }
   function onMaestro(m) { if (props.onMaestro) props.onMaestro(m); }
 
+  // Slides de la portada (editables desde el admin). Si hay al menos uno activo con foto,
+  // la portada se muestra como slider; si no, cae a la portada de video por defecto.
+  var slidesRaw = props.homeSlides;
+  if (typeof slidesRaw === 'string') { try { slidesRaw = JSON.parse(slidesRaw); } catch (e) { slidesRaw = null; } }
+  var slidesOn = (Array.isArray(slidesRaw) ? slidesRaw : []).filter(function (s) { return s && s.on !== false && s.foto; });
+
   var BLOQUES = {
-    hero: (
+    hero: (slidesOn.length > 0 ? (
+      <PortadaSlider slides={slidesOn} onCotizar={onCotizar} />
+    ) : (
       <div className="hc-sec">
         <div className="hc-videohero" onClick={onCotizar}>
           <img className="hc-herobg" src={FOTO_PORTADA} alt="" />
@@ -126,7 +199,7 @@ export default function HomeCliente(props) {
           <button className="hc-btn">Grabar video →</button>
         </div>
       </div>
-    ),
+    )),
     confianza: (
       <div className="hc-sec">
         <div className="hc-trustrip">
