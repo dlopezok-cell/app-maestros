@@ -36,6 +36,32 @@ function melPing() {
   } catch (e) {}
 }
 
+// Push nativo (OneSignal). Solo se activa DENTRO del app iOS, donde el plugin de
+// Capacitor inyecta window.plugins.OneSignal. En el navegador web normal no existe,
+// así que estas funciones no hacen nada (no rompen el sitio).
+var _melOSReady = false, _melOSPend = null;
+function _melOSnow(userId) {
+  try {
+    var OS = (typeof window !== 'undefined') && window.plugins && window.plugins.OneSignal;
+    if (!OS) return false;
+    var appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+    if (!appId) return true;
+    if (!_melOSReady) {
+      try { OS.initialize(appId); } catch (e) {}
+      try { OS.Notifications.requestPermission(true); } catch (e) {}
+      _melOSReady = true;
+    }
+    if (userId) { try { OS.login(String(userId)); } catch (e) {} }
+    return true;
+  } catch (e) { return false; }
+}
+function melOneSignal(userId) {
+  if (typeof window === 'undefined') return;
+  if (_melOSnow(userId)) return;
+  _melOSPend = userId;
+  try { document.addEventListener('deviceready', function () { _melOSnow(_melOSPend); }, { once: true }); } catch (e) {}
+}
+
 // App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
 // Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
 const EMO = { gasfiteria: '\u{1F6B0}', electricidad: '⚡', cerrajeria: '\u{1F511}', pintura: '\u{1F3A8}', calefont: '\u{1F525}', limpieza: '\u{1F9F9}' };
@@ -70,6 +96,9 @@ const [portada, setPortada] = useState(undefined); // undefined = cargando
 const [aviso, setAviso] = useState(false); // popup de prelanzamiento
 const [noLeidosCli, setNoLeidosCli] = useState(0);  // mensajes de maestros sin leer (badge)
 const [soporteNL, setSoporteNL] = useState(0);
+
+// Identifica al usuario en OneSignal (push nativo) cuando hay sesión.
+useEffect(function () { if (usuario) melOneSignal(usuario.id); }, [usuario]);
 
 useEffect(function () {
 if (!usuario) { setPerfilCli(null); return; }
