@@ -12,6 +12,28 @@ import AccesoMaestro from '../AccesoMaestro';
 import ComunicadosBanner from '../ComunicadosBanner';
 import BandejaMaestro from '../BandejaMaestro';
 
+// Sonido de notificación con desbloqueo en el primer toque (iOS deja el audio
+// "suspendido" hasta que el usuario interactúa).
+var _melAudioCtx = null;
+function _melDesbloquear() {
+  try {
+    if (!_melAudioCtx) { var C = window.AudioContext || window.webkitAudioContext; if (C) _melAudioCtx = new C(); }
+    if (_melAudioCtx && _melAudioCtx.state === 'suspended') _melAudioCtx.resume();
+  } catch (e) {}
+}
+if (typeof window !== 'undefined') {
+  ['touchend', 'click', 'keydown'].forEach(function (ev) { window.addEventListener(ev, _melDesbloquear, { passive: true }); });
+}
+function melPing() {
+  try {
+    if (!_melAudioCtx) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return; _melAudioCtx = new C(); }
+    if (_melAudioCtx.state === 'suspended') _melAudioCtx.resume();
+    var ctx = _melAudioCtx;
+    function tono(f, t, d) { var o = ctx.createOscillator(); var g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.34, ctx.currentTime + t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + d); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.02); }
+    tono(880, 0, 0.16); tono(1320, 0.15, 0.2);
+  } catch (e) {}
+}
+
 // App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
 // cuenta y arme su ficha. Navega por pestañas: Perfil · Solicitudes · Agenda · Ganancias.
 export default function Maestros() {
@@ -69,14 +91,24 @@ export default function Maestros() {
 
   useEffect(function () {
     if (!usuario) return;
+    var prev = { n: -1 };
     function contar() {
       supabase.from('mensajes').select('id', { count: 'exact', head: true })
         .eq('maestro_id', usuario.id).eq('autor_rol', 'cliente').eq('leido', false)
-        .then(function (r) { setNoLeidos(r.count || 0); });
+        .then(function (r) {
+          var n = r.count || 0;
+          setNoLeidos(n);
+          if (prev.n >= 0 && n > prev.n) melPing(); // suena solo si llegó algo nuevo
+          prev.n = n;
+        });
     }
     contar();
-    var iv = setInterval(contar, 20000);
-    return function () { clearInterval(iv); };
+    var iv = setInterval(contar, 12000);
+    // Tiempo real: al insertar un mensaje del cliente para este maestro, recontar (badge + sonido al instante).
+    var ch = supabase.channel('mae-msgs-' + usuario.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: 'maestro_id=eq.' + usuario.id }, function () { contar(); })
+      .subscribe();
+    return function () { clearInterval(iv); try { supabase.removeChannel(ch); } catch (e) {} };
   }, [usuario, pestana]);
 
   function salir() {
