@@ -34,6 +34,31 @@ function melPing() {
   } catch (e) {}
 }
 
+// Push nativo (OneSignal). Solo se activa dentro del app iOS (plugin de Capacitor);
+// en web no existe window.plugins.OneSignal y no hace nada.
+var _melOSReady = false, _melOSPend = null;
+function _melOSnow(userId) {
+  try {
+    var OS = (typeof window !== 'undefined') && window.plugins && window.plugins.OneSignal;
+    if (!OS) return false;
+    var appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+    if (!appId) return true;
+    if (!_melOSReady) {
+      try { OS.initialize(appId); } catch (e) {}
+      try { OS.Notifications.requestPermission(true); } catch (e) {}
+      _melOSReady = true;
+    }
+    if (userId) { try { OS.login(String(userId)); } catch (e) {} }
+    return true;
+  } catch (e) { return false; }
+}
+function melOneSignal(userId) {
+  if (typeof window === 'undefined') return;
+  if (_melOSnow(userId)) return;
+  _melOSPend = userId;
+  try { document.addEventListener('deviceready', function () { _melOSnow(_melOSPend); }, { once: true }); } catch (e) {}
+}
+
 // App de MAESTROS (ruta /maestros). Abierta para que cualquier maestro cree su
 // cuenta y arme su ficha. Navega por pestañas: Perfil · Solicitudes · Agenda · Ganancias.
 export default function Maestros() {
@@ -50,6 +75,9 @@ export default function Maestros() {
       setCargado(true);
     });
   }, []);
+
+  // Identifica al maestro en OneSignal (push nativo) cuando hay sesión.
+  useEffect(function () { if (usuario) melOneSignal(usuario.id); }, [usuario]);
 
   useEffect(function () {
     try {
