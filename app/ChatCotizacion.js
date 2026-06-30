@@ -127,6 +127,10 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       if (miRol === 'maestro' && presupuestoId) {
         try { fetch('/api/notif-cliente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: presupuestoId, maestro_id: maestroId }) }).catch(function () {}); } catch (e) {}
       }
+      // Push nativo (OneSignal) al destinatario, en ambos sentidos (server omite si no está configurado).
+      if (presupuestoId) {
+        try { fetch('/api/notif-push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: presupuestoId, maestro_id: maestroId, from_rol: miRol }) }).catch(function () {}); } catch (e) {}
+      }
     });
   }
 
