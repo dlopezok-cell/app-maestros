@@ -13,6 +13,29 @@ import ChatCotizacion from './ChatCotizacion';
 
 const ADMIN_EMAIL = 'dlopezok@gmail.com';
 
+// Sonido de notificación con desbloqueo en el primer toque (iOS deja el audio
+// "suspendido" hasta que el usuario interactúa). Compartido para toda la app.
+var _melAudioCtx = null, _melAudioListo = false;
+function _melDesbloquear() {
+  try {
+    if (!_melAudioCtx) { var C = window.AudioContext || window.webkitAudioContext; if (C) _melAudioCtx = new C(); }
+    if (_melAudioCtx && _melAudioCtx.state === 'suspended') _melAudioCtx.resume();
+    _melAudioListo = true;
+  } catch (e) {}
+}
+if (typeof window !== 'undefined') {
+  ['touchend', 'click', 'keydown'].forEach(function (ev) { window.addEventListener(ev, _melDesbloquear, { passive: true }); });
+}
+function melPing() {
+  try {
+    if (!_melAudioCtx) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return; _melAudioCtx = new C(); }
+    if (_melAudioCtx.state === 'suspended') _melAudioCtx.resume();
+    var ctx = _melAudioCtx;
+    function tono(f, t, d) { var o = ctx.createOscillator(); var g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.34, ctx.currentTime + t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + d); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.02); }
+    tono(880, 0, 0.16); tono(1320, 0.15, 0.2);
+  } catch (e) {}
+}
+
 // App del CLIENTE (ruta /). Inicio con maestros reales -> ficha -> pedir presupuesto.
 // Pestañas: Inicio · Cotizar (PresupuestoCliente) · Cuenta (PerfilCliente).
 const EMO = { gasfiteria: '\u{1F6B0}', electricidad: '⚡', cerrajeria: '\u{1F511}', pintura: '\u{1F3A8}', calefont: '\u{1F525}', limpieza: '\u{1F9F9}' };
@@ -76,15 +99,30 @@ supabase.from('resenas').select('maestro_id, estrellas, comentario, creado_en')
 
 useEffect(function () {
 if (!usuario) return;
+var prev = { n: -1 };
 function contar() {
-supabase.from('mensajes').select('id, presupuestos!inner(cliente_id)', { count: 'exact', head: true })
-.eq('autor_rol', 'maestro').eq('leido', false).eq('presupuestos.cliente_id', usuario.id)
-.then(function (r) { setNoLeidosCli(r.count || 0); });
+// Consulta robusta en 2 pasos (sin depender de la relación FK): mis presupuestos -> mensajes sin leer del maestro.
+supabase.from('presupuestos').select('id').eq('cliente_id', usuario.id).then(function (pr) {
+var ids = (pr.data || []).map(function (p) { return p.id; });
+if (!ids.length) { setNoLeidosCli(0); prev.n = 0; return; }
+supabase.from('mensajes').select('id', { count: 'exact', head: true })
+.in('presupuesto_id', ids).eq('autor_rol', 'maestro').eq('leido', false)
+.then(function (r) {
+var n = r.count || 0;
+setNoLeidosCli(n);
+if (prev.n >= 0 && n > prev.n) melPing(); // suena solo si llegó algo nuevo
+prev.n = n;
+});
+});
 supabase.from('mensajes_soporte').select('id', { count: 'exact', head: true }).eq('cliente_id', usuario.id).eq('autor', 'admin').eq('leido', false).then(function (r) { setSoporteNL(r.count || 0); });
 }
 contar();
-var iv = setInterval(contar, 20000);
-return function () { clearInterval(iv); };
+var iv = setInterval(contar, 12000);
+// Tiempo real: al insertarse cualquier mensaje, recontar (badge + sonido al instante).
+var ch = supabase.channel('cli-msgs-' + usuario.id)
+.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, function () { contar(); })
+.subscribe();
+return function () { clearInterval(iv); try { supabase.removeChannel(ch); } catch (e) {} };
 }, [usuario, vista]);
 
 function ratingDe(id) {
