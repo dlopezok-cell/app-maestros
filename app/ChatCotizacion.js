@@ -123,6 +123,10 @@ export default function ChatCotizacion({ usuario, presupuestoId, maestroId, miRo
       if (miRol === 'cliente' && presupuestoId && maestroId) {
         try { fetch('/api/notif-mensaje', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: presupuestoId, maestro_id: maestroId }) }).catch(function () {}); } catch (e) {}
       }
+      // Si responde el MAESTRO, avisamos por WhatsApp al cliente (el server omite si no hay plantilla/teléfono).
+      if (miRol === 'maestro' && presupuestoId) {
+        try { fetch('/api/notif-cliente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presupuesto_id: presupuestoId, maestro_id: maestroId }) }).catch(function () {}); } catch (e) {}
+      }
     });
   }
 
